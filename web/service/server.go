@@ -71,11 +71,12 @@ type Status struct {
 		ErrorMsg string       `json:"errorMsg"`
 		Version  string       `json:"version"`
 	} `json:"xray"`
-	Uptime   uint64    `json:"uptime"`
-	Loads    []float64 `json:"loads"`
-	TcpCount int       `json:"tcpCount"`
-	UdpCount int       `json:"udpCount"`
-	NetIO    struct {
+	VKTurnProxy VKTurnProxyRuntimeStatus `json:"vkTurnProxy"`
+	Uptime      uint64                   `json:"uptime"`
+	Loads       []float64                `json:"loads"`
+	TcpCount    int                      `json:"tcpCount"`
+	UdpCount    int                      `json:"udpCount"`
+	NetIO       struct {
 		Up   uint64 `json:"up"`
 		Down uint64 `json:"down"`
 	} `json:"netIO"`
@@ -402,6 +403,7 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 		status.Xray.ErrorMsg = s.xrayService.GetXrayResult()
 	}
 	status.Xray.Version = s.xrayService.GetXrayVersion()
+	status.VKTurnProxy = VKTurnProxyRuntime().GetStatus()
 
 	// Application stats
 	var rtm runtime.MemStats
@@ -519,7 +521,7 @@ func (s *ServerService) sampleCPUUtilization() (float64, error) {
 
 func (s *ServerService) GetXrayVersions() ([]string, error) {
 	const (
-		XrayURL    = "https://api.github.com/repos/XTLS/Xray-core/releases"
+		XrayURL    = "https://api.github.com/repos/WINGS-N/Xray-core/releases"
 		bufferSize = 8192
 	)
 
@@ -592,6 +594,30 @@ func (s *ServerService) RestartXrayService() error {
 	return nil
 }
 
+func (s *ServerService) StartVKTurnProxyService() error {
+	if err := VKTurnProxyRuntime().StartAll(); err != nil {
+		logger.Error("start vk-turn-proxy failed:", err)
+		return err
+	}
+	return nil
+}
+
+func (s *ServerService) StopVKTurnProxyService() error {
+	if err := VKTurnProxyRuntime().StopAll(); err != nil {
+		logger.Error("stop vk-turn-proxy failed:", err)
+		return err
+	}
+	return nil
+}
+
+func (s *ServerService) RestartVKTurnProxyService() error {
+	if err := VKTurnProxyRuntime().RestartAll(); err != nil {
+		logger.Error("restart vk-turn-proxy failed:", err)
+		return err
+	}
+	return nil
+}
+
 func (s *ServerService) downloadXRay(version string) (string, error) {
 	osName := runtime.GOOS
 	arch := runtime.GOARCH
@@ -621,7 +647,7 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 	}
 
 	fileName := fmt.Sprintf("Xray-%s-%s.zip", osName, arch)
-	url := fmt.Sprintf("https://github.com/XTLS/Xray-core/releases/download/%s/%s", version, fileName)
+	url := fmt.Sprintf("https://github.com/WINGS-N/Xray-core/releases/download/%s/%s", version, fileName)
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err
@@ -851,6 +877,26 @@ func (s *ServerService) GetXrayLogs(
 	}
 
 	return entries
+}
+
+func (s *ServerService) GetVKTurnProxyLogs(count string, level string) []string {
+	countInt, err := strconv.Atoi(count)
+	if err != nil || countInt < 1 {
+		countInt = 20
+	}
+
+	allLogs := logger.GetLogs(10000, level)
+	filtered := make([]string, 0, min(countInt, len(allLogs)))
+	for _, line := range allLogs {
+		if !strings.Contains(line, "VKTURN[") {
+			continue
+		}
+		filtered = append(filtered, line)
+		if len(filtered) >= countInt {
+			break
+		}
+	}
+	return filtered
 }
 
 func logEntryContains(line string, suffixes []string) bool {

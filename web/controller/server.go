@@ -53,11 +53,15 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 
 	g.POST("/stopXrayService", a.stopXrayService)
 	g.POST("/restartXrayService", a.restartXrayService)
+	g.POST("/startVKTurnProxyService", a.startVKTurnProxyService)
+	g.POST("/stopVKTurnProxyService", a.stopVKTurnProxyService)
+	g.POST("/restartVKTurnProxyService", a.restartVKTurnProxyService)
 	g.POST("/installXray/:version", a.installXray)
 	g.POST("/updateGeofile", a.updateGeofile)
 	g.POST("/updateGeofile/:fileName", a.updateGeofile)
 	g.POST("/logs/:count", a.getLogs)
 	g.POST("/xraylogs/:count", a.getXrayLogs)
+	g.POST("/vkturnproxylogs/:count", a.getVKTurnProxyLogs)
 	g.POST("/importDB", a.importDB)
 	g.POST("/getNewEchCert", a.getNewEchCert)
 }
@@ -187,6 +191,21 @@ func (a *ServerController) restartXrayService(c *gin.Context) {
 	)
 }
 
+func (a *ServerController) startVKTurnProxyService(c *gin.Context) {
+	err := a.serverService.StartVKTurnProxyService()
+	jsonMsg(c, "vk-turn-proxy service started", err)
+}
+
+func (a *ServerController) stopVKTurnProxyService(c *gin.Context) {
+	err := a.serverService.StopVKTurnProxyService()
+	jsonMsg(c, "vk-turn-proxy service stopped", err)
+}
+
+func (a *ServerController) restartVKTurnProxyService(c *gin.Context) {
+	err := a.serverService.RestartVKTurnProxyService()
+	jsonMsg(c, "vk-turn-proxy service restarted", err)
+}
+
 // getLogs retrieves the application logs based on count, level, and syslog filters.
 func (a *ServerController) getLogs(c *gin.Context) {
 	count := c.Param("count")
@@ -238,6 +257,16 @@ func (a *ServerController) getXrayLogs(c *gin.Context) {
 	}
 
 	logs := a.serverService.GetXrayLogs(count, filter, showDirect, showBlocked, showProxy, freedoms, blackholes)
+	jsonObj(c, logs, nil)
+}
+
+func (a *ServerController) getVKTurnProxyLogs(c *gin.Context) {
+	count := c.Param("count")
+	level := c.PostForm("level")
+	if level == "" {
+		level = "debug"
+	}
+	logs := a.serverService.GetVKTurnProxyLogs(count, level)
 	jsonObj(c, logs, nil)
 }
 

@@ -1,0 +1,58 @@
+{{define "form/vkTurnProxy"}}
+<a-form :colon="false" :label-col="{ md: {span:8} }" :wrapper-col="{ md: {span:14} }">
+  <a-form-item label='Forward To'>
+    <a-select v-model="inbound.settings.forward.type" :dropdown-class-name="themeSwitcher.currentTheme">
+      <a-select-option value="wireguardInbound">Panel WireGuard inbound</a-select-option>
+      <a-select-option value="external">External UDP target</a-select-option>
+    </a-select>
+  </a-form-item>
+
+  <a-form-item v-if="inbound.settings.forward.type === 'wireguardInbound'" label='WireGuard Inbound'>
+    <a-select v-model="inbound.settings.forward.wireguardInboundId" :dropdown-class-name="themeSwitcher.currentTheme">
+      <a-select-option v-for="wgInbound in wireguardInbounds" :key="wgInbound.id" :value="wgInbound.id">
+        #[[ wgInbound.id ]] [[ wgInbound.remark || 'WireGuard' ]] : [[ wgInbound.port ]]
+      </a-select-option>
+    </a-select>
+  </a-form-item>
+
+  <template v-else>
+    <a-form-item label='Target Host'>
+      <a-input v-model.trim="inbound.settings.forward.host"></a-input>
+    </a-form-item>
+    <a-form-item label='Target Port'>
+      <a-input-number v-model.number="inbound.settings.forward.port" :min="1" :max="65535"></a-input-number>
+    </a-form-item>
+  </template>
+
+  <a-form-item label='Session Mode'>
+    <a-select v-model="inbound.settings.sessionMode" :dropdown-class-name="themeSwitcher.currentTheme">
+      <a-select-option value="auto">auto</a-select-option>
+      <a-select-option value="mainline">mainline</a-select-option>
+      <a-select-option value="mux">mux</a-select-option>
+    </a-select>
+  </a-form-item>
+
+  <a-form-item label='Local Endpoint'>
+    <a-input v-model.trim="inbound.settings.localEndpoint"></a-input>
+  </a-form-item>
+
+  <a-form-item label='WG DNS'>
+    <a-input v-model.trim="inbound.settings.wgDns"></a-input>
+  </a-form-item>
+
+  <a-form-item label='WG MTU'>
+    <a-input-number v-model.number="inbound.settings.wgMtu" :min="576" :max="1500"></a-input-number>
+  </a-form-item>
+
+  <a-form-item label='WG Allowed IPs'>
+    <a-input v-model.trim="inbound.settings.wgAllowedIps"></a-input>
+  </a-form-item>
+
+  <a-alert
+    v-if="inbound.settings.forward.type === 'external'"
+    type="info"
+    show-icon
+    message="Client management and wingsv export are available only when forwarding to an existing WireGuard inbound.">
+  </a-alert>
+</a-form>
+{{end}}

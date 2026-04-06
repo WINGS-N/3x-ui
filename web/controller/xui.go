@@ -21,6 +21,11 @@ func NewXUIController(g *gin.RouterGroup) *XUIController {
 
 // initRouter sets up the main panel routes and initializes sub-controllers.
 func (a *XUIController) initRouter(g *gin.RouterGroup) {
+	apiDocs := g.Group("/api")
+	apiDocs.Use(a.checkLogin)
+	apiDocs.GET("/docs", a.apiDocs)
+	apiDocs.GET("/docs/openapi.yaml", a.apiDocsSpec)
+
 	g = g.Group("/panel")
 	g.Use(a.checkLogin)
 

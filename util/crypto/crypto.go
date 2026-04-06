@@ -2,6 +2,9 @@
 package crypto
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -14,4 +17,11 @@ func HashPasswordAsBcrypt(password string) (string, error) {
 // CheckPasswordHash verifies if the given password matches the bcrypt hash.
 func CheckPasswordHash(hash, password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+}
+
+// HashTokenSHA256 returns a deterministic hash for random API tokens so the plain token
+// does not need to be stored in the database.
+func HashTokenSHA256(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }

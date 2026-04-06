@@ -3,6 +3,7 @@ package model
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/mhsanaei/3x-ui/v2/util/json_util"
 	"github.com/mhsanaei/3x-ui/v2/xray"
@@ -21,6 +22,7 @@ const (
 	Shadowsocks Protocol = "shadowsocks"
 	Mixed       Protocol = "mixed"
 	WireGuard   Protocol = "wireguard"
+	VKTurnProxy Protocol = "vk-turn-proxy"
 )
 
 // User represents a user account in the 3x-ui panel.
@@ -28,6 +30,19 @@ type User struct {
 	Id       int    `json:"id" gorm:"primaryKey;autoIncrement"`
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+// APIToken stores a hashed API token for authenticating requests to the panel API.
+// The plain token is shown only at creation time and is never stored in the database.
+type APIToken struct {
+	Id         int        `json:"id" gorm:"primaryKey;autoIncrement"`
+	UserId     int        `json:"userId" gorm:"index"`
+	Name       string     `json:"name"`
+	TokenHash  string     `json:"-" gorm:"uniqueIndex;size:64"`
+	Preview    string     `json:"preview" gorm:"size:64"`
+	LastUsedAt *time.Time `json:"lastUsedAt"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	UpdatedAt  time.Time  `json:"updatedAt"`
 }
 
 // Inbound represents an Xray inbound configuration with traffic statistics and settings.

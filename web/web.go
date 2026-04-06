@@ -299,8 +299,16 @@ func (s *Server) startTask() {
 	if err != nil {
 		logger.Warning("start xray failed:", err)
 	}
+	if err := service.VKTurnProxyRuntime().EnsureRunning(); err != nil {
+		logger.Warning("start vk-turn-proxy failed:", err)
+	}
 	// Check whether xray is running every second
 	s.cron.AddJob("@every 1s", job.NewCheckXrayRunningJob())
+	s.cron.AddFunc("@every 5s", func() {
+		if err := service.VKTurnProxyRuntime().EnsureRunning(); err != nil {
+			logger.Warning("ensure vk-turn-proxy failed:", err)
+		}
+	})
 
 	// Check if xray needs to be restarted every 30 seconds
 	s.cron.AddFunc("@every 30s", func() {
@@ -455,6 +463,7 @@ func (s *Server) Start() (err error) {
 func (s *Server) Stop() error {
 	s.cancel()
 	s.xrayService.StopXray()
+	_ = service.VKTurnProxyRuntime().StopAll()
 	if s.cron != nil {
 		s.cron.Stop()
 	}

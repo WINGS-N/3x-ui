@@ -29,9 +29,17 @@ func (j *XrayTrafficJob) Run() {
 	if !j.xrayService.IsXrayRunning() {
 		return
 	}
-	traffics, clientTraffics, err := j.xrayService.GetXrayTraffic()
+	traffics, clientTraffics, wireGuardPeerTraffics, err := j.xrayService.GetXrayTraffic()
 	if err != nil {
 		return
+	}
+	if len(wireGuardPeerTraffics) > 0 {
+		vkTurnProxyTraffics, mapErr := j.inboundService.BuildVKTurnProxyClientTraffics(wireGuardPeerTraffics)
+		if mapErr != nil {
+			logger.Warning("map vk-turn-proxy client traffic failed:", mapErr)
+		} else if len(vkTurnProxyTraffics) > 0 {
+			clientTraffics = append(clientTraffics, vkTurnProxyTraffics...)
+		}
 	}
 	err, needRestart0 := j.inboundService.AddTraffic(traffics, clientTraffics)
 	if err != nil {

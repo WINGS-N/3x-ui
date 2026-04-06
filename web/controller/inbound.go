@@ -8,7 +8,6 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v2/database/model"
 	"github.com/mhsanaei/3x-ui/v2/web/service"
-	"github.com/mhsanaei/3x-ui/v2/web/session"
 	"github.com/mhsanaei/3x-ui/v2/web/websocket"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +33,10 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 	g.GET("/get/:id", a.getInbound)
 	g.GET("/getClientTraffics/:email", a.getClientTraffics)
 	g.GET("/getClientTrafficsById/:id", a.getClientTrafficsById)
+	g.GET("/:id/vkTurnProxy/peerOptions", a.getVKTurnProxyPeerOptions)
+	g.GET("/:id/vkTurnProxy/clients/:clientId/stats", a.getVKTurnProxyClientStats)
+	g.GET("/:id/vkTurnProxy/exportClient/:clientId", a.exportVKTurnProxyClient)
+	g.GET("/:id/vkTurnProxy/exportAll", a.exportAllVKTurnProxyClients)
 
 	g.POST("/add", a.addInbound)
 	g.POST("/del/:id", a.delInbound)
@@ -41,8 +44,13 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 	g.POST("/clientIps/:email", a.getClientIps)
 	g.POST("/clearClientIps/:email", a.clearClientIps)
 	g.POST("/addClient", a.addInboundClient)
+	g.POST("/:id/vkTurnProxy/clients", a.addVKTurnProxyClient)
+	g.POST("/:id/vkTurnProxy/clients/:clientId/enable", a.setVKTurnProxyClientEnable)
+	g.POST("/addPeer", a.addInboundPeer)
 	g.POST("/:id/delClient/:clientId", a.delInboundClient)
+	g.POST("/:id/delPeer/:peerId", a.delInboundPeer)
 	g.POST("/updateClient/:clientId", a.updateInboundClient)
+	g.POST("/updatePeer/:peerId", a.updateInboundPeer)
 	g.POST("/:id/resetClientTraffic/:email", a.resetClientTraffic)
 	g.POST("/resetAllTraffics", a.resetAllTraffics)
 	g.POST("/resetAllClientTraffics/:id", a.resetAllClientTraffics)
@@ -56,7 +64,7 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 
 // getInbounds retrieves the list of inbounds for the logged-in user.
 func (a *InboundController) getInbounds(c *gin.Context) {
-	user := session.GetLoginUser(c)
+	user := getAuthUser(c)
 	inbounds, err := a.inboundService.GetInbounds(user.Id)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
@@ -78,6 +86,62 @@ func (a *InboundController) getInbound(c *gin.Context) {
 		return
 	}
 	jsonObj(c, inbound, nil)
+}
+
+func (a *InboundController) getVKTurnProxyPeerOptions(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "get"), err)
+		return
+	}
+	peers, err := a.inboundService.GetVKTurnProxyPeerOptions(id)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	jsonObj(c, peers, nil)
+}
+
+func (a *InboundController) exportVKTurnProxyClient(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "get"), err)
+		return
+	}
+	link, err := a.inboundService.ExportVKTurnProxyClient(id, c.Param("clientId"), c.Request.Host)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	jsonObj(c, link, nil)
+}
+
+func (a *InboundController) exportAllVKTurnProxyClients(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "get"), err)
+		return
+	}
+	links, err := a.inboundService.ExportAllVKTurnProxyClients(id, c.Request.Host)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	jsonObj(c, links, nil)
+}
+
+func (a *InboundController) getVKTurnProxyClientStats(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "get"), err)
+		return
+	}
+	traffic, err := a.inboundService.GetVKTurnProxyClientTraffic(id, c.Param("clientId"))
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.trafficGetError"), err)
+		return
+	}
+	jsonObj(c, traffic, nil)
 }
 
 // getClientTraffics retrieves client traffic information by email.
@@ -110,7 +174,7 @@ func (a *InboundController) addInbound(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundCreateSuccess"), err)
 		return
 	}
-	user := session.GetLoginUser(c)
+	user := getAuthUser(c)
 	inbound.UserId = user.Id
 	if inbound.Listen == "" || inbound.Listen == "0.0.0.0" || inbound.Listen == "::" || inbound.Listen == "::0" {
 		inbound.Tag = fmt.Sprintf("inbound-%v", inbound.Port)
@@ -149,7 +213,7 @@ func (a *InboundController) delInbound(c *gin.Context) {
 		a.xrayService.SetToNeedRestart()
 	}
 	// Broadcast inbounds update via WebSocket
-	user := session.GetLoginUser(c)
+	user := getAuthUser(c)
 	inbounds, _ := a.inboundService.GetInbounds(user.Id)
 	websocket.BroadcastInbounds(inbounds)
 }
@@ -179,7 +243,7 @@ func (a *InboundController) updateInbound(c *gin.Context) {
 		a.xrayService.SetToNeedRestart()
 	}
 	// Broadcast inbounds update via WebSocket
-	user := session.GetLoginUser(c)
+	user := getAuthUser(c)
 	inbounds, _ := a.inboundService.GetInbounds(user.Id)
 	websocket.BroadcastInbounds(inbounds)
 }
@@ -260,6 +324,76 @@ func (a *InboundController) addInboundClient(c *gin.Context) {
 	}
 }
 
+func (a *InboundController) addVKTurnProxyClient(c *gin.Context) {
+	inboundID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientAddSuccess"), err)
+		return
+	}
+	client := &service.VKTurnProxyClient{}
+	err = c.ShouldBind(client)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientAddSuccess"), err)
+		return
+	}
+
+	needRestart, err := a.inboundService.AddVKTurnProxyClientDirect(inboundID, client)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientAddSuccess"), nil)
+	if needRestart {
+		a.xrayService.SetToNeedRestart()
+	}
+}
+
+func (a *InboundController) setVKTurnProxyClientEnable(c *gin.Context) {
+	inboundID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), err)
+		return
+	}
+
+	request := struct {
+		Enable bool `json:"enable" form:"enable"`
+	}{}
+	if err := c.ShouldBind(&request); err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), err)
+		return
+	}
+
+	needRestart, err := a.inboundService.SetVKTurnProxyClientEnable(inboundID, c.Param("clientId"), request.Enable)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	jsonMsgObj(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), gin.H{"enable": request.Enable}, nil)
+	if needRestart {
+		a.xrayService.SetToNeedRestart()
+	}
+}
+
+// addInboundPeer adds one or more WireGuard peers to an inbound.
+func (a *InboundController) addInboundPeer(c *gin.Context) {
+	data := &model.Inbound{}
+	err := c.ShouldBind(data)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundPeerAddSuccess"), err)
+		return
+	}
+
+	needRestart, err := a.inboundService.AddInboundPeer(data)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundPeerAddSuccess"), nil)
+	if needRestart {
+		a.xrayService.SetToNeedRestart()
+	}
+}
+
 // delInboundClient deletes a client from an inbound by inbound ID and client ID.
 func (a *InboundController) delInboundClient(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
@@ -275,6 +409,30 @@ func (a *InboundController) delInboundClient(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientDeleteSuccess"), nil)
+	if needRestart {
+		a.xrayService.SetToNeedRestart()
+	}
+}
+
+// delInboundPeer deletes a WireGuard peer from an inbound by index.
+func (a *InboundController) delInboundPeer(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundPeerDeleteSuccess"), err)
+		return
+	}
+	peerIndex, err := strconv.Atoi(c.Param("peerId"))
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundPeerDeleteSuccess"), err)
+		return
+	}
+
+	needRestart, err := a.inboundService.DelInboundPeer(id, peerIndex)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundPeerDeleteSuccess"), nil)
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
@@ -297,6 +455,32 @@ func (a *InboundController) updateInboundClient(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), nil)
+	if needRestart {
+		a.xrayService.SetToNeedRestart()
+	}
+}
+
+// updateInboundPeer updates a single WireGuard peer in an inbound by index.
+func (a *InboundController) updateInboundPeer(c *gin.Context) {
+	peerIndex, err := strconv.Atoi(c.Param("peerId"))
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundPeerUpdateSuccess"), err)
+		return
+	}
+
+	inbound := &model.Inbound{}
+	err = c.ShouldBind(inbound)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundPeerUpdateSuccess"), err)
+		return
+	}
+
+	needRestart, err := a.inboundService.UpdateInboundPeer(inbound, peerIndex)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundPeerUpdateSuccess"), nil)
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
@@ -360,7 +544,7 @@ func (a *InboundController) importInbound(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}
-	user := session.GetLoginUser(c)
+	user := getAuthUser(c)
 	inbound.Id = 0
 	inbound.UserId = user.Id
 	if inbound.Listen == "" || inbound.Listen == "0.0.0.0" || inbound.Listen == "::" || inbound.Listen == "::0" {

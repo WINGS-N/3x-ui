@@ -63,6 +63,10 @@ class DBInbound {
         return this.protocol === Protocols.WIREGUARD;
     }
 
+    get isVKTurnProxy() {
+        return this.protocol === Protocols.VK_TURN_PROXY;
+    }
+
     get address() {
         let address = location.hostname;
         if (!ObjectUtil.isEmpty(this.listen) && this.listen !== "0.0.0.0") {
@@ -127,9 +131,16 @@ class DBInbound {
                 return true;
             case Protocols.SHADOWSOCKS:
                 return this.toInbound().isSSMultiUser;
+            case Protocols.VK_TURN_PROXY:
+                return this.toInbound().settings.forward.type === 'wireguardInbound';
             default:
                 return false;
         }
+    }
+
+    canBulkAddClients() {
+        return [Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN].includes(this.protocol)
+            || (this.protocol === Protocols.SHADOWSOCKS && this.toInbound().isSSMultiUser);
     }
 
     hasLink() {

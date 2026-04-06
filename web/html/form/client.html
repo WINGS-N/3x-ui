@@ -15,6 +15,83 @@
         </template>
         <a-input v-model.trim="client.email"></a-input>
     </a-form-item>
+    <template v-if="inbound.protocol === Protocols.VK_TURN_PROXY">
+        <a-form-item label='VK Link'>
+            <a-input v-model.trim="client.link" placeholder="https://vk.com/call/join/..."></a-input>
+        </a-form-item>
+        <a-form-item label='Peer Binding'>
+            <a-radio-group
+                :value="client.peerManaged ? 'managed' : 'existing'"
+                @change="event => {
+                    client.peerManaged = event.target.value === 'managed';
+                    if (!client.peerManaged && !client.peerPublicKey && availablePeerOptions.length > 0) {
+                        client.peerPublicKey = availablePeerOptions[0].publicKey;
+                    }
+                }"
+                button-style="solid">
+                <a-radio-button value="managed">Create peer</a-radio-button>
+                <a-radio-button value="existing">Bind existing</a-radio-button>
+            </a-radio-group>
+        </a-form-item>
+        <template v-if="client.peerManaged">
+            <a-form-item>
+                <template slot="label">
+                    <a-tooltip>
+                        <template slot="title">
+                            <span>{{ i18n "reset" }}</span>
+                        </template>
+                        Peer Private Key
+                        <a-icon @click="[client.peer.publicKey, client.peer.privateKey] = Object.values(Wireguard.generateKeypair())" type="sync"></a-icon>
+                    </a-tooltip>
+                </template>
+                <a-input v-model.trim="client.peer.privateKey"></a-input>
+            </a-form-item>
+            <a-form-item label='Peer Public Key'>
+                <a-input v-model.trim="client.peer.publicKey"></a-input>
+            </a-form-item>
+            <a-form-item>
+                <template slot="label">
+                    <a-tooltip>
+                        <template slot="title">
+                            <span>{{ i18n "reset" }}</span>
+                        </template>
+                        Peer Preshared Key
+                        <a-icon @click="client.peer.psk = Wireguard.keyToBase64(Wireguard.generatePresharedKey())" type="sync"></a-icon>
+                    </a-tooltip>
+                </template>
+                <a-input v-model.trim="client.peer.psk"></a-input>
+            </a-form-item>
+            <a-form-item>
+                <template slot="label">
+                    Allowed IPs
+                    <a-button icon="plus" type="primary" size="small" @click="client.peer.allowedIPs.push('')"></a-button>
+                </template>
+                <template v-for="(allowedIp, allowedIpIndex) in client.peer.allowedIPs">
+                    <a-input v-model.trim="client.peer.allowedIPs[allowedIpIndex]">
+                        <a-button
+                            icon="minus"
+                            v-if="client.peer.allowedIPs.length > 1"
+                            slot="addonAfter"
+                            size="small"
+                            @click="client.peer.allowedIPs.splice(allowedIpIndex, 1)"></a-button>
+                    </a-input>
+                </template>
+            </a-form-item>
+            <a-form-item label='Keep Alive'>
+                <a-input-number v-model.number="client.peer.keepAlive" :min="0"></a-input-number>
+            </a-form-item>
+        </template>
+        <a-form-item v-else label='Existing Peer'>
+            <a-select
+                v-model="client.peerPublicKey"
+                :dropdown-class-name="themeSwitcher.currentTheme"
+                :loading="peerOptionsLoading">
+                <a-select-option v-for="peer in availablePeerOptions" :key="peer.publicKey" :value="peer.publicKey">
+                    [[ peer.allowedIPs.join(', ') ]] :: [[ peer.publicKey ]]
+                </a-select-option>
+            </a-select>
+        </a-form-item>
+    </template>
     <a-form-item v-if="inbound.protocol === Protocols.TROJAN || inbound.protocol === Protocols.SHADOWSOCKS">
         <template slot="label">
             <a-tooltip>

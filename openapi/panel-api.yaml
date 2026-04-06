@@ -1,0 +1,1901 @@
+openapi: 3.0.3
+info:
+  title: 3x-ui Panel API
+  version: "1.0.0"
+  description: |
+    OpenAPI specification for the bearer-authenticated panel API exposed under `/panel/api`.
+
+    Notes:
+    - All documented endpoints can be called with `Authorization: Bearer <token>`.
+    - The implementation also accepts `X-API-Key: <token>` as an alternative.
+    - If the panel is served behind a custom `webBasePath`, prepend that base path before `/panel/api`.
+    - Most mutation endpoints return HTTP 200 even when `success=false` inside the JSON envelope.
+
+servers:
+  - url: "{scheme}://{host}{basePath}"
+    description: Panel origin plus optional configured web base path.
+    variables:
+      scheme:
+        default: http
+        enum:
+          - http
+          - https
+      host:
+        default: localhost:2053
+      basePath:
+        default: ""
+        description: Custom panel base path without trailing slash, for example `/my-panel`.
+
+tags:
+  - name: Inbounds
+  - name: Server
+  - name: Tokens
+  - name: Backup
+
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []
+
+paths:
+  /panel/api/backuptotgbot:
+    get:
+      tags: [Backup]
+      summary: Send a backup to Telegram bot admins
+      operationId: backupToTelegramBot
+      responses:
+        "200":
+          description: Backup task triggered. The handler returns an empty body.
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/tokens/list:
+    get:
+      tags: [Tokens]
+      summary: List API tokens
+      operationId: listApiTokens
+      responses:
+        "200":
+          description: Token list wrapped in the standard response envelope.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/APIToken"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/tokens/create:
+    post:
+      tags: [Tokens]
+      summary: Create an API token
+      operationId: createApiToken
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiTokenCreateRequest"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/ApiTokenCreateRequest"
+      responses:
+        "200":
+          description: Token created. The plain token is only returned once.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/ApiTokenCreateResult"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/tokens/del/{id}:
+    post:
+      tags: [Tokens]
+      summary: Delete an API token
+      operationId: deleteApiToken
+      parameters:
+        - $ref: "#/components/parameters/TokenId"
+      responses:
+        "200":
+          description: Deletion result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: integer
+                        format: int64
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/list:
+    get:
+      tags: [Inbounds]
+      summary: List inbounds visible to the authenticated user
+      operationId: listInbounds
+      responses:
+        "200":
+          description: Inbound list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Inbound"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/get/{id}:
+    get:
+      tags: [Inbounds]
+      summary: Get one inbound by ID
+      operationId: getInbound
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+      responses:
+        "200":
+          description: Inbound record.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/Inbound"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/getClientTraffics/{email}:
+    get:
+      tags: [Inbounds]
+      summary: Get client traffic by email
+      operationId: getClientTrafficByEmail
+      parameters:
+        - $ref: "#/components/parameters/Email"
+      responses:
+        "200":
+          description: Client traffic record or null.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        nullable: true
+                        allOf:
+                          - $ref: "#/components/schemas/ClientTraffic"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/getClientTrafficsById/{id}:
+    get:
+      tags: [Inbounds]
+      summary: Get all client traffic rows for an inbound
+      operationId: getClientTrafficByInboundId
+      parameters:
+        - $ref: "#/components/parameters/InboundIdAsString"
+      responses:
+        "200":
+          description: Client traffic rows for the specified inbound.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ClientTraffic"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/{id}/vkTurnProxy/peerOptions:
+    get:
+      tags: [Inbounds]
+      summary: List WireGuard peers available for binding to a vk-turn-proxy inbound
+      operationId: getVkTurnProxyPeerOptions
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+      responses:
+        "200":
+          description: Peer options for the linked WireGuard inbound.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/VKTurnProxyPeerOptionsResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/{id}/vkTurnProxy/clients:
+    post:
+      tags: [Inbounds]
+      summary: Create one vk-turn-proxy client
+      operationId: createVkTurnProxyClient
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VKTurnProxyClient"
+      responses:
+        "200":
+          description: Client created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/{id}/vkTurnProxy/clients/{clientId}/stats:
+    get:
+      tags: [Inbounds]
+      summary: Get traffic stats for one vk-turn-proxy client
+      operationId: getVkTurnProxyClientStats
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+        - $ref: "#/components/parameters/ClientId"
+      responses:
+        "200":
+          description: Traffic stats for the selected client.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        nullable: true
+                        allOf:
+                          - $ref: "#/components/schemas/ClientTraffic"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/{id}/vkTurnProxy/clients/{clientId}/enable:
+    post:
+      tags: [Inbounds]
+      summary: Set vk-turn-proxy client enabled state
+      operationId: setVkTurnProxyClientEnable
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+        - $ref: "#/components/parameters/ClientId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VKTurnProxyClientEnableRequest"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/VKTurnProxyClientEnableRequest"
+      responses:
+        "200":
+          description: Updated enabled state.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/EnableStateResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/{id}/vkTurnProxy/exportClient/{clientId}:
+    get:
+      tags: [Inbounds]
+      summary: Export one vk-turn-proxy client as a wingsv link
+      operationId: exportVkTurnProxyClient
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+        - $ref: "#/components/parameters/ClientId"
+      responses:
+        "200":
+          description: "One `wingsv://` import link."
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: string
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/{id}/vkTurnProxy/exportAll:
+    get:
+      tags: [Inbounds]
+      summary: Export all vk-turn-proxy clients as wingsv links
+      operationId: exportAllVkTurnProxyClients
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+      responses:
+        "200":
+          description: Exported client links.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/VKTurnProxyExportedClient"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/add:
+    post:
+      tags: [Inbounds]
+      summary: Create an inbound
+      operationId: addInbound
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InboundWriteRequest"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/InboundWriteRequest"
+      responses:
+        "200":
+          description: Creation result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/Inbound"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/del/{id}:
+    post:
+      tags: [Inbounds]
+      summary: Delete an inbound
+      operationId: deleteInbound
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+      responses:
+        "200":
+          description: Deletion result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: integer
+                        format: int64
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/update/{id}:
+    post:
+      tags: [Inbounds]
+      summary: Update an inbound
+      operationId: updateInbound
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InboundWriteRequest"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/InboundWriteRequest"
+      responses:
+        "200":
+          description: Update result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/Inbound"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/clientIps/{email}:
+    post:
+      tags: [Inbounds]
+      summary: Get stored client IP addresses
+      operationId: getClientIps
+      parameters:
+        - $ref: "#/components/parameters/Email"
+      responses:
+        "200":
+          description: IP record list or string.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        oneOf:
+                          - type: string
+                          - type: array
+                            items:
+                              type: string
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/clearClientIps/{email}:
+    post:
+      tags: [Inbounds]
+      summary: Clear stored client IP addresses
+      operationId: clearClientIps
+      parameters:
+        - $ref: "#/components/parameters/Email"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/addClient:
+    post:
+      tags: [Inbounds]
+      summary: Add client records to an inbound
+      operationId: addInboundClient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientMutationRequest"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/ClientMutationRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/addPeer:
+    post:
+      tags: [Inbounds]
+      summary: Add WireGuard peers to an inbound
+      operationId: addInboundPeer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PeerMutationRequest"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/PeerMutationRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/{id}/delClient/{clientId}:
+    post:
+      tags: [Inbounds]
+      summary: Delete a client by client identifier
+      description: |
+        `clientId` is protocol-specific:
+        - VMess/VLESS: client UUID
+        - Trojan: password
+        - Shadowsocks: email
+        URL-encode the path value if it contains special characters.
+      operationId: deleteInboundClient
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+        - $ref: "#/components/parameters/ClientId"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/{id}/delPeer/{peerId}:
+    post:
+      tags: [Inbounds]
+      summary: Delete a WireGuard peer by index
+      operationId: deleteInboundPeer
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+        - $ref: "#/components/parameters/PeerIndex"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/updateClient/{clientId}:
+    post:
+      tags: [Inbounds]
+      summary: Update one client
+      operationId: updateInboundClient
+      parameters:
+        - $ref: "#/components/parameters/ClientId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientMutationRequest"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/ClientMutationRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/updatePeer/{peerId}:
+    post:
+      tags: [Inbounds]
+      summary: Update one WireGuard peer
+      operationId: updateInboundPeer
+      parameters:
+        - $ref: "#/components/parameters/PeerIndex"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PeerMutationRequest"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/PeerMutationRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/{id}/resetClientTraffic/{email}:
+    post:
+      tags: [Inbounds]
+      summary: Reset one client's traffic counters
+      operationId: resetClientTraffic
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+        - $ref: "#/components/parameters/Email"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/resetAllTraffics:
+    post:
+      tags: [Inbounds]
+      summary: Reset all traffic counters
+      operationId: resetAllTraffics
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/resetAllClientTraffics/{id}:
+    post:
+      tags: [Inbounds]
+      summary: Reset all client traffic counters in one inbound
+      operationId: resetAllClientTraffics
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/delDepletedClients/{id}:
+    post:
+      tags: [Inbounds]
+      summary: Delete depleted clients from an inbound
+      operationId: deleteDepletedClients
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/import:
+    post:
+      tags: [Inbounds]
+      summary: Import an inbound from serialized JSON
+      operationId: importInbound
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/InboundImportRequest"
+      responses:
+        "200":
+          description: Import result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/Inbound"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/onlines:
+    post:
+      tags: [Inbounds]
+      summary: List currently online client emails
+      operationId: getOnlineClients
+      responses:
+        "200":
+          description: Online client email list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: array
+                        items:
+                          type: string
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/lastOnline:
+    post:
+      tags: [Inbounds]
+      summary: Get last-online timestamps for clients
+      operationId: getClientsLastOnline
+      responses:
+        "200":
+          description: Email-to-last-online map.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                          format: int64
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/updateClientTraffic/{email}:
+    post:
+      tags: [Inbounds]
+      summary: Manually update a client's traffic counters
+      operationId: updateClientTraffic
+      parameters:
+        - $ref: "#/components/parameters/Email"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClientTrafficRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/inbounds/{id}/delClientByEmail/{email}:
+    post:
+      tags: [Inbounds]
+      summary: Delete a client by email
+      operationId: deleteInboundClientByEmail
+      parameters:
+        - $ref: "#/components/parameters/InboundId"
+        - $ref: "#/components/parameters/Email"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/status:
+    get:
+      tags: [Server]
+      summary: Get server status
+      operationId: getServerStatus
+      responses:
+        "200":
+          description: Current server status snapshot.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/Status"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/cpuHistory/{bucket}:
+    get:
+      tags: [Server]
+      summary: Get aggregated CPU history
+      operationId: getCpuHistory
+      parameters:
+        - name: bucket
+          in: path
+          required: true
+          schema:
+            type: integer
+            enum: [2, 30, 60, 120, 180, 300]
+          description: Aggregation bucket size in seconds.
+      responses:
+        "200":
+          description: CPU history points.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/CPUHistoryPoint"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/getXrayVersion:
+    get:
+      tags: [Server]
+      summary: List available Xray versions
+      operationId: getXrayVersions
+      responses:
+        "200":
+          description: Version list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: array
+                        items:
+                          type: string
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/getConfigJson:
+    get:
+      tags: [Server]
+      summary: Get effective Xray configuration JSON
+      operationId: getConfigJson
+      responses:
+        "200":
+          description: Free-form JSON configuration object.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/GenericObject"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/getDb:
+    get:
+      tags: [Server]
+      summary: Download the SQLite database
+      operationId: downloadDatabase
+      responses:
+        "200":
+          description: SQLite database file.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/getNewUUID:
+    get:
+      tags: [Server]
+      summary: Generate a new UUID
+      operationId: getNewUuid
+      responses:
+        "200":
+          description: Generated UUID.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/UuidResult"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/getNewX25519Cert:
+    get:
+      tags: [Server]
+      summary: Generate a new X25519 keypair
+      operationId: getNewX25519Cert
+      responses:
+        "200":
+          description: Generated keypair.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/X25519KeyPair"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/getNewmldsa65:
+    get:
+      tags: [Server]
+      summary: Generate a new ML-DSA-65 keypair
+      operationId: getNewMldsa65
+      responses:
+        "200":
+          description: Generated keypair.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/Mldsa65KeyPair"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/getNewmlkem768:
+    get:
+      tags: [Server]
+      summary: Generate a new ML-KEM-768 keypair
+      operationId: getNewMlkem768
+      responses:
+        "200":
+          description: Generated keypair.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/Mlkem768KeyPair"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/getNewVlessEnc:
+    get:
+      tags: [Server]
+      summary: Generate VLESS encryption presets
+      operationId: getNewVlessEnc
+      responses:
+        "200":
+          description: Generated VLESS encryption presets.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/VlessEncResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/stopXrayService:
+    post:
+      tags: [Server]
+      summary: Stop Xray
+      operationId: stopXrayService
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/restartXrayService:
+    post:
+      tags: [Server]
+      summary: Restart Xray
+      operationId: restartXrayService
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/startVKTurnProxyService:
+    post:
+      tags: [Server]
+      summary: Start all enabled vk-turn-proxy processes
+      operationId: startVkTurnProxyService
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/stopVKTurnProxyService:
+    post:
+      tags: [Server]
+      summary: Stop all vk-turn-proxy processes and pause auto-restart
+      operationId: stopVkTurnProxyService
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/restartVKTurnProxyService:
+    post:
+      tags: [Server]
+      summary: Restart all enabled vk-turn-proxy processes
+      operationId: restartVkTurnProxyService
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/installXray/{version}:
+    post:
+      tags: [Server]
+      summary: Install or switch to a specific Xray version
+      operationId: installXray
+      parameters:
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/updateGeofile:
+    post:
+      tags: [Server]
+      summary: Update all supported geofiles
+      operationId: updateGeofile
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/updateGeofile/{fileName}:
+    post:
+      tags: [Server]
+      summary: Update one specific geofile
+      operationId: updateSingleGeofile
+      parameters:
+        - name: fileName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Filename validated by the server against a safe character whitelist.
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/logs/{count}:
+    post:
+      tags: [Server]
+      summary: Get panel logs
+      operationId: getLogs
+      parameters:
+        - name: count
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/LogsRequest"
+      responses:
+        "200":
+          description: Log lines.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: array
+                        items:
+                          type: string
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/xraylogs/{count}:
+    post:
+      tags: [Server]
+      summary: Get parsed Xray access logs
+      operationId: getXrayLogs
+      parameters:
+        - name: count
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/XrayLogsRequest"
+      responses:
+        "200":
+          description: Parsed Xray log entries.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/LogEntry"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/vkturnproxylogs/{count}:
+    post:
+      tags: [Server]
+      summary: Get vk-turn-proxy process logs from the panel log buffer
+      operationId: getVkTurnProxyLogs
+      parameters:
+        - name: count
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                level:
+                  type: string
+                  enum: [debug, info, notice, warning, err]
+      responses:
+        "200":
+          description: Filtered vk-turn-proxy log lines.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: array
+                        items:
+                          type: string
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/importDB:
+    post:
+      tags: [Server]
+      summary: Import a database backup
+      operationId: importDatabase
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [db]
+              properties:
+                db:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: "Import result. `obj` contains a localized success string."
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: string
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/getNewEchCert:
+    post:
+      tags: [Server]
+      summary: Generate an ECH certificate set
+      operationId: getNewEchCert
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/EchCertRequest"
+      responses:
+        "200":
+          description: Generated ECH values.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/EchCertResult"
+        "404":
+          description: Missing or invalid bearer token.
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API token
+      description: "Pass the panel API token as `Authorization: Bearer <token>`."
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Alternative header accepted by the implementation.
+
+  parameters:
+    InboundId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    InboundIdAsString:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Inbound ID as used by the handler path parameter.
+    Email:
+      name: email
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Client email. URL-encode the value when needed.
+    ClientId:
+      name: clientId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Protocol-specific client identifier. URL-encode when needed.
+    PeerIndex:
+      name: peerId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Zero-based WireGuard peer index.
+    TokenId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+
+  responses:
+    ApiEnvelopeResponse:
+      description: Standard JSON envelope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiEnvelope"
+
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+        msg:
+          type: string
+        obj:
+          nullable: true
+
+    GenericObject:
+      type: object
+      additionalProperties: true
+
+    Inbound:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        up:
+          type: integer
+          format: int64
+        down:
+          type: integer
+          format: int64
+        total:
+          type: integer
+          format: int64
+        allTime:
+          type: integer
+          format: int64
+        remark:
+          type: string
+        enable:
+          type: boolean
+        expiryTime:
+          type: integer
+          format: int64
+        trafficReset:
+          type: string
+        lastTrafficResetTime:
+          type: integer
+          format: int64
+        clientStats:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientTraffic"
+        listen:
+          type: string
+        port:
+          type: integer
+        protocol:
+          type: string
+          enum:
+            - vmess
+            - vless
+            - tunnel
+            - http
+            - trojan
+            - shadowsocks
+            - mixed
+            - wireguard
+            - vk-turn-proxy
+        settings:
+          type: string
+          description: JSON string with protocol-specific inbound settings.
+        streamSettings:
+          type: string
+          description: JSON string with stream settings.
+        tag:
+          type: string
+        sniffing:
+          type: string
+          description: JSON string with sniffing settings.
+
+    InboundWriteRequest:
+      type: object
+      required:
+        - up
+        - down
+        - total
+        - remark
+        - enable
+        - expiryTime
+        - listen
+        - port
+        - protocol
+        - settings
+        - sniffing
+      properties:
+        up:
+          type: integer
+          format: int64
+        down:
+          type: integer
+          format: int64
+        total:
+          type: integer
+          format: int64
+        remark:
+          type: string
+        enable:
+          type: boolean
+        expiryTime:
+          type: integer
+          format: int64
+        trafficReset:
+          type: string
+        lastTrafficResetTime:
+          type: integer
+          format: int64
+        listen:
+          type: string
+        port:
+          type: integer
+        protocol:
+          type: string
+        settings:
+          type: string
+          description: "JSON string for the inbound `settings` field."
+        streamSettings:
+          type: string
+          description: "Optional JSON string for `streamSettings`."
+        sniffing:
+          type: string
+          description: JSON string for sniffing settings.
+
+    InboundImportRequest:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: string
+          description: Serialized inbound JSON string to import.
+
+    ClientMutationRequest:
+      type: object
+      required: [id, settings]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Target inbound ID.
+        settings:
+          type: string
+          description: "JSON string containing a `clients` array."
+
+    PeerMutationRequest:
+      type: object
+      required: [id, settings]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Target inbound ID.
+        settings:
+          type: string
+          description: "JSON string containing a `peers` array."
+
+    UpdateClientTrafficRequest:
+      type: object
+      required: [upload, download]
+      properties:
+        upload:
+          type: integer
+          format: int64
+        download:
+          type: integer
+          format: int64
+
+    LogsRequest:
+      type: object
+      properties:
+        level:
+          type: string
+        syslog:
+          type: string
+          description: Use `"true"` to read journalctl output instead of application logs.
+
+    XrayLogsRequest:
+      type: object
+      properties:
+        filter:
+          type: string
+        showDirect:
+          type: string
+          description: String boolean as used by the handler, for example `"true"` or `"false"`.
+        showBlocked:
+          type: string
+        showProxy:
+          type: string
+
+    EchCertRequest:
+      type: object
+      required: [sni]
+      properties:
+        sni:
+          type: string
+
+    ClientTraffic:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        inboundId:
+          type: integer
+          format: int64
+        enable:
+          type: boolean
+        email:
+          type: string
+        uuid:
+          type: string
+        subId:
+          type: string
+        up:
+          type: integer
+          format: int64
+        down:
+          type: integer
+          format: int64
+        allTime:
+          type: integer
+          format: int64
+        expiryTime:
+          type: integer
+          format: int64
+        total:
+          type: integer
+          format: int64
+        reset:
+          type: integer
+        lastOnline:
+          type: integer
+          format: int64
+
+    APIToken:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        preview:
+          type: string
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApiTokenCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+
+    ApiTokenCreateResult:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Plain API token returned only at creation time.
+        info:
+          $ref: "#/components/schemas/APIToken"
+
+    VKTurnProxyPeerBinding:
+      type: object
+      properties:
+        inboundId:
+          type: integer
+          format: int64
+        inboundRemark:
+          type: string
+        clientId:
+          type: string
+        clientEmail:
+          type: string
+
+    VKTurnProxyPeerOption:
+      type: object
+      properties:
+        publicKey:
+          type: string
+        allowedIPs:
+          type: array
+          items:
+            type: string
+        bound:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/VKTurnProxyPeerBinding"
+
+    VKTurnProxyPeerOptionsResponse:
+      type: object
+      properties:
+        wireguardInboundId:
+          type: integer
+          format: int64
+        wireguardRemark:
+          type: string
+        peers:
+          type: array
+          items:
+            $ref: "#/components/schemas/VKTurnProxyPeerOption"
+
+    VKTurnProxyClientPeer:
+      type: object
+      properties:
+        privateKey:
+          type: string
+        publicKey:
+          type: string
+        preSharedKey:
+          type: string
+        allowedIPs:
+          type: array
+          items:
+            type: string
+        keepAlive:
+          type: integer
+
+    VKTurnProxyClient:
+      type: object
+      required:
+        - email
+        - link
+      properties:
+        id:
+          type: string
+          description: Optional on create. When omitted, the panel generates a UUID.
+        email:
+          type: string
+        enable:
+          type: boolean
+        comment:
+          type: string
+        limitIp:
+          type: integer
+        totalGB:
+          type: integer
+          format: int64
+        expiryTime:
+          type: integer
+          format: int64
+        tgId:
+          type: integer
+          format: int64
+        subId:
+          type: string
+        reset:
+          type: integer
+        created_at:
+          type: integer
+          format: int64
+        updated_at:
+          type: integer
+          format: int64
+        link:
+          type: string
+          description: TURN link consumed by the client app.
+        peerPublicKey:
+          type: string
+          description: Existing WireGuard peer public key to bind when `peerManaged=false`.
+        peerManaged:
+          type: boolean
+          description: When true, the panel manages the WireGuard peer from the `peer` object.
+        peer:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/VKTurnProxyClientPeer"
+
+    VKTurnProxyExportedClient:
+      type: object
+      properties:
+        clientId:
+          type: string
+        email:
+          type: string
+        link:
+          type: string
+          description: "`wingsv://` import link for the client."
+
+    VKTurnProxyClientEnableRequest:
+      type: object
+      required: [enable]
+      properties:
+        enable:
+          type: boolean
+
+    EnableStateResponse:
+      type: object
+      properties:
+        enable:
+          type: boolean
+
+    ProcessStatusSummary:
+      type: object
+      properties:
+        available:
+          type: boolean
+        total:
+          type: integer
+        enabled:
+          type: integer
+        running:
+          type: integer
+        state:
+          type: string
+          enum: [running, stop, error]
+        errorMsg:
+          type: string
+        uptime:
+          type: integer
+          format: int64
+
+    Status:
+      type: object
+      properties:
+        cpu:
+          type: number
+          format: double
+        cpuCores:
+          type: integer
+        logicalPro:
+          type: integer
+        cpuSpeedMhz:
+          type: number
+          format: double
+        mem:
+          $ref: "#/components/schemas/CurrentTotalStats"
+        swap:
+          $ref: "#/components/schemas/CurrentTotalStats"
+        disk:
+          $ref: "#/components/schemas/CurrentTotalStats"
+        xray:
+          type: object
+          properties:
+            state:
+              type: string
+              enum: [running, stop, error]
+            errorMsg:
+              type: string
+            version:
+              type: string
+        vkTurnProxy:
+          $ref: "#/components/schemas/ProcessStatusSummary"
+        uptime:
+          type: integer
+          format: int64
+        loads:
+          type: array
+          items:
+            type: number
+            format: double
+        tcpCount:
+          type: integer
+        udpCount:
+          type: integer
+        netIO:
+          type: object
+          properties:
+            up:
+              type: integer
+              format: int64
+            down:
+              type: integer
+              format: int64
+        netTraffic:
+          type: object
+          properties:
+            sent:
+              type: integer
+              format: int64
+            recv:
+              type: integer
+              format: int64
+        publicIP:
+          type: object
+          properties:
+            ipv4:
+              type: string
+            ipv6:
+              type: string
+        appStats:
+          type: object
+          properties:
+            threads:
+              type: integer
+            mem:
+              type: integer
+              format: int64
+            uptime:
+              type: integer
+              format: int64
+
+    CurrentTotalStats:
+      type: object
+      properties:
+        current:
+          type: integer
+          format: int64
+        total:
+          type: integer
+          format: int64
+
+    CPUHistoryPoint:
+      type: object
+      properties:
+        t:
+          type: integer
+          format: int64
+        cpu:
+          type: number
+          format: double
+
+    LogEntry:
+      type: object
+      properties:
+        DateTime:
+          type: string
+          format: date-time
+        FromAddress:
+          type: string
+        ToAddress:
+          type: string
+        Inbound:
+          type: string
+        Outbound:
+          type: string
+        Email:
+          type: string
+        Event:
+          type: integer
+          description: 0=direct, 1=blocked, 2=proxied
+
+    UuidResult:
+      type: object
+      properties:
+        uuid:
+          type: string
+
+    X25519KeyPair:
+      type: object
+      properties:
+        privateKey:
+          type: string
+        publicKey:
+          type: string
+
+    Mldsa65KeyPair:
+      type: object
+      properties:
+        seed:
+          type: string
+        verify:
+          type: string
+
+    Mlkem768KeyPair:
+      type: object
+      properties:
+        seed:
+          type: string
+        client:
+          type: string
+
+    EchCertResult:
+      type: object
+      properties:
+        echServerKeys:
+          type: string
+        echConfigList:
+          type: string
+
+    VlessEncResponse:
+      type: object
+      properties:
+        auths:
+          type: array
+          items:
+            $ref: "#/components/schemas/VlessEncAuth"
+
+    VlessEncAuth:
+      type: object
+      properties:
+        label:
+          type: string
+        decryption:
+          type: string
+        encryption:
+          type: string

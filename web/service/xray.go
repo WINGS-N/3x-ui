@@ -113,6 +113,9 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		if !inbound.Enable {
 			continue
 		}
+		if !isXrayManagedProtocol(inbound.Protocol) {
+			continue
+		}
 		// get settings clients
 		settings := map[string]any{}
 		json.Unmarshal([]byte(inbound.Settings), &settings)
@@ -195,22 +198,22 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 }
 
 // GetXrayTraffic fetches the current traffic statistics from the running Xray process.
-func (s *XrayService) GetXrayTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, error) {
+func (s *XrayService) GetXrayTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, []*xray.WireGuardPeerTraffic, error) {
 	if !s.IsXrayRunning() {
 		err := errors.New("xray is not running")
 		logger.Debug("Attempted to fetch Xray traffic, but Xray is not running:", err)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	apiPort := p.GetAPIPort()
 	s.xrayAPI.Init(apiPort)
 	defer s.xrayAPI.Close()
 
-	traffic, clientTraffic, err := s.xrayAPI.GetTraffic(true)
+	traffic, clientTraffic, wireGuardPeerTraffic, err := s.xrayAPI.GetTraffic(true)
 	if err != nil {
 		logger.Debug("Failed to fetch Xray traffic:", err)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return traffic, clientTraffic, nil
+	return traffic, clientTraffic, wireGuardPeerTraffic, nil
 }
 
 // RestartXray restarts the Xray process, optionally forcing a restart even if config unchanged.

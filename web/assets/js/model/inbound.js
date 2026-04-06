@@ -7,6 +7,7 @@ const Protocols = {
     MIXED: 'mixed',
     HTTP: 'http',
     WIREGUARD: 'wireguard',
+    VK_TURN_PROXY: 'vk-turn-proxy',
     TUN: 'tun',
 };
 
@@ -132,6 +133,13 @@ Object.freeze(USERS_SECURITY);
 Object.freeze(MODE_OPTION);
 
 class XrayCommonClass {
+    static normalizeTgId(tgId) {
+        if (tgId === '' || tgId === null || tgId === undefined) {
+            return 0;
+        }
+        const parsed = Number(tgId);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
 
     static toJsonArray(arr) {
         return arr.map(obj => obj.toJson());
@@ -1201,6 +1209,7 @@ class Inbound extends XrayCommonClass {
             case Protocols.VLESS: return this.settings.vlesses;
             case Protocols.TROJAN: return this.settings.trojans;
             case Protocols.SHADOWSOCKS: return this.isSSMultiUser ? this.settings.shadowsockses : null;
+            case Protocols.VK_TURN_PROXY: return this.settings.clients;
             default: return null;
         }
     }
@@ -1826,6 +1835,7 @@ Inbound.Settings = class extends XrayCommonClass {
             case Protocols.MIXED: return new Inbound.MixedSettings(protocol);
             case Protocols.HTTP: return new Inbound.HttpSettings(protocol);
             case Protocols.WIREGUARD: return new Inbound.WireguardSettings(protocol);
+            case Protocols.VK_TURN_PROXY: return new Inbound.VKTurnProxySettings(protocol);
             case Protocols.TUN: return new Inbound.TunSettings(protocol);
             default: return null;
         }
@@ -1841,6 +1851,7 @@ Inbound.Settings = class extends XrayCommonClass {
             case Protocols.MIXED: return Inbound.MixedSettings.fromJson(json);
             case Protocols.HTTP: return Inbound.HttpSettings.fromJson(json);
             case Protocols.WIREGUARD: return Inbound.WireguardSettings.fromJson(json);
+            case Protocols.VK_TURN_PROXY: return Inbound.VKTurnProxySettings.fromJson(json);
             case Protocols.TUN: return Inbound.TunSettings.fromJson(json);
             default: return null;
         }
@@ -1899,7 +1910,7 @@ Inbound.VmessSettings.VMESS = class extends XrayCommonClass {
         totalGB = 0,
         expiryTime = 0,
         enable = true,
-        tgId = '',
+        tgId = 0,
         subId = RandomUtil.randomLowerAndNum(16),
         comment = '',
         reset = 0,
@@ -1914,7 +1925,7 @@ Inbound.VmessSettings.VMESS = class extends XrayCommonClass {
         this.totalGB = totalGB;
         this.expiryTime = expiryTime;
         this.enable = enable;
-        this.tgId = tgId;
+        this.tgId = XrayCommonClass.normalizeTgId(tgId);
         this.subId = subId;
         this.comment = comment;
         this.reset = reset;
@@ -1939,6 +1950,25 @@ Inbound.VmessSettings.VMESS = class extends XrayCommonClass {
             json.updated_at,
         );
     }
+
+    toJson() {
+        return {
+            id: this.id,
+            security: this.security,
+            email: this.email,
+            limitIp: this.limitIp,
+            totalGB: this.totalGB,
+            expiryTime: this.expiryTime,
+            enable: this.enable,
+            tgId: XrayCommonClass.normalizeTgId(this.tgId),
+            subId: this.subId,
+            comment: this.comment,
+            reset: this.reset,
+            created_at: this.created_at,
+            updated_at: this.updated_at,
+        };
+    }
+
     get _expiryTime() {
         if (this.expiryTime === 0 || this.expiryTime === "") {
             return null;
@@ -2054,7 +2084,7 @@ Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
         totalGB = 0,
         expiryTime = 0,
         enable = true,
-        tgId = '',
+        tgId = 0,
         subId = RandomUtil.randomLowerAndNum(16),
         comment = '',
         reset = 0,
@@ -2069,7 +2099,7 @@ Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
         this.totalGB = totalGB;
         this.expiryTime = expiryTime;
         this.enable = enable;
-        this.tgId = tgId;
+        this.tgId = XrayCommonClass.normalizeTgId(tgId);
         this.subId = subId;
         this.comment = comment;
         this.reset = reset;
@@ -2093,6 +2123,24 @@ Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
             json.created_at,
             json.updated_at,
         );
+    }
+
+    toJson() {
+        return {
+            id: this.id,
+            flow: this.flow,
+            email: this.email,
+            limitIp: this.limitIp,
+            totalGB: this.totalGB,
+            expiryTime: this.expiryTime,
+            enable: this.enable,
+            tgId: XrayCommonClass.normalizeTgId(this.tgId),
+            subId: this.subId,
+            comment: this.comment,
+            reset: this.reset,
+            created_at: this.created_at,
+            updated_at: this.updated_at,
+        };
     }
 
     get _expiryTime() {
@@ -2199,7 +2247,7 @@ Inbound.TrojanSettings.Trojan = class extends XrayCommonClass {
         totalGB = 0,
         expiryTime = 0,
         enable = true,
-        tgId = '',
+        tgId = 0,
         subId = RandomUtil.randomLowerAndNum(16),
         comment = '',
         reset = 0,
@@ -2213,7 +2261,7 @@ Inbound.TrojanSettings.Trojan = class extends XrayCommonClass {
         this.totalGB = totalGB;
         this.expiryTime = expiryTime;
         this.enable = enable;
-        this.tgId = tgId;
+        this.tgId = XrayCommonClass.normalizeTgId(tgId);
         this.subId = subId;
         this.comment = comment;
         this.reset = reset;
@@ -2229,7 +2277,7 @@ Inbound.TrojanSettings.Trojan = class extends XrayCommonClass {
             totalGB: this.totalGB,
             expiryTime: this.expiryTime,
             enable: this.enable,
-            tgId: this.tgId,
+            tgId: XrayCommonClass.normalizeTgId(this.tgId),
             subId: this.subId,
             comment: this.comment,
             reset: this.reset,
@@ -2368,7 +2416,7 @@ Inbound.ShadowsocksSettings.Shadowsocks = class extends XrayCommonClass {
         totalGB = 0,
         expiryTime = 0,
         enable = true,
-        tgId = '',
+        tgId = 0,
         subId = RandomUtil.randomLowerAndNum(16),
         comment = '',
         reset = 0,
@@ -2383,7 +2431,7 @@ Inbound.ShadowsocksSettings.Shadowsocks = class extends XrayCommonClass {
         this.totalGB = totalGB;
         this.expiryTime = expiryTime;
         this.enable = enable;
-        this.tgId = tgId;
+        this.tgId = XrayCommonClass.normalizeTgId(tgId);
         this.subId = subId;
         this.comment = comment;
         this.reset = reset;
@@ -2400,7 +2448,7 @@ Inbound.ShadowsocksSettings.Shadowsocks = class extends XrayCommonClass {
             totalGB: this.totalGB,
             expiryTime: this.expiryTime,
             enable: this.enable,
-            tgId: this.tgId,
+            tgId: XrayCommonClass.normalizeTgId(this.tgId),
             subId: this.subId,
             comment: this.comment,
             reset: this.reset,
@@ -2675,6 +2723,208 @@ Inbound.WireguardSettings.Peer = class extends XrayCommonClass {
             allowedIPs: this.allowedIPs,
             keepAlive: this.keepAlive ?? undefined,
         };
+    }
+};
+
+Inbound.VKTurnProxySettings = class extends Inbound.Settings {
+    constructor(
+        protocol,
+        forward = new Inbound.VKTurnProxySettings.Forward(),
+        sessionMode = 'auto',
+        localEndpoint = '127.0.0.1:9000',
+        wgDns = '1.1.1.1, 1.0.0.1',
+        wgMtu = 1280,
+        wgAllowedIps = '0.0.0.0/0, ::/0',
+        clients = []
+    ) {
+        super(protocol);
+        this.forward = forward;
+        this.sessionMode = sessionMode;
+        this.localEndpoint = localEndpoint;
+        this.wgDns = wgDns;
+        this.wgMtu = wgMtu;
+        this.wgAllowedIps = wgAllowedIps;
+        this.clients = clients;
+    }
+
+    static fromJson(json = {}) {
+        return new Inbound.VKTurnProxySettings(
+            Protocols.VK_TURN_PROXY,
+            Inbound.VKTurnProxySettings.Forward.fromJson(json.forward),
+            json.sessionMode ?? 'auto',
+            json.localEndpoint ?? '127.0.0.1:9000',
+            json.wgDns ?? '1.1.1.1, 1.0.0.1',
+            json.wgMtu ?? 1280,
+            json.wgAllowedIps ?? '0.0.0.0/0, ::/0',
+            (json.clients || []).map(client => Inbound.VKTurnProxySettings.Client.fromJson(client)),
+        );
+    }
+
+    toJson() {
+        return {
+            forward: this.forward.toJson(),
+            sessionMode: this.sessionMode || 'auto',
+            localEndpoint: this.localEndpoint || '127.0.0.1:9000',
+            wgDns: this.wgDns || '1.1.1.1, 1.0.0.1',
+            wgMtu: this.wgMtu || 1280,
+            wgAllowedIps: this.wgAllowedIps || '0.0.0.0/0, ::/0',
+            clients: Inbound.VKTurnProxySettings.Client.toJsonArray(this.clients),
+        };
+    }
+};
+
+Inbound.VKTurnProxySettings.Forward = class extends XrayCommonClass {
+    constructor(type = 'wireguardInbound', wireguardInboundId = 0, host = '', port = 0) {
+        super();
+        this.type = type;
+        this.wireguardInboundId = wireguardInboundId;
+        this.host = host;
+        this.port = port;
+    }
+
+    static fromJson(json = {}) {
+        return new Inbound.VKTurnProxySettings.Forward(
+            json.type ?? 'wireguardInbound',
+            json.wireguardInboundId ?? 0,
+            json.host ?? '',
+            json.port ?? 0,
+        );
+    }
+
+    toJson() {
+        return {
+            type: this.type,
+            wireguardInboundId: this.wireguardInboundId || undefined,
+            host: this.host || undefined,
+            port: this.port || undefined,
+        };
+    }
+};
+
+Inbound.VKTurnProxySettings.Client = class extends XrayCommonClass {
+    static normalizeTgId(tgId) {
+        return XrayCommonClass.normalizeTgId(tgId);
+    }
+
+    constructor(
+        id = RandomUtil.randomUUID(),
+        email = RandomUtil.randomLowerAndNum(8),
+        enable = true,
+        comment = '',
+        limitIp = 0,
+        totalGB = 0,
+        expiryTime = 0,
+        tgId = 0,
+        subId = RandomUtil.randomLowerAndNum(16),
+        reset = 0,
+        link = '',
+        peerPublicKey = '',
+        peerManaged = true,
+        peer = new Inbound.VKTurnProxySettings.Peer(),
+        created_at = undefined,
+        updated_at = undefined
+    ) {
+        super();
+        this.id = id;
+        this.email = email;
+        this.enable = enable;
+        this.comment = comment;
+        this.limitIp = limitIp;
+        this.totalGB = totalGB;
+        this.expiryTime = expiryTime;
+        this.tgId = Inbound.VKTurnProxySettings.Client.normalizeTgId(tgId);
+        this.subId = subId;
+        this.reset = reset;
+        this.link = link;
+        this.peerPublicKey = peerPublicKey || peer.publicKey;
+        this.peerManaged = peerManaged;
+        this.peer = peer;
+        this.created_at = created_at;
+        this.updated_at = updated_at;
+    }
+
+    static fromJson(json = {}) {
+        return new Inbound.VKTurnProxySettings.Client(
+            json.id,
+            json.email,
+            json.enable,
+            json.comment,
+            json.limitIp,
+            json.totalGB,
+            json.expiryTime,
+            Inbound.VKTurnProxySettings.Client.normalizeTgId(json.tgId),
+            json.subId,
+            json.reset,
+            json.link,
+            json.peerPublicKey,
+            json.peerManaged ?? false,
+            Inbound.VKTurnProxySettings.Peer.fromJson(json.peer || {}),
+            json.created_at,
+            json.updated_at,
+        );
+    }
+
+    toJson() {
+        return {
+            id: this.id,
+            email: this.email,
+            enable: this.enable,
+            comment: this.comment,
+            limitIp: this.limitIp,
+            totalGB: this.totalGB,
+            expiryTime: this.expiryTime,
+            tgId: Inbound.VKTurnProxySettings.Client.normalizeTgId(this.tgId),
+            subId: this.subId,
+            reset: this.reset,
+            link: this.link,
+            peerPublicKey: this.peerPublicKey || this.peer.publicKey,
+            peerManaged: this.peerManaged,
+            peer: this.peer ? this.peer.toJson() : undefined,
+            created_at: this.created_at,
+            updated_at: this.updated_at,
+        };
+    }
+
+    get _expiryTime() {
+        if (this.expiryTime === 0 || this.expiryTime === "") {
+            return null;
+        }
+        if (this.expiryTime < 0) {
+            return this.expiryTime / -86400000;
+        }
+        return moment(this.expiryTime);
+    }
+
+    set _expiryTime(t) {
+        if (t == null || t === "") {
+            this.expiryTime = 0;
+        } else {
+            this.expiryTime = t.valueOf();
+        }
+    }
+
+    get _totalGB() {
+        return NumberFormatter.toFixed(this.totalGB / SizeFormatter.ONE_GB, 2);
+    }
+
+    set _totalGB(gb) {
+        this.totalGB = NumberFormatter.toFixed(gb * SizeFormatter.ONE_GB, 0);
+    }
+};
+
+Inbound.VKTurnProxySettings.Peer = class extends Inbound.WireguardSettings.Peer {
+    constructor(privateKey = null, publicKey = null, psk = '', allowedIPs = ['10.0.0.2/32'], keepAlive = 0) {
+        super(privateKey, publicKey, psk, allowedIPs, keepAlive);
+    }
+
+    static fromJson(json = {}) {
+        return new Inbound.VKTurnProxySettings.Peer(
+            json.privateKey,
+            json.publicKey,
+            json.preSharedKey,
+            json.allowedIPs,
+            json.keepAlive,
+        );
     }
 };
 

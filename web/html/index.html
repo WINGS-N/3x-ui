@@ -137,6 +137,62 @@
                   </template>
                 </a-card>
               </a-col>
+              <a-col v-if="status.vkTurnProxy.available" :sm="24" :lg="12">
+                <a-card hoverable>
+                  <template #title>
+                    <a-space direction="horizontal">
+                      <span>vk-turn-proxy</span>
+                      <a-tag color="blue">
+                        [[ status.vkTurnProxy.running ]]/[[ status.vkTurnProxy.enabled ]]
+                      </a-tag>
+                    </a-space>
+                  </template>
+                  <template #extra>
+                    <template v-if="status.vkTurnProxy.state != 'error'">
+                      <a-badge status="processing"
+                        :class="({ green: 'xray-running-animation', orange: 'xray-stop-animation' }[status.vkTurnProxy.color]) || 'xray-processing-animation'"
+                        :text="status.vkTurnProxy.stateMsg" :color="status.vkTurnProxy.color" />
+                    </template>
+                    <template v-else>
+                      <a-popover :overlay-class-name="themeSwitcher.currentTheme">
+                        <span slot="title">
+                          <a-row type="flex" align="middle" justify="space-between">
+                            <a-col>
+                              <span>vk-turn-proxy error</span>
+                            </a-col>
+                            <a-col>
+                              <a-icon type="bars" class="cursor-pointer float-right" @click="openVKTurnProxyLogs()"></a-icon>
+                            </a-col>
+                          </a-row>
+                        </span>
+                        <template slot="content">
+                          <span class="max-w-400" v-for="line in status.vkTurnProxy.errorMsg.split('\n')">[[ line ]]</span>
+                        </template>
+                        <a-badge :text="status.vkTurnProxy.stateMsg" :color="status.vkTurnProxy.color"
+                          :class="status.vkTurnProxy.color === 'red' ? 'xray-error-animation' : ''" />
+                      </a-popover>
+                    </template>
+                  </template>
+                  <template #actions>
+                    <a-space direction="horizontal" @click="openVKTurnProxyLogs()" class="jc-center">
+                      <a-icon type="bars"></a-icon>
+                      <span v-if="!isMobile">{{ i18n "pages.index.logs" }}</span>
+                    </a-space>
+                    <a-space direction="horizontal" @click="startVKTurnProxyService" class="jc-center">
+                      <a-icon type="caret-right"></a-icon>
+                      <span v-if="!isMobile">Start</span>
+                    </a-space>
+                    <a-space direction="horizontal" @click="stopVKTurnProxyService" class="jc-center">
+                      <a-icon type="poweroff"></a-icon>
+                      <span v-if="!isMobile">{{ i18n "pages.index.stopXray" }}</span>
+                    </a-space>
+                    <a-space direction="horizontal" @click="restartVKTurnProxyService" class="jc-center">
+                      <a-icon type="reload"></a-icon>
+                      <span v-if="!isMobile">{{ i18n "pages.index.restartXray" }}</span>
+                    </a-space>
+                  </template>
+                </a-card>
+              </a-col>
               <a-col :sm="24" :lg="12">
                 <a-card title='{{ i18n "menu.link" }}' hoverable>
                   <template #actions>
@@ -178,6 +234,7 @@
                 <a-card title='{{ i18n "pages.index.operationHours" }}' hoverable>
                   <a-tag :color="status.xray.color">Xray: [[ TimeFormatter.formatSecond(status.appStats.uptime)
                     ]]</a-tag>
+                  <a-tag v-if="status.vkTurnProxy.available" :color="status.vkTurnProxy.color">vk-turn-proxy: [[ TimeFormatter.formatSecond(status.vkTurnProxy.uptime) ]]</a-tag>
                   <a-tag color="green">OS: [[ TimeFormatter.formatSecond(status.uptime) ]]</a-tag>
                 </a-card>
               </a-col>
@@ -404,6 +461,41 @@
       </a-form-item>
     </a-form>
     <div class="ant-input log-container" v-html="xraylogModal.formattedLogs"></div>
+  </a-modal>
+  <a-modal id="vkturnproxylog-modal" v-model="vkTurnProxyLogModal.visible" :closable="true"
+    @cancel="() => vkTurnProxyLogModal.visible = false" :class="themeSwitcher.currentTheme" width="800px" footer="">
+    <template slot="title">
+      vk-turn-proxy logs
+      <a-icon :spin="vkTurnProxyLogModal.loading" type="sync" class="va-middle ml-10" :disabled="vkTurnProxyLogModal.loading"
+        @click="openVKTurnProxyLogs()">
+      </a-icon>
+    </template>
+    <a-form layout="inline">
+      <a-form-item class="mr-05">
+        <a-input-group compact>
+          <a-select size="small" v-model="vkTurnProxyLogModal.rows" :style="{ width: '70px' }" @change="openVKTurnProxyLogs()"
+            :dropdown-class-name="themeSwitcher.currentTheme">
+            <a-select-option value="10">10</a-select-option>
+            <a-select-option value="20">20</a-select-option>
+            <a-select-option value="50">50</a-select-option>
+            <a-select-option value="100">100</a-select-option>
+            <a-select-option value="500">500</a-select-option>
+          </a-select>
+          <a-select size="small" v-model="vkTurnProxyLogModal.level" :style="{ width: '95px' }" @change="openVKTurnProxyLogs()"
+            :dropdown-class-name="themeSwitcher.currentTheme">
+            <a-select-option value="debug">Debug</a-select-option>
+            <a-select-option value="info">Info</a-select-option>
+            <a-select-option value="notice">Notice</a-select-option>
+            <a-select-option value="warning">Warning</a-select-option>
+            <a-select-option value="err">Error</a-select-option>
+          </a-select>
+        </a-input-group>
+      </a-form-item>
+      <a-form-item style="float: right;">
+        <a-button type="primary" icon="download" @click="FileManager.downloadTextFile(vkTurnProxyLogModal.logs?.join('\n'), 'vk-turn-proxy.log')"></a-button>
+      </a-form-item>
+    </a-form>
+    <div class="ant-input log-container" v-html="vkTurnProxyLogModal.formattedLogs"></div>
   </a-modal>
   <a-modal id="backup-modal" v-model="backupModal.visible" title='{{ i18n "pages.index.backupTitle" }}' :closable="true"
     footer="" :class="themeSwitcher.currentTheme">
@@ -666,6 +758,35 @@
   }
 
   class Status {
+    static normalizeServiceStatus(service) {
+      const normalized = Object.assign({
+        state: 'stop',
+        stateMsg: "",
+        errorMsg: "",
+        color: "gray",
+      }, service || {});
+
+      switch (normalized.state) {
+        case 'running':
+          normalized.color = "green";
+          normalized.stateMsg = '{{ i18n "pages.index.xrayStatusRunning" }}';
+          break;
+        case 'stop':
+          normalized.color = "orange";
+          normalized.stateMsg = '{{ i18n "pages.index.xrayStatusStop" }}';
+          break;
+        case 'error':
+          normalized.color = "red";
+          normalized.stateMsg = '{{ i18n "pages.index.xrayStatusError" }}';
+          break;
+        default:
+          normalized.color = "gray";
+          normalized.stateMsg = '{{ i18n "pages.index.xrayStatusUnknown" }}';
+          break;
+      }
+      return normalized;
+    }
+
     constructor(data) {
       this.cpu = new CurTotal(0, 0);
       this.cpuCores = 0;
@@ -684,7 +805,8 @@
       this.appUptime = 0;
       this.appStats = { threads: 0, mem: 0, uptime: 0 };
 
-      this.xray = { state: 'stop', stateMsg: "", errorMsg: "", version: "", color: "" };
+      this.xray = Status.normalizeServiceStatus({ state: 'stop', version: "" });
+      this.vkTurnProxy = Status.normalizeServiceStatus({ state: 'stop', available: false, total: 0, enabled: 0, running: 0, uptime: 0 });
 
       if (data == null) {
         return;
@@ -706,25 +828,8 @@
       this.uptime = data.uptime;
       this.appUptime = data.appUptime;
       this.appStats = data.appStats;
-      this.xray = data.xray;
-      switch (this.xray.state) {
-        case 'running':
-          this.xray.color = "green";
-          this.xray.stateMsg = '{{ i18n "pages.index.xrayStatusRunning" }}';
-          break;
-        case 'stop':
-          this.xray.color = "orange";
-          this.xray.stateMsg = '{{ i18n "pages.index.xrayStatusStop" }}';
-          break;
-        case 'error':
-          this.xray.color = "red";
-          this.xray.stateMsg = '{{ i18n "pages.index.xrayStatusError" }}';
-          break;
-        default:
-          this.xray.color = "gray";
-          this.xray.stateMsg = '{{ i18n "pages.index.xrayStatusUnknown" }}';
-          break;
-      }
+      this.xray = Status.normalizeServiceStatus(data.xray);
+      this.vkTurnProxy = Status.normalizeServiceStatus(data.vkTurnProxy);
     }
   }
 
@@ -750,43 +855,23 @@
     show(logs) {
       this.visible = true;
       this.logs = logs;
-      this.formattedLogs = this.logs?.length > 0 ? this.formatLogs(this.logs) : "No Record...";
+      this.formattedLogs = this.logs?.length > 0 ? formatPanelLogs(this.logs) : "No Record...";
     },
-    formatLogs(logs) {
-      let formattedLogs = '';
-      const levels = ["DEBUG", "INFO", "NOTICE", "WARNING", "ERROR"];
-      const levelColors = ["#3c89e8", "#008771", "#008771", "#f37b24", "#e04141", "#bcbcbc"];
+    hide() {
+      this.visible = false;
+    },
+  };
 
-      logs.forEach((log, index) => {
-        let [data, message] = log.split(" - ", 2);
-        const parts = data.split(" ")
-        if (index > 0) formattedLogs += '<br>';
-
-        if (parts.length === 3) {
-          const d = parts[0];
-          const t = parts[1];
-          const level = parts[2];
-          const levelIndex = levels.indexOf(level, levels) || 5;
-
-          //formattedLogs += `<span style="color: gray;">${index + 1}.</span>`;
-          formattedLogs += `<span style="color: ${levelColors[0]};">${d} ${t}</span> `;
-          formattedLogs += `<span style="color: ${levelColors[levelIndex]}">${level}</span>`;
-        } else {
-          const levelIndex = levels.indexOf(data, levels) || 5;
-          formattedLogs += `<span style="color: ${levelColors[levelIndex]}">${data}</span>`;
-        }
-
-        if (message) {
-          if (message.startsWith("XRAY:"))
-            message = "<b>XRAY: </b>" + message.substring(5);
-          else
-            message = "<b>X-UI: </b>" + message;
-        }
-
-        formattedLogs += message ? ' - ' + message : '';
-      });
-
-      return formattedLogs;
+  const vkTurnProxyLogModal = {
+    visible: false,
+    logs: [],
+    rows: 20,
+    level: 'debug',
+    loading: false,
+    show(logs) {
+      this.visible = true;
+      this.logs = logs;
+      this.formattedLogs = this.logs?.length > 0 ? formatPanelLogs(this.logs) : "No Record...";
     },
     hide() {
       this.visible = false;
@@ -890,6 +975,7 @@
       versionModal,
       logModal,
       xraylogModal,
+      vkTurnProxyLogModal,
       backupModal,
       loadingTip: '{{ i18n "loading"}}',
       showAlert: false,
@@ -1015,6 +1101,34 @@
         if (!msg.success) {
           return;
         }
+        await this.getStatus();
+      },
+      async startVKTurnProxyService() {
+        this.loading(true);
+        const msg = await HttpUtil.post('/panel/api/server/startVKTurnProxyService');
+        this.loading(false);
+        if (!msg.success) {
+          return;
+        }
+        await this.getStatus();
+      },
+      async stopVKTurnProxyService() {
+        this.loading(true);
+        const msg = await HttpUtil.post('/panel/api/server/stopVKTurnProxyService');
+        this.loading(false);
+        if (!msg.success) {
+          return;
+        }
+        await this.getStatus();
+      },
+      async restartVKTurnProxyService() {
+        this.loading(true);
+        const msg = await HttpUtil.post('/panel/api/server/restartVKTurnProxyService');
+        this.loading(false);
+        if (!msg.success) {
+          return;
+        }
+        await this.getStatus();
       },
       async openLogs() {
         logModal.loading = true;
@@ -1035,6 +1149,17 @@
         xraylogModal.show(msg.obj);
         await PromiseUtil.sleep(500);
         xraylogModal.loading = false;
+      },
+      async openVKTurnProxyLogs() {
+        vkTurnProxyLogModal.loading = true;
+        const msg = await HttpUtil.post('/panel/api/server/vkturnproxylogs/' + vkTurnProxyLogModal.rows, { level: vkTurnProxyLogModal.level });
+        if (!msg.success) {
+          vkTurnProxyLogModal.loading = false;
+          return;
+        }
+        vkTurnProxyLogModal.show(msg.obj);
+        await PromiseUtil.sleep(500);
+        vkTurnProxyLogModal.loading = false;
       },
       downloadXrayLogs() {
         if (!Array.isArray(this.xraylogModal.logs) || this.xraylogModal.logs.length === 0) {
@@ -1142,22 +1267,11 @@
         // Listen for Xray state changes
         window.wsClient.on('xray_state', (payload) => {
           if (this.status && this.status.xray) {
-            this.status.xray.state = payload.state;
-            this.status.xray.errorMsg = payload.errorMsg || '';
-            switch (payload.state) {
-              case 'running':
-                this.status.xray.color = "green";
-                this.status.xray.stateMsg = '{{ i18n "pages.index.xrayStatusRunning" }}';
-                break;
-              case 'stop':
-                this.status.xray.color = "orange";
-                this.status.xray.stateMsg = '{{ i18n "pages.index.xrayStatusStop" }}';
-                break;
-              case 'error':
-                this.status.xray.color = "red";
-                this.status.xray.stateMsg = '{{ i18n "pages.index.xrayStatusError" }}';
-                break;
-            }
+            this.status.xray = Status.normalizeServiceStatus({
+              ...this.status.xray,
+              state: payload.state,
+              errorMsg: payload.errorMsg || '',
+            });
           }
         });
 
@@ -1181,5 +1295,44 @@
       }
     },
   });
+
+  function formatPanelLogs(logs) {
+    let formattedLogs = '';
+    const levels = ["DEBUG", "INFO", "NOTICE", "WARNING", "ERROR"];
+    const levelColors = ["#3c89e8", "#008771", "#008771", "#f37b24", "#e04141", "#bcbcbc"];
+
+    logs.forEach((log, index) => {
+      let [data, message] = log.split(" - ", 2);
+      const parts = data.split(" ")
+      if (index > 0) formattedLogs += '<br>';
+
+      if (parts.length === 3) {
+        const d = parts[0];
+        const t = parts[1];
+        const level = parts[2];
+        const levelIndex = levels.indexOf(level, levels) || 5;
+
+        formattedLogs += `<span style="color: ${levelColors[0]};">${d} ${t}</span> `;
+        formattedLogs += `<span style="color: ${levelColors[levelIndex]}">${level}</span>`;
+      } else {
+        const levelIndex = levels.indexOf(data, levels) || 5;
+        formattedLogs += `<span style="color: ${levelColors[levelIndex]}">${data}</span>`;
+      }
+
+      if (message) {
+        if (message.startsWith("XRAY:")) {
+          message = "<b>XRAY: </b>" + message.substring(5);
+        } else if (message.startsWith("VKTURN[")) {
+          message = "<b>" + message.replace(/^VKTURN\[[^\]]+\]/, (prefix) => `${prefix}`) + "</b>";
+        } else {
+          message = "<b>X-UI: </b>" + message;
+        }
+      }
+
+      formattedLogs += message ? ' - ' + message : '';
+    });
+
+    return formattedLogs;
+  }
 </script>
 {{ template "page/body_end" .}}

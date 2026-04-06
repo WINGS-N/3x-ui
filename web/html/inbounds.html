@@ -208,7 +208,7 @@
                               <a-icon type="user-add"></a-icon>
                               {{ i18n "pages.client.add"}}
                             </a-menu-item>
-                            <a-menu-item key="addBulkClient">
+                            <a-menu-item key="addBulkClient" v-if="dbInbound.canBulkAddClients()">
                               <a-icon type="usergroup-add"></a-icon>
                               {{ i18n "pages.client.bulk"}}
                             </a-menu-item>
@@ -807,7 +807,7 @@
           to_inbound = dbInbound.toInbound()
           this.inbounds.push(to_inbound);
           this.dbInbounds.push(dbInbound);
-          if ([Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS].includes(inbound.protocol)) {
+          if ([Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS, Protocols.VK_TURN_PROXY].includes(inbound.protocol)) {
             if (dbInbound.isSS && (!to_inbound.isSSMultiUser)) {
               continue;
             }
@@ -838,6 +838,11 @@
               if (client.enable) {
                 active.push(client.email);
                 if (this.isClientOnline(client.email)) online.push(client.email);
+                if (client.expiryTime > 0 && client.expiryTime <= now) {
+                  depleted.push(client.email);
+                } else if (client.expiryTime > 0 && (client.expiryTime - now < this.expireDiff)) {
+                  expiring.push(client.email);
+                }
               } else {
                 deactive.push(client.email);
               }
@@ -1466,12 +1471,36 @@
         return new Date(ts).toLocaleString()
       },
       isRemovable(dbInboundId) {
-        return this.getInboundClients(this.dbInbounds.find(row => row.id === dbInboundId)).length > 1;
+        const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+        if (!dbInbound) return false;
+        if (dbInbound.isVKTurnProxy) return true;
+        return this.getInboundClients(dbInbound).length > 1;
       },
       inboundLinks(dbInboundId) {
         dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+        if (dbInbound.isVKTurnProxy) {
+          this.exportVKTurnProxyInbound(dbInboundId);
+          return;
+        }
         newDbInbound = this.checkFallback(dbInbound);
         txtModal.show('{{ i18n "pages.inbounds.export"}}', newDbInbound.genInboundLinks(this.remarkModel), newDbInbound.remark);
+      },
+      async exportVKTurnProxyInbound(dbInboundId) {
+        const msg = await HttpUtil.get(`/panel/api/inbounds/${dbInboundId}/vkTurnProxy/exportAll`);
+        if (!msg.success) {
+          return;
+        }
+        const links = (msg.obj || []).map(item => item.link).join('\r\n');
+        const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+        txtModal.show('WINGSV', links, `${dbInbound.remark || 'vk-turn-proxy'}-wingsv`);
+      },
+      async exportVKTurnProxyClient(dbInboundId, client) {
+        const clientId = this.getClientId(Protocols.VK_TURN_PROXY, client);
+        const msg = await HttpUtil.get(`/panel/api/inbounds/${dbInboundId}/vkTurnProxy/exportClient/${clientId}`);
+        if (!msg.success) {
+          return;
+        }
+        txtModal.show('WINGSV', msg.obj, `${client.email || client.id}.wingsv.txt`);
       },
       exportSubs(dbInboundId) {
         const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
@@ -1517,9 +1546,16 @@
           [...new Set(subLinks)].join('\r\n'),
           'All-Inbounds-Subs');
       },
-      exportAllLinks() {
+      async exportAllLinks() {
         let copyText = [];
         for (const dbInbound of this.dbInbounds) {
+          if (dbInbound.isVKTurnProxy) {
+            const msg = await HttpUtil.get(`/panel/api/inbounds/${dbInbound.id}/vkTurnProxy/exportAll`);
+            if (msg.success && Array.isArray(msg.obj)) {
+              copyText.push(msg.obj.map(item => item.link).join('\r\n'));
+            }
+            continue;
+          }
           copyText.push(dbInbound.genInboundLinks(this.remarkModel));
         }
         txtModal.show('{{ i18n "pages.inbounds.export"}}', copyText.join('\r\n'), 'All-Inbounds');
@@ -1696,5 +1732,6 @@
       }
     },
   });
+  window.inboundsApp = app;
 </script>
 {{ template "page/body_end" .}}

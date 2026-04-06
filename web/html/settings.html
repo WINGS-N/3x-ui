@@ -127,6 +127,10 @@
       user: {},
       lang: LanguageManager.getLanguage(),
       inboundOptions: [],
+      apiTokens: [],
+      newApiTokenName: '',
+      createdApiToken: '',
+      createdApiTokenInfo: null,
       remarkModels: { i: 'Inbound', e: 'Email', o: 'Other' },
       remarkSeparators: [' ', '-', '_', '@', ':', '~', '|', ',', '.', '/'],
       datepickerList: [{ name: 'Gregorian (Standard)', value: 'gregorian' }, { name: 'Jalalian (شمسی)', value: 'jalalian' }],
@@ -286,6 +290,105 @@
         } else {
           this.inboundOptions = [];
         }
+      },
+      async loadApiTokens() {
+        const msg = await HttpUtil.get("/panel/api/tokens/list");
+        if (msg && msg.success && Array.isArray(msg.obj)) {
+          this.apiTokens = msg.obj;
+        } else {
+          this.apiTokens = [];
+        }
+      },
+      async createApiToken() {
+        this.loading(true);
+        const msg = await HttpUtil.post("/panel/api/tokens/create", {
+          name: this.newApiTokenName,
+        });
+        this.loading(false);
+        if (!msg.success || !msg.obj) {
+          return;
+        }
+
+        this.createdApiToken = msg.obj.token || '';
+        this.createdApiTokenInfo = msg.obj.info || null;
+        this.newApiTokenName = '';
+        await this.loadApiTokens();
+      },
+      async deleteApiToken(token) {
+        await new Promise(resolve => {
+          this.$confirm({
+            title: '{{ i18n "pages.settings.security.apiTokenDelete" }}',
+            content: '{{ i18n "pages.settings.security.apiTokenDeleteDesc" }}',
+            class: themeSwitcher.currentTheme,
+            okText: '{{ i18n "delete" }}',
+            cancelText: '{{ i18n "cancel" }}',
+            onOk: () => resolve(),
+          });
+        });
+
+        this.loading(true);
+        const msg = await HttpUtil.post(`/panel/api/tokens/del/${token.id}`);
+        this.loading(false);
+        if (!msg.success) {
+          return;
+        }
+
+        if (this.createdApiTokenInfo && this.createdApiTokenInfo.id === token.id) {
+          this.createdApiToken = '';
+          this.createdApiTokenInfo = null;
+        }
+        await this.loadApiTokens();
+      },
+      async copyApiToken() {
+        if (!this.createdApiToken) {
+          return;
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(this.createdApiToken);
+        } else {
+          const input = document.createElement('textarea');
+          input.value = this.createdApiToken;
+          input.style.position = 'fixed';
+          input.style.opacity = '0';
+          document.body.appendChild(input);
+          input.focus();
+          input.select();
+          document.execCommand('copy');
+          document.body.removeChild(input);
+        }
+
+        this.$message.success('{{ i18n "copied" }}');
+      },
+      formatApiTokenTime(value, emptyMeansNever = true) {
+        if (!value) {
+          return emptyMeansNever ? '{{ i18n "pages.settings.security.apiTokenNeverUsed" }}' : '';
+        }
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return value;
+        }
+        return date.toLocaleString();
+      },
+      apiTokenAlertStyle(type) {
+        if (this.themeSwitcher.currentTheme === 'light') {
+          return {};
+        }
+
+        if (type === 'success') {
+          return {
+            backgroundColor: 'rgb(var(--dark-color-tag-green-bg))',
+            borderColor: 'rgb(var(--dark-color-tag-green-border))',
+            color: 'var(--dark-color-tag-green-color)',
+          };
+        }
+
+        return {
+          backgroundColor: 'var(--dark-color-tag-blue-bg)',
+          borderColor: 'var(--dark-color-tag-blue-border)',
+          color: 'var(--dark-color-tag-blue-color)',
+        };
       },
       async updateAllSetting() {
         this.loading(true);
@@ -628,6 +731,7 @@
       this.entryIsIP = this._isIp(this.entryHost);
       await this.getAllSetting();
       await this.loadInboundTags();
+      await this.loadApiTokens();
       while (true) {
         await PromiseUtil.sleep(1000);
         this.saveBtnDisable = this.oldAllSetting.equals(this.allSetting);

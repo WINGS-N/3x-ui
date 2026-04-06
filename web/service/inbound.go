@@ -26,13 +26,87 @@ type InboundService struct {
 	xrayApi xray.XrayAPI
 }
 
+type wireguardPeer struct {
+	PrivateKey   string   `json:"privateKey"`
+	PublicKey    string   `json:"publicKey"`
+	PreSharedKey string   `json:"preSharedKey,omitempty"`
+	AllowedIPs   []string `json:"allowedIPs"`
+	KeepAlive    int      `json:"keepAlive,omitempty"`
+}
+
+func normalizeClientTGIDInMap(client map[string]any) bool {
+	tgIDRaw, ok := client["tgId"]
+	if !ok {
+		return false
+	}
+
+	switch value := tgIDRaw.(type) {
+	case nil:
+		client["tgId"] = int64(0)
+		return true
+	case string:
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			client["tgId"] = int64(0)
+			return true
+		}
+		tgID, err := strconv.ParseInt(trimmed, 10, 64)
+		if err != nil {
+			client["tgId"] = int64(0)
+			return true
+		}
+		client["tgId"] = tgID
+		return true
+	case json.Number:
+		tgID, err := value.Int64()
+		if err != nil {
+			client["tgId"] = int64(0)
+			return true
+		}
+		client["tgId"] = tgID
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeRawClientsTGID(rawClients json.RawMessage) (json.RawMessage, bool, error) {
+	var clients []map[string]any
+	if err := json.Unmarshal(rawClients, &clients); err != nil {
+		return nil, false, err
+	}
+
+	changed := false
+	for _, client := range clients {
+		if normalizeClientTGIDInMap(client) {
+			changed = true
+		}
+	}
+
+	if !changed {
+		return rawClients, false, nil
+	}
+
+	normalizedClients, err := json.Marshal(clients)
+	if err != nil {
+		return nil, false, err
+	}
+	return normalizedClients, true, nil
+}
+
 // GetInbounds retrieves all inbounds for a specific user.
 // Returns a slice of inbound models with their associated client statistics.
 func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
 	db := database.GetDB()
 	var inbounds []*model.Inbound
-	err := db.Model(model.Inbound{}).Preload("ClientStats").Where("user_id = ?", userId).Find(&inbounds).Error
+	err := db.Model(model.Inbound{}).Where("user_id = ?", userId).Find(&inbounds).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+	if _, err := s.syncVKTurnProxyClientTrafficRows(db, inbounds); err != nil {
+		return nil, err
+	}
+	if err := s.loadInboundClientStats(db, inbounds); err != nil {
 		return nil, err
 	}
 	// Enrich client stats with UUID/SubId from inbound settings
@@ -62,8 +136,14 @@ func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
 func (s *InboundService) GetAllInbounds() ([]*model.Inbound, error) {
 	db := database.GetDB()
 	var inbounds []*model.Inbound
-	err := db.Model(model.Inbound{}).Preload("ClientStats").Find(&inbounds).Error
+	err := db.Model(model.Inbound{}).Find(&inbounds).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+	if _, err := s.syncVKTurnProxyClientTrafficRows(db, inbounds); err != nil {
+		return nil, err
+	}
+	if err := s.loadInboundClientStats(db, inbounds); err != nil {
 		return nil, err
 	}
 	// Enrich client stats with UUID/SubId from inbound settings
@@ -128,15 +208,32 @@ func (s *InboundService) checkPortExist(listen string, port int, ignoreId int) (
 }
 
 func (s *InboundService) GetClients(inbound *model.Inbound) ([]model.Client, error) {
-	settings := map[string][]model.Client{}
-	json.Unmarshal([]byte(inbound.Settings), &settings)
-	if settings == nil {
-		return nil, fmt.Errorf("setting is null")
+	if strings.TrimSpace(inbound.Settings) == "" {
+		return nil, nil
+	}
+	settings := map[string]json.RawMessage{}
+	if err := json.Unmarshal([]byte(inbound.Settings), &settings); err != nil {
+		return nil, err
+	}
+	rawClients, ok := settings["clients"]
+	if !ok || len(rawClients) == 0 || string(rawClients) == "null" {
+		return nil, nil
 	}
 
-	clients := settings["clients"]
-	if clients == nil {
-		return nil, nil
+	normalizedClients, changed, err := normalizeRawClientsTGID(rawClients)
+	if err == nil {
+		rawClients = normalizedClients
+		if changed {
+			settings["clients"] = rawClients
+			if normalizedSettings, marshalErr := json.Marshal(settings); marshalErr == nil {
+				inbound.Settings = string(normalizedSettings)
+			}
+		}
+	}
+
+	clients := make([]model.Client, 0)
+	if err := json.Unmarshal(rawClients, &clients); err != nil {
+		return nil, err
 	}
 	return clients, nil
 }
@@ -222,6 +319,22 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		return inbound, false, common.NewError("Port already exists:", inbound.Port)
 	}
 
+	if isVKTurnProxyProtocol(inbound.Protocol) {
+		settings, err := s.getVKTurnProxySettings(inbound.Settings)
+		if err != nil {
+			return inbound, false, err
+		}
+		allowClients := settings.Forward.Type == VKTurnProxyForwardWireGuardInbound
+		if err := s.validateVKTurnProxySettings(settings, allowClients); err != nil {
+			return inbound, false, err
+		}
+		rawSettings, err := s.marshalVKTurnProxySettings(settings)
+		if err != nil {
+			return inbound, false, err
+		}
+		inbound.Settings = rawSettings
+	}
+
 	existEmail, err := s.checkEmailExistForInbound(inbound)
 	if err != nil {
 		return inbound, false, err
@@ -299,7 +412,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 	}
 
 	needRestart := false
-	if inbound.Enable {
+	if inbound.Enable && isXrayManagedProtocol(inbound.Protocol) {
 		s.xrayApi.Init(p.GetAPIPort())
 		inboundJson, err1 := json.MarshalIndent(inbound.GenXrayInboundConfig(), "", "  ")
 		if err1 != nil {
@@ -324,30 +437,28 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 // Returns whether Xray needs restart and any error.
 func (s *InboundService) DelInbound(id int) (bool, error) {
 	db := database.GetDB()
+	inbound, err := s.GetInbound(id)
+	if err != nil {
+		return false, err
+	}
 
-	var tag string
 	needRestart := false
-	result := db.Model(model.Inbound{}).Select("tag").Where("id = ? and enable = ?", id, true).First(&tag)
-	if result.Error == nil {
+	if inbound.Enable && isXrayManagedProtocol(inbound.Protocol) {
 		s.xrayApi.Init(p.GetAPIPort())
-		err1 := s.xrayApi.DelInbound(tag)
+		err1 := s.xrayApi.DelInbound(inbound.Tag)
 		if err1 == nil {
-			logger.Debug("Inbound deleted by api:", tag)
+			logger.Debug("Inbound deleted by api:", inbound.Tag)
 		} else {
 			logger.Debug("Unable to delete inbound by api:", err1)
 			needRestart = true
 		}
 		s.xrayApi.Close()
 	} else {
-		logger.Debug("No enabled inbound founded to removing by api", tag)
+		logger.Debug("No enabled xray-managed inbound found to remove by api", inbound.Tag)
 	}
 
 	// Delete client traffics of inbounds
-	err := db.Where("inbound_id = ?", id).Delete(xray.ClientTraffic{}).Error
-	if err != nil {
-		return false, err
-	}
-	inbound, err := s.GetInbound(id)
+	err = db.Where("inbound_id = ?", id).Delete(xray.ClientTraffic{}).Error
 	if err != nil {
 		return false, err
 	}
@@ -385,6 +496,22 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	}
 	if exist {
 		return inbound, false, common.NewError("Port already exists:", inbound.Port)
+	}
+
+	if isVKTurnProxyProtocol(inbound.Protocol) {
+		settings, err := s.getVKTurnProxySettings(inbound.Settings)
+		if err != nil {
+			return inbound, false, err
+		}
+		allowClients := settings.Forward.Type == VKTurnProxyForwardWireGuardInbound
+		if err := s.validateVKTurnProxySettings(settings, allowClients); err != nil {
+			return inbound, false, err
+		}
+		rawSettings, err := s.marshalVKTurnProxySettings(settings)
+		if err != nil {
+			return inbound, false, err
+		}
+		inbound.Settings = rawSettings
 	}
 
 	oldInbound, err := s.GetInbound(inbound.Id)
@@ -489,26 +616,28 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	}
 
 	needRestart := false
-	s.xrayApi.Init(p.GetAPIPort())
-	if s.xrayApi.DelInbound(tag) == nil {
-		logger.Debug("Old inbound deleted by api:", tag)
-	}
-	if inbound.Enable {
-		inboundJson, err2 := json.MarshalIndent(oldInbound.GenXrayInboundConfig(), "", "  ")
-		if err2 != nil {
-			logger.Debug("Unable to marshal updated inbound config:", err2)
-			needRestart = true
-		} else {
-			err2 = s.xrayApi.AddInbound(inboundJson)
-			if err2 == nil {
-				logger.Debug("Updated inbound added by api:", oldInbound.Tag)
-			} else {
-				logger.Debug("Unable to update inbound by api:", err2)
+	if isXrayManagedProtocol(oldInbound.Protocol) || isXrayManagedProtocol(inbound.Protocol) {
+		s.xrayApi.Init(p.GetAPIPort())
+		if isXrayManagedProtocol(oldInbound.Protocol) && s.xrayApi.DelInbound(tag) == nil {
+			logger.Debug("Old inbound deleted by api:", tag)
+		}
+		if inbound.Enable && isXrayManagedProtocol(inbound.Protocol) {
+			inboundJson, err2 := json.MarshalIndent(oldInbound.GenXrayInboundConfig(), "", "  ")
+			if err2 != nil {
+				logger.Debug("Unable to marshal updated inbound config:", err2)
 				needRestart = true
+			} else {
+				err2 = s.xrayApi.AddInbound(inboundJson)
+				if err2 == nil {
+					logger.Debug("Updated inbound added by api:", oldInbound.Tag)
+				} else {
+					logger.Debug("Unable to update inbound by api:", err2)
+					needRestart = true
+				}
 			}
 		}
+		s.xrayApi.Close()
 	}
-	s.xrayApi.Close()
 
 	return inbound, needRestart, tx.Save(oldInbound).Error
 }
@@ -559,6 +688,17 @@ func (s *InboundService) updateClientTraffics(tx *gorm.DB, oldInbound *model.Inb
 }
 
 func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
+	oldInbound, err := s.GetInbound(data.Id)
+	if err != nil {
+		return false, err
+	}
+	if oldInbound.Protocol == model.VKTurnProxy {
+		return s.AddVKTurnProxyClient(data)
+	}
+	if oldInbound.Protocol == model.WireGuard {
+		return s.AddInboundPeer(data)
+	}
+
 	clients, err := s.GetClients(data)
 	if err != nil {
 		return false, err
@@ -570,7 +710,10 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 		return false, err
 	}
 
-	interfaceClients := settings["clients"].([]any)
+	interfaceClients, ok := settings["clients"].([]any)
+	if !ok {
+		return false, common.NewError("clients is empty")
+	}
 	// Add timestamps for new clients being appended
 	nowTs := time.Now().Unix() * 1000
 	for i := range interfaceClients {
@@ -588,11 +731,6 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 	}
 	if existEmail != "" {
 		return false, common.NewError("Duplicate email:", existEmail)
-	}
-
-	oldInbound, err := s.GetInbound(data.Id)
-	if err != nil {
-		return false, err
 	}
 
 	// Secure client ID
@@ -682,6 +820,16 @@ func (s *InboundService) DelInboundClient(inboundId int, clientId string) (bool,
 		logger.Error("Load Old Data Error")
 		return false, err
 	}
+	if oldInbound.Protocol == model.VKTurnProxy {
+		return s.DelVKTurnProxyClient(inboundId, clientId)
+	}
+	if oldInbound.Protocol == model.WireGuard {
+		peerIndex, err := strconv.Atoi(clientId)
+		if err != nil {
+			return false, common.NewError("wireguard peer index is invalid:", clientId)
+		}
+		return s.DelInboundPeer(inboundId, peerIndex)
+	}
 	var settings map[string]any
 	err = json.Unmarshal([]byte(oldInbound.Settings), &settings)
 	if err != nil {
@@ -766,6 +914,21 @@ func (s *InboundService) DelInboundClient(inboundId int, clientId string) (bool,
 
 func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId string) (bool, error) {
 	// TODO: check if TrafficReset field is updating
+	oldInbound, err := s.GetInbound(data.Id)
+	if err != nil {
+		return false, err
+	}
+	if oldInbound.Protocol == model.VKTurnProxy {
+		return s.UpdateVKTurnProxyClient(data, clientId)
+	}
+	if oldInbound.Protocol == model.WireGuard {
+		peerIndex, err := strconv.Atoi(clientId)
+		if err != nil {
+			return false, common.NewError("wireguard peer index is invalid:", clientId)
+		}
+		return s.UpdateInboundPeer(data, peerIndex)
+	}
+
 	clients, err := s.GetClients(data)
 	if err != nil {
 		return false, err
@@ -777,11 +940,9 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 		return false, err
 	}
 
-	interfaceClients := settings["clients"].([]any)
-
-	oldInbound, err := s.GetInbound(data.Id)
-	if err != nil {
-		return false, err
+	interfaceClients, ok := settings["clients"].([]any)
+	if !ok || len(interfaceClients) == 0 {
+		return false, common.NewError("clients is empty")
 	}
 
 	oldClients, err := s.GetClients(oldInbound)
@@ -939,6 +1100,129 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 	return needRestart, tx.Save(oldInbound).Error
 }
 
+func (s *InboundService) AddInboundPeer(data *model.Inbound) (bool, error) {
+	_, newPeers, err := s.getWireguardSettings(data.Settings)
+	if err != nil {
+		return false, err
+	}
+	if len(newPeers) == 0 {
+		return false, common.NewError("wireguard peers is empty")
+	}
+
+	return s.mutateWireguardPeers(data.Id, func(peers []wireguardPeer) ([]wireguardPeer, error) {
+		return append(peers, newPeers...), nil
+	})
+}
+
+func (s *InboundService) UpdateInboundPeer(data *model.Inbound, peerIndex int) (bool, error) {
+	_, newPeers, err := s.getWireguardSettings(data.Settings)
+	if err != nil {
+		return false, err
+	}
+	if len(newPeers) != 1 {
+		return false, common.NewError("wireguard peer update expects exactly one peer")
+	}
+
+	return s.mutateWireguardPeers(data.Id, func(peers []wireguardPeer) ([]wireguardPeer, error) {
+		if peerIndex < 0 || peerIndex >= len(peers) {
+			return nil, common.NewError("wireguard peer index out of range:", peerIndex)
+		}
+		peers[peerIndex] = newPeers[0]
+		return peers, nil
+	})
+}
+
+func (s *InboundService) DelInboundPeer(inboundId int, peerIndex int) (bool, error) {
+	return s.mutateWireguardPeers(inboundId, func(peers []wireguardPeer) ([]wireguardPeer, error) {
+		if peerIndex < 0 || peerIndex >= len(peers) {
+			return nil, common.NewError("wireguard peer index out of range:", peerIndex)
+		}
+		if len(peers) <= 1 {
+			return nil, common.NewError("no wireguard peer remained in inbound")
+		}
+		return append(peers[:peerIndex], peers[peerIndex+1:]...), nil
+	})
+}
+
+func (s *InboundService) mutateWireguardPeers(inboundId int, mutate func([]wireguardPeer) ([]wireguardPeer, error)) (bool, error) {
+	oldInbound, err := s.GetInbound(inboundId)
+	if err != nil {
+		return false, err
+	}
+	if oldInbound.Protocol != model.WireGuard {
+		return false, common.NewError("inbound is not wireguard")
+	}
+
+	settings, peers, err := s.getWireguardSettings(oldInbound.Settings)
+	if err != nil {
+		return false, err
+	}
+
+	updatedPeers, err := mutate(peers)
+	if err != nil {
+		return false, err
+	}
+	if err := s.validateWireguardPeers(updatedPeers); err != nil {
+		return false, err
+	}
+
+	settings["peers"] = updatedPeers
+	newSettings, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return false, err
+	}
+
+	updatedInbound := *oldInbound
+	updatedInbound.Settings = string(newSettings)
+
+	_, needRestart, err := s.UpdateInbound(&updatedInbound)
+	return needRestart, err
+}
+
+func (s *InboundService) getWireguardSettings(raw string) (map[string]any, []wireguardPeer, error) {
+	settings := map[string]any{}
+	if err := json.Unmarshal([]byte(raw), &settings); err != nil {
+		return nil, nil, err
+	}
+
+	peerValue, ok := settings["peers"]
+	if !ok {
+		return nil, nil, common.NewError("wireguard peers is empty")
+	}
+
+	peerBytes, err := json.Marshal(peerValue)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	peers := make([]wireguardPeer, 0)
+	if err := json.Unmarshal(peerBytes, &peers); err != nil {
+		return nil, nil, err
+	}
+	return settings, peers, nil
+}
+
+func (s *InboundService) validateWireguardPeers(peers []wireguardPeer) error {
+	seen := make(map[string]struct{}, len(peers))
+	for i, peer := range peers {
+		if strings.TrimSpace(peer.PrivateKey) == "" {
+			return common.NewErrorf("wireguard peer #%d privateKey is empty", i+1)
+		}
+		publicKey := strings.TrimSpace(peer.PublicKey)
+		if publicKey == "" {
+			return common.NewErrorf("wireguard peer #%d publicKey is empty", i+1)
+		}
+		if len(peer.AllowedIPs) == 0 {
+			return common.NewErrorf("wireguard peer #%d allowedIPs is empty", i+1)
+		}
+		if _, exists := seen[publicKey]; exists {
+			return common.NewError("Duplicate wireguard publicKey:", publicKey)
+		}
+		seen[publicKey] = struct{}{}
+	}
+	return nil
+}
+
 func (s *InboundService) AddTraffic(inboundTraffics []*xray.Traffic, clientTraffics []*xray.ClientTraffic) (error, bool) {
 	var err error
 	db := database.GetDB()
@@ -1025,6 +1309,37 @@ func (s *InboundService) addClientTraffic(tx *gorm.DB, traffics []*xray.ClientTr
 	err = tx.Model(xray.ClientTraffic{}).Where("email IN (?)", emails).Find(&dbClientTraffics).Error
 	if err != nil {
 		return err
+	}
+
+	existingByEmail := make(map[string]struct{}, len(dbClientTraffics))
+	for _, dbTraffic := range dbClientTraffics {
+		existingByEmail[strings.ToLower(dbTraffic.Email)] = struct{}{}
+	}
+
+	for _, traffic := range traffics {
+		if _, ok := existingByEmail[strings.ToLower(traffic.Email)]; ok {
+			continue
+		}
+		if traffic.InboundId <= 0 {
+			continue
+		}
+
+		missing := &xray.ClientTraffic{
+			InboundId:  traffic.InboundId,
+			Enable:     traffic.Enable,
+			Email:      traffic.Email,
+			Up:         0,
+			Down:       0,
+			AllTime:    0,
+			ExpiryTime: traffic.ExpiryTime,
+			Total:      traffic.Total,
+			Reset:      traffic.Reset,
+		}
+		if err := tx.Create(missing).Error; err != nil {
+			return err
+		}
+		dbClientTraffics = append(dbClientTraffics, missing)
+		existingByEmail[strings.ToLower(missing.Email)] = struct{}{}
 	}
 
 	// Avoid empty slice error
@@ -1224,19 +1539,25 @@ func (s *InboundService) disableInvalidInbounds(tx *gorm.DB) (bool, int64, error
 	needRestart := false
 
 	if p != nil {
-		var tags []string
+		var results []struct {
+			Tag      string
+			Protocol model.Protocol
+		}
 		err := tx.Table("inbounds").
-			Select("inbounds.tag").
+			Select("inbounds.tag, inbounds.protocol").
 			Where("((total > 0 and up + down >= total) or (expiry_time > 0 and expiry_time <= ?)) and enable = ?", now, true).
-			Scan(&tags).Error
+			Scan(&results).Error
 		if err != nil {
 			return false, 0, err
 		}
 		s.xrayApi.Init(p.GetAPIPort())
-		for _, tag := range tags {
-			err1 := s.xrayApi.DelInbound(tag)
+		for _, result := range results {
+			if !isXrayManagedProtocol(result.Protocol) {
+				continue
+			}
+			err1 := s.xrayApi.DelInbound(result.Tag)
 			if err1 == nil {
-				logger.Debug("Inbound disabled by api:", tag)
+				logger.Debug("Inbound disabled by api:", result.Tag)
 			} else {
 				logger.Debug("Error in disabling inbound by api:", err1)
 				needRestart = true
@@ -1259,12 +1580,13 @@ func (s *InboundService) disableInvalidClients(tx *gorm.DB) (bool, int64, error)
 
 	if p != nil {
 		var results []struct {
-			Tag   string
-			Email string
+			Tag      string
+			Email    string
+			Protocol model.Protocol
 		}
 
 		err := tx.Table("inbounds").
-			Select("inbounds.tag, client_traffics.email").
+			Select("inbounds.tag, client_traffics.email, inbounds.protocol").
 			Joins("JOIN client_traffics ON inbounds.id = client_traffics.inbound_id").
 			Where("((client_traffics.total > 0 AND client_traffics.up + client_traffics.down >= client_traffics.total) OR (client_traffics.expiry_time > 0 AND client_traffics.expiry_time <= ?)) AND client_traffics.enable = ?", now, true).
 			Scan(&results).Error
@@ -1273,6 +1595,9 @@ func (s *InboundService) disableInvalidClients(tx *gorm.DB) (bool, int64, error)
 		}
 		s.xrayApi.Init(p.GetAPIPort())
 		for _, result := range results {
+			if !isXrayManagedProtocol(result.Protocol) {
+				continue
+			}
 			err1 := s.xrayApi.RemoveUser(result.Tag, result.Email)
 			if err1 == nil {
 				logger.Debug("Client disabled by api:", result.Email)
@@ -2239,7 +2564,7 @@ func (s *InboundService) MigrationRequirements() {
 
 	// Fix inbounds based problems
 	var inbounds []*model.Inbound
-	err = tx.Model(model.Inbound{}).Where("protocol IN (?)", []string{"vmess", "vless", "trojan"}).Find(&inbounds).Error
+	err = tx.Model(model.Inbound{}).Where("protocol IN (?)", []string{"vmess", "vless", "trojan", "shadowsocks"}).Find(&inbounds).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return
 	}
@@ -2258,16 +2583,7 @@ func (s *InboundService) MigrationRequirements() {
 					c["email"] = ""
 				}
 
-				// Convert string tgId to int64
-				if _, ok := c["tgId"]; ok {
-					var tgId any = c["tgId"]
-					if tgIdStr, ok2 := tgId.(string); ok2 {
-						tgIdInt64, err := strconv.ParseInt(strings.ReplaceAll(tgIdStr, " ", ""), 10, 64)
-						if err == nil {
-							c["tgId"] = tgIdInt64
-						}
-					}
-				}
+				normalizeClientTGIDInMap(c)
 
 				// Remove "flow": "xtls-rprx-direct"
 				if _, ok := c["flow"]; ok {
@@ -2362,6 +2678,7 @@ func (s *InboundService) MigrationRequirements() {
 func (s *InboundService) MigrateDB() {
 	s.MigrationRequirements()
 	s.MigrationRemoveOrphanedTraffics()
+	s.MigrationBackfillVKTurnProxyClientTraffics()
 }
 
 func (s *InboundService) GetOnlineClients() []string {
@@ -2420,6 +2737,18 @@ func (s *InboundService) DelInboundClientByEmail(inboundId int, email string) (b
 	if err != nil {
 		logger.Error("Load Old Data Error")
 		return false, err
+	}
+	if oldInbound.Protocol == model.VKTurnProxy {
+		settings, err := s.getVKTurnProxySettings(oldInbound.Settings)
+		if err != nil {
+			return false, err
+		}
+		for _, client := range settings.Clients {
+			if strings.EqualFold(client.Email, email) {
+				return s.DelVKTurnProxyClient(inboundId, client.ID)
+			}
+		}
+		return false, common.NewError(fmt.Sprintf("client with email %s not found", email))
 	}
 
 	var settings map[string]any

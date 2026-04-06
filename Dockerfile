@@ -1,9 +1,13 @@
+# syntax=docker/dockerfile:1.7
+
 # ========================================================
 # Stage: Builder
 # ========================================================
 FROM golang:1.26-alpine AS builder
 WORKDIR /app
 ARG TARGETARCH
+ARG TARGETVARIANT
+ARG DOWNLOAD_CACHE_BUSTER
 
 RUN apk --no-cache --update add \
   build-base \
@@ -11,12 +15,19 @@ RUN apk --no-cache --update add \
   curl \
   unzip
 
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+  go mod download
+
 COPY . .
 
 ENV CGO_ENABLED=1
 ENV CGO_CFLAGS="-D_LARGEFILE64_SOURCE"
-RUN go build -ldflags "-w -s" -o build/x-ui main.go
-RUN ./DockerInit.sh "$TARGETARCH"
+RUN mkdir -p build
+RUN --mount=type=cache,target=/go/pkg/mod \
+  --mount=type=cache,target=/root/.cache/go-build \
+  go build -ldflags "-w -s" -o build/x-ui main.go
+RUN printf '%s\n' "$DOWNLOAD_CACHE_BUSTER" >/dev/null && ./DockerInit.sh "$TARGETARCH" "$TARGETVARIANT"
 
 # ========================================================
 # Stage: Final Image of 3x-ui

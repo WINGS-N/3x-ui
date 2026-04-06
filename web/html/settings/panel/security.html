@@ -40,5 +40,66 @@
             </template>
         </a-setting-list-item>
     </a-collapse-panel>
+    <a-collapse-panel key="3" header='{{ i18n "pages.settings.security.apiTokens" }}'>
+        <a-setting-list-item paddings="small">
+            <template #title>{{ i18n "pages.settings.security.apiTokens" }}</template>
+            <template #description>{{ i18n "pages.settings.security.apiTokensDesc" }}</template>
+            <template #control>
+                <a-space direction="vertical" :style="{ width: '100%' }" size="middle">
+                    <a-input v-model.trim="newApiTokenName" placeholder='{{ i18n "pages.settings.security.apiTokenNamePlaceholder" }}'>
+                        <template slot="addonBefore">{{ i18n "pages.settings.security.apiTokenName" }}</template>
+                    </a-input>
+                    <a-space direction="horizontal" wrap>
+                        <a-button type="primary" @click="createApiToken">{{ i18n "pages.settings.security.apiTokenCreate" }}</a-button>
+                        <span :style="{ fontSize: '12px', color: 'var(--text-secondary-color, rgba(0,0,0,0.45))' }">
+                            {{ i18n "pages.settings.security.apiTokenUsage" }}
+                        </span>
+                    </a-space>
+
+                    <a-alert v-if="createdApiToken" type="success" show-icon :style="apiTokenAlertStyle('success')">
+                        <template #message>{{ i18n "pages.settings.security.apiTokenCreated" }}</template>
+                        <template #description>
+                            <a-space direction="vertical" :style="{ width: '100%' }">
+                                <span>{{ i18n "pages.settings.security.apiTokenCreatedDesc" }}</span>
+                                <a-input :value="createdApiToken" readonly>
+                                    <a-button slot="addonAfter" @click="copyApiToken">{{ i18n "copy" }}</a-button>
+                                </a-input>
+                            </a-space>
+                        </template>
+                    </a-alert>
+
+                    <a-alert
+                        v-if="apiTokens.length === 0"
+                        type="info"
+                        :style="apiTokenAlertStyle('info')"
+                        message='{{ i18n "pages.settings.security.apiTokenEmpty" }}'></a-alert>
+
+                    <a-list v-else bordered size="small">
+                        <a-list-item v-for="token in apiTokens" :key="token.id">
+                            <a-row :gutter="[12, 8]" :style="{ width: '100%' }">
+                                <a-col :xs="24" :md="16">
+                                    <div><b>[[ token.name ]]</b></div>
+                                    <div :style="{ fontFamily: 'monospace', fontSize: '12px' }">[[ token.preview ]]</div>
+                                    <div :style="{ fontSize: '12px', color: 'var(--text-secondary-color, rgba(0,0,0,0.45))' }">
+                                        {{ i18n "pages.settings.security.apiTokenCreatedAt" }}:
+                                        [[ formatApiTokenTime(token.createdAt, false) ]]
+                                    </div>
+                                    <div :style="{ fontSize: '12px', color: 'var(--text-secondary-color, rgba(0,0,0,0.45))' }">
+                                        {{ i18n "pages.settings.security.apiTokenLastUsedAt" }}:
+                                        [[ formatApiTokenTime(token.lastUsedAt) ]]
+                                    </div>
+                                </a-col>
+                                <a-col :xs="24" :md="8" :style="{ textAlign: isMobile ? 'left' : 'right' }">
+                                    <a-button type="danger" ghost @click="deleteApiToken(token)">
+                                        {{ i18n "delete" }}
+                                    </a-button>
+                                </a-col>
+                            </a-row>
+                        </a-list-item>
+                    </a-list>
+                </a-space>
+            </template>
+        </a-setting-list-item>
+    </a-collapse-panel>
 </a-collapse>
 {{end}}

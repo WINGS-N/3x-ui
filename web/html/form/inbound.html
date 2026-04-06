@@ -147,6 +147,11 @@
     {{template "form/wireguard"}}
 </template>
 
+<!-- vk-turn-proxy -->
+<template v-if="inbound.protocol === Protocols.VK_TURN_PROXY">
+    {{template "form/vkTurnProxy"}}
+</template>
+
 <!-- tun -->
 <template v-if="inbound.protocol === Protocols.TUN">
     {{template "form/tun"}}

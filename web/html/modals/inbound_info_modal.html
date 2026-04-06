@@ -160,6 +160,28 @@
                 <a-tag>[[ infoModal.clientSettings.id ]]</a-tag>
               </td>
             </tr>
+            <tr v-if="dbInbound.isVKTurnProxy && infoModal.clientSettings.link">
+              <td>VK Link</td>
+              <td>
+                <a-tooltip :title="[[ infoModal.clientSettings.link ]]">
+                  <a-tag class="info-large-tag">[[ infoModal.clientSettings.link ]]</a-tag>
+                </a-tooltip>
+              </td>
+            </tr>
+            <tr v-if="dbInbound.isVKTurnProxy && infoModal.clientSettings.peerPublicKey">
+              <td>Peer</td>
+              <td>
+                <a-tooltip :title="[[ infoModal.clientSettings.peerPublicKey ]]">
+                  <a-tag class="info-large-tag">[[ infoModal.clientSettings.peerPublicKey ]]</a-tag>
+                </a-tooltip>
+              </td>
+            </tr>
+            <tr v-if="dbInbound.isVKTurnProxy">
+              <td>Peer Mode</td>
+              <td>
+                <a-tag>[[ infoModal.clientSettings.peerManaged ? 'managed' : 'existing' ]]</a-tag>
+              </td>
+            </tr>
             <tr v-if="dbInbound.isVMess">
               <td>{{ i18n "security" }}</td>
               <td>
@@ -376,6 +398,18 @@
                     @click="copy(infoModal.clientSettings.tgId)"></a-button>
                 </a-tooltip>
               </tr-info-title>
+            </tr-info-row>
+          </template>
+          <template v-if="dbInbound.isVKTurnProxy && infoModal.vkTurnProxyLink">
+            <a-divider>WINGSV</a-divider>
+            <tr-info-row class="tr-info-row">
+              <tr-info-title class="tr-info-title">
+                <a-tag class="tr-info-tag" color="green">wingsv://</a-tag>
+                <a-tooltip title='{{ i18n "copy" }}'>
+                  <a-button :style="{ minWidth: '24px' }" size="small" icon="snippets" @click="copy(infoModal.vkTurnProxyLink)"></a-button>
+                </a-tooltip>
+              </tr-info-title>
+              <code>[[ infoModal.vkTurnProxyLink ]]</code>
             </tr-info-row>
           </template>
           <template v-if="dbInbound.hasLink()">
@@ -642,6 +676,7 @@
     isExpired: false,
     subLink: '',
     subJsonLink: '',
+    vkTurnProxyLink: '',
     clientIps: '',
     clientIpsArray: [],
     show(dbInbound, index) {
@@ -651,6 +686,7 @@
       this.clientSettings = this.inbound.clients ? this.inbound.clients[index] : null;
       this.isExpired = this.inbound.clients ? this.inbound.isExpiry(index) : this.dbInbound.isExpiry;
       this.clientStats = this.inbound.clients ? (this.dbInbound.clientStats.find(row => row.email === this.clientSettings.email) || null) : null;
+      this.vkTurnProxyLink = '';
 
       if (
         [
@@ -676,6 +712,14 @@
         if (this.clientSettings.subId) {
           this.subLink = this.genSubLink(this.clientSettings.subId);
           this.subJsonLink = app.subSettings.subJsonEnable ? this.genSubJsonLink(this.clientSettings.subId) : '';
+        }
+        if (this.dbInbound.isVKTurnProxy) {
+          HttpUtil.get(`/panel/api/inbounds/${this.dbInbound.id}/vkTurnProxy/exportClient/${this.clientSettings.id}`)
+            .then((msg) => {
+              if (msg.success) {
+                this.vkTurnProxyLink = msg.obj;
+              }
+            });
         }
       }
       this.visible = true;

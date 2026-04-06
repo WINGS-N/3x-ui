@@ -6,11 +6,15 @@ import (
 	"strings"
 
 	"github.com/mhsanaei/3x-ui/v2/config"
+	"github.com/mhsanaei/3x-ui/v2/database/model"
 	"github.com/mhsanaei/3x-ui/v2/logger"
 	"github.com/mhsanaei/3x-ui/v2/web/entity"
+	"github.com/mhsanaei/3x-ui/v2/web/session"
 
 	"github.com/gin-gonic/gin"
 )
+
+const authUserContextKey = "AUTH_USER"
 
 // getRemoteIp extracts the real IP address from the request headers or remote address.
 func getRemoteIp(c *gin.Context) string {
@@ -62,6 +66,24 @@ func pureJsonMsg(c *gin.Context, statusCode int, success bool, msg string) {
 		Success: success,
 		Msg:     msg,
 	})
+}
+
+// setAuthUser stores the authenticated user for the current request.
+func setAuthUser(c *gin.Context, user *model.User) {
+	if user == nil {
+		return
+	}
+	c.Set(authUserContextKey, user)
+}
+
+// getAuthUser returns the request-scoped authenticated user, falling back to a login session.
+func getAuthUser(c *gin.Context) *model.User {
+	if value, ok := c.Get(authUserContextKey); ok {
+		if user, ok := value.(*model.User); ok && user != nil {
+			return user
+		}
+	}
+	return session.GetLoginUser(c)
 }
 
 // html renders an HTML template with the provided data and title.

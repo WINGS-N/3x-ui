@@ -1,22 +1,29 @@
 #!/bin/sh
-case $1 in
+
+set -eu
+
+arch="$1"
+variant="$2"
+XRAY_VERSION="v26.3.27-wv"
+
+case "${arch}${variant:+/${variant}}" in
     amd64)
         ARCH="64"
         FNAME="amd64"
         ;;
-    i386)
+    386|i386)
         ARCH="32"
         FNAME="i386"
         ;;
-    armv8 | arm64 | aarch64)
+    arm64 | arm64/* | aarch64 | aarch64/*)
         ARCH="arm64-v8a"
         FNAME="arm64"
         ;;
-    armv7 | arm | arm32)
+    arm/v7 | armv7 | arm | arm32)
         ARCH="arm32-v7a"
         FNAME="arm32"
         ;;
-    armv6)
+    arm/v6 | armv6)
         ARCH="arm32-v6"
         FNAME="armv6"
         ;;
@@ -27,10 +34,16 @@ case $1 in
 esac
 mkdir -p build/bin
 cd build/bin
-curl -sfLRO "https://github.com/XTLS/Xray-core/releases/download/v26.2.6/Xray-linux-${ARCH}.zip"
+curl -sfLRO "https://github.com/WINGS-N/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-${ARCH}.zip"
 unzip "Xray-linux-${ARCH}.zip"
 rm -f "Xray-linux-${ARCH}.zip" geoip.dat geosite.dat
 mv xray "xray-linux-${FNAME}"
+case "${FNAME}" in
+    amd64|arm64)
+        curl -sfLRo "vk-turn-proxy-server-linux-${FNAME}" "https://github.com/WINGS-N/vk-turn-proxy/releases/latest/download/server-linux-${FNAME}"
+        chmod +x "vk-turn-proxy-server-linux-${FNAME}"
+        ;;
+esac
 curl -sfLRO https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat
 curl -sfLRO https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
 curl -sfLRo geoip_IR.dat https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geoip.dat

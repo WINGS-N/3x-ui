@@ -2082,6 +2082,12 @@ func (t *Tgbot) BuildInboundClientDataMessage(inbound_remark string, protocol mo
 // BuildJSONForProtocol builds a JSON string for the given protocol with client data.
 func (t *Tgbot) BuildJSONForProtocol(protocol model.Protocol) (string, error) {
 	var jsonString string
+	tgID := EmptyTelegramUserID
+	if trimmed := strings.TrimSpace(client_TgID); trimmed != "" {
+		if parsed, err := strconv.ParseInt(trimmed, 10, 64); err == nil {
+			tgID = parsed
+		}
+	}
 
 	switch protocol {
 	case model.VMESS:
@@ -2094,12 +2100,12 @@ func (t *Tgbot) BuildJSONForProtocol(protocol model.Protocol) (string, error) {
                 "totalGB": %d,
                 "expiryTime": %d,
                 "enable": %t,
-                "tgId": "%s",
+                "tgId": %d,
                 "subId": "%s",
                 "comment": "%s",
                 "reset": %d
             }]
-        }`, client_Id, client_Security, client_Email, client_LimitIP, client_TotalGB, client_ExpiryTime, client_Enable, client_TgID, client_SubID, client_Comment, client_Reset)
+        }`, client_Id, client_Security, client_Email, client_LimitIP, client_TotalGB, client_ExpiryTime, client_Enable, tgID, client_SubID, client_Comment, client_Reset)
 
 	case model.VLESS:
 		jsonString = fmt.Sprintf(`{
@@ -2111,12 +2117,12 @@ func (t *Tgbot) BuildJSONForProtocol(protocol model.Protocol) (string, error) {
                 "totalGB": %d,
                 "expiryTime": %d,
                 "enable": %t,
-                "tgId": "%s",
+                "tgId": %d,
                 "subId": "%s",
                 "comment": "%s",
                 "reset": %d
             }]
-        }`, client_Id, client_Flow, client_Email, client_LimitIP, client_TotalGB, client_ExpiryTime, client_Enable, client_TgID, client_SubID, client_Comment, client_Reset)
+        }`, client_Id, client_Flow, client_Email, client_LimitIP, client_TotalGB, client_ExpiryTime, client_Enable, tgID, client_SubID, client_Comment, client_Reset)
 
 	case model.Trojan:
 		jsonString = fmt.Sprintf(`{
@@ -2127,12 +2133,12 @@ func (t *Tgbot) BuildJSONForProtocol(protocol model.Protocol) (string, error) {
                 "totalGB": %d,
                 "expiryTime": %d,
                 "enable": %t,
-                "tgId": "%s",
+                "tgId": %d,
                 "subId": "%s",
                 "comment": "%s",
                 "reset": %d
             }]
-        }`, client_TrPassword, client_Email, client_LimitIP, client_TotalGB, client_ExpiryTime, client_Enable, client_TgID, client_SubID, client_Comment, client_Reset)
+        }`, client_TrPassword, client_Email, client_LimitIP, client_TotalGB, client_ExpiryTime, client_Enable, tgID, client_SubID, client_Comment, client_Reset)
 
 	case model.Shadowsocks:
 		jsonString = fmt.Sprintf(`{
@@ -2144,12 +2150,12 @@ func (t *Tgbot) BuildJSONForProtocol(protocol model.Protocol) (string, error) {
                 "totalGB": %d,
                 "expiryTime": %d,
                 "enable": %t,
-                "tgId": "%s",
+                "tgId": %d,
                 "subId": "%s",
                 "comment": "%s",
                 "reset": %d
             }]
-        }`, client_Method, client_ShPassword, client_Email, client_LimitIP, client_TotalGB, client_ExpiryTime, client_Enable, client_TgID, client_SubID, client_Comment, client_Reset)
+        }`, client_Method, client_ShPassword, client_Email, client_LimitIP, client_TotalGB, client_ExpiryTime, client_Enable, tgID, client_SubID, client_Comment, client_Reset)
 
 	default:
 		return "", errors.New("unknown protocol")

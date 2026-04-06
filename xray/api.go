@@ -205,38 +205,42 @@ func (x *XrayAPI) RemoveUser(inboundTag, email string) error {
 }
 
 // GetTraffic queries traffic statistics from the Xray core, optionally resetting counters.
-func (x *XrayAPI) GetTraffic(reset bool) ([]*Traffic, []*ClientTraffic, error) {
+func (x *XrayAPI) GetTraffic(reset bool) ([]*Traffic, []*ClientTraffic, []*WireGuardPeerTraffic, error) {
 	if x.grpcClient == nil {
-		return nil, nil, common.NewError("xray api is not initialized")
+		return nil, nil, nil, common.NewError("xray api is not initialized")
 	}
 
 	trafficRegex := regexp.MustCompile(`(inbound|outbound)>>>([^>]+)>>>traffic>>>(downlink|uplink)`)
 	clientTrafficRegex := regexp.MustCompile(`user>>>([^>]+)>>>traffic>>>(downlink|uplink)`)
+	wireGuardPeerTrafficRegex := regexp.MustCompile(`wireguard>>>([^>]+)>>>([^>]+)>>>traffic>>>(downlink|uplink)`)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	if x.StatsServiceClient == nil {
-		return nil, nil, common.NewError("xray StatusServiceClient is not initialized")
+		return nil, nil, nil, common.NewError("xray StatusServiceClient is not initialized")
 	}
 
 	resp, err := (*x.StatsServiceClient).QueryStats(ctx, &statsService.QueryStatsRequest{Reset_: reset})
 	if err != nil {
 		logger.Debug("Failed to query Xray stats:", err)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	tagTrafficMap := make(map[string]*Traffic)
 	emailTrafficMap := make(map[string]*ClientTraffic)
+	wireGuardPeerTrafficMap := make(map[string]*WireGuardPeerTraffic)
 
 	for _, stat := range resp.GetStat() {
 		if matches := trafficRegex.FindStringSubmatch(stat.Name); len(matches) == 4 {
 			processTraffic(matches, stat.Value, tagTrafficMap)
 		} else if matches := clientTrafficRegex.FindStringSubmatch(stat.Name); len(matches) == 3 {
 			processClientTraffic(matches, stat.Value, emailTrafficMap)
+		} else if matches := wireGuardPeerTrafficRegex.FindStringSubmatch(stat.Name); len(matches) == 4 {
+			processWireGuardPeerTraffic(matches, stat.Value, wireGuardPeerTrafficMap)
 		}
 	}
-	return mapToSlice(tagTrafficMap), mapToSlice(emailTrafficMap), nil
+	return mapToSlice(tagTrafficMap), mapToSlice(emailTrafficMap), mapToSlice(wireGuardPeerTrafficMap), nil
 }
 
 // processTraffic aggregates a traffic stat into trafficMap using regex matches and value.
@@ -275,6 +279,29 @@ func processClientTraffic(matches []string, value int64, clientTrafficMap map[st
 	if !ok {
 		traffic = &ClientTraffic{Email: email}
 		clientTrafficMap[email] = traffic
+	}
+
+	if isDown {
+		traffic.Down = value
+	} else {
+		traffic.Up = value
+	}
+}
+
+// processWireGuardPeerTraffic updates wireGuardPeerTrafficMap with upload/download values for a WireGuard peer.
+func processWireGuardPeerTraffic(matches []string, value int64, wireGuardPeerTrafficMap map[string]*WireGuardPeerTraffic) {
+	inboundTag := matches[1]
+	publicKey := matches[2]
+	isDown := matches[3] == "downlink"
+	mapKey := inboundTag + "\x00" + publicKey
+
+	traffic, ok := wireGuardPeerTrafficMap[mapKey]
+	if !ok {
+		traffic = &WireGuardPeerTraffic{
+			InboundTag: inboundTag,
+			PublicKey:  publicKey,
+		}
+		wireGuardPeerTrafficMap[mapKey] = traffic
 	}
 
 	if isDown {
