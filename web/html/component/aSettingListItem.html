@@ -1,7 +1,7 @@
 {{define "component/settingListItem"}}
 <a-list-item :style="{ padding: padding }">
     <a-row :gutter="[8,16]">
-        <a-col :lg="24" :xl="12">
+        <a-col :xs="24" :sm="24" :md="24" :lg="24" :xl="12">
             <a-list-item-meta>
                 <template #title>
                     <slot name="title"></slot>
@@ -11,7 +11,7 @@
                 </template>
             </a-list-item-meta>
         </a-col>
-        <a-col :lg="24" :xl="12">
+        <a-col :xs="24" :sm="24" :md="24" :lg="24" :xl="12">
             <slot name="control"></slot>
         </a-col>
     </a-row>

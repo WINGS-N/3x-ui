@@ -14,6 +14,18 @@
     body {
       background: #fff;
     }
+
+    @media (max-width: 768px) {
+      html, body, #app {
+        height: 100dvh;
+        min-height: 100dvh;
+        overflow: hidden;
+      }
+
+      body {
+        -webkit-text-size-adjust: 100%;
+      }
+    }
   </style>
 </head>
 <body>

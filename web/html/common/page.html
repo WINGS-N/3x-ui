@@ -58,6 +58,141 @@
         display: none;
       }
     }
+
+    @media (max-width: 768px) {
+      #content-layout {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .ant-layout-content {
+        min-width: 0;
+        padding: 0 .25rem .75rem;
+      }
+
+      .ant-card-head-wrapper {
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .ant-card-head-title,
+      .ant-card-extra {
+        min-width: 0;
+        white-space: normal;
+      }
+
+      .ant-card-extra {
+        margin-left: 0;
+      }
+
+      .ant-card-actions > li {
+        min-width: 0;
+      }
+
+      .ant-card-actions .ant-space {
+        justify-content: center;
+      }
+
+      .ant-modal {
+        top: 8px;
+        width: calc(100vw - 16px) !important;
+        max-width: calc(100vw - 16px);
+        margin: 8px auto;
+        padding-bottom: 8px;
+      }
+
+      .ant-modal-body {
+        max-height: calc(100dvh - 140px);
+        overflow: auto;
+      }
+
+      .ant-form-item-label,
+      .ant-form-item-control-wrapper {
+        width: 100%;
+      }
+
+      .ant-form-inline .ant-form-item {
+        display: block;
+        margin-right: 0;
+        margin-bottom: 8px;
+      }
+
+      .ant-input-group.ant-input-group-compact {
+        display: flex;
+      }
+
+      .ant-input-group.ant-input-group-compact > * {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      .ant-select-selection-selected-value,
+      .ant-select-dropdown-menu-item {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .settings-page .ant-alert {
+        float: none !important;
+        width: 100% !important;
+      }
+
+      .settings-page .ant-input-group {
+        display: flex;
+      }
+
+      .settings-page .ant-input-group-addon {
+        flex: 0 0 auto;
+        white-space: nowrap;
+      }
+
+      .settings-page .ant-input-group .ant-input {
+        min-width: 0;
+      }
+
+      .inbounds-page .ant-col-sm-24 {
+        margin: .5rem 0 !important;
+      }
+
+      .inbounds-page .ant-table:not(.ant-table-expanded-row .ant-table),
+      .inbounds-page .ant-table .ant-table-content,
+      .inbounds-page .ant-table-expanded-row .ant-table .ant-table-body {
+        overflow-x: auto !important;
+      }
+
+      .inbounds-page .client-email {
+        display: inline-block;
+        max-width: calc(100vw - 180px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: middle;
+      }
+
+      .inbounds-page .tr-table-box {
+        justify-content: flex-start;
+      }
+
+      .inbounds-page .tr-table-rt,
+      .inbounds-page .tr-table-lt {
+        flex-basis: auto;
+        min-width: 44px;
+      }
+
+      .inbounds-page .tr-table-bar {
+        flex: 1 1 70px;
+        min-width: 48px;
+      }
+
+      .inbounds-page ~ div #inbound-info-modal code {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+    }
   </style>
   <title>{{ .host }} – {{ i18n .title}}</title>
 {{ end }}
