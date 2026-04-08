@@ -27,6 +27,9 @@ type ServerController struct {
 
 	lastVersions        []string
 	lastGetVersionsTime int64 // unix seconds
+
+	lastVKTurnProxyVersions        []string
+	lastGetVKTurnProxyVersionsTime int64 // unix seconds
 }
 
 // NewServerController creates a new ServerController, initializes routes, and starts background tasks.
@@ -43,6 +46,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.GET("/status", a.status)
 	g.GET("/cpuHistory/:bucket", a.getCpuHistoryBucket)
 	g.GET("/getXrayVersion", a.getXrayVersion)
+	g.GET("/getVKTurnProxyVersion", a.getVKTurnProxyVersion)
 	g.GET("/getConfigJson", a.getConfigJson)
 	g.GET("/getDb", a.getDb)
 	g.GET("/getNewUUID", a.getNewUUID)
@@ -57,6 +61,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/stopVKTurnProxyService", a.stopVKTurnProxyService)
 	g.POST("/restartVKTurnProxyService", a.restartVKTurnProxyService)
 	g.POST("/installXray/:version", a.installXray)
+	g.POST("/installVKTurnProxy/:version", a.installVKTurnProxy)
 	g.POST("/updateGeofile", a.updateGeofile)
 	g.POST("/updateGeofile/:fileName", a.updateGeofile)
 	g.POST("/logs/:count", a.getLogs)
@@ -135,11 +140,38 @@ func (a *ServerController) getXrayVersion(c *gin.Context) {
 	jsonObj(c, versions, nil)
 }
 
+// getVKTurnProxyVersion retrieves available vk-turn-proxy versions, with caching for 1 minute.
+func (a *ServerController) getVKTurnProxyVersion(c *gin.Context) {
+	now := time.Now().Unix()
+	if now-a.lastGetVKTurnProxyVersionsTime <= 60 { // 1 minute cache
+		jsonObj(c, a.lastVKTurnProxyVersions, nil)
+		return
+	}
+
+	versions, err := a.serverService.GetVKTurnProxyVersions()
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "getVersion"), err)
+		return
+	}
+
+	a.lastVKTurnProxyVersions = versions
+	a.lastGetVKTurnProxyVersionsTime = now
+
+	jsonObj(c, versions, nil)
+}
+
 // installXray installs or updates Xray to the specified version.
 func (a *ServerController) installXray(c *gin.Context) {
 	version := c.Param("version")
 	err := a.serverService.UpdateXray(version)
 	jsonMsg(c, I18nWeb(c, "pages.index.xraySwitchVersionPopover"), err)
+}
+
+// installVKTurnProxy installs or updates vk-turn-proxy to the specified version.
+func (a *ServerController) installVKTurnProxy(c *gin.Context) {
+	version := c.Param("version")
+	err := a.serverService.UpdateVKTurnProxy(version)
+	jsonMsg(c, "vk-turn-proxy binary has been updated", err)
 }
 
 // updateGeofile updates the specified geo file for Xray.

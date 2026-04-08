@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -358,14 +359,27 @@ func (s *VKTurnProxyService) ensureBinary() error {
 		logger.Warning("vk-turn-proxy binary check failed:", err)
 	}
 
+	return s.downloadBinary("latest")
+}
+
+func (s *VKTurnProxyService) downloadBinary(version string) error {
 	assetName, err := vkturnproxy.GetReleaseAssetName()
 	if err != nil {
 		return err
 	}
 
-	url := fmt.Sprintf("https://github.com/%s/releases/latest/download/%s", vkTurnProxyReleaseRepo, assetName)
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Get(url)
+	version = strings.TrimSpace(version)
+	if version == "" {
+		return common.NewError("vk-turn-proxy version is empty")
+	}
+
+	downloadURL := fmt.Sprintf("https://github.com/%s/releases/latest/download/%s", vkTurnProxyReleaseRepo, assetName)
+	if version != "latest" {
+		downloadURL = fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", vkTurnProxyReleaseRepo, url.PathEscape(version), assetName)
+	}
+
+	client := &http.Client{Timeout: 2 * time.Minute}
+	resp, err := client.Get(downloadURL)
 	if err != nil {
 		return err
 	}
@@ -381,6 +395,7 @@ func (s *VKTurnProxyService) ensureBinary() error {
 	}
 
 	tmpPath := vkturnproxy.GetBinaryPath() + ".tmp"
+	defer os.Remove(tmpPath)
 	file, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755)
 	if err != nil {
 		return err
@@ -392,10 +407,48 @@ func (s *VKTurnProxyService) ensureBinary() error {
 	if err := file.Close(); err != nil {
 		return err
 	}
+	if err := os.Chmod(tmpPath, 0o755); err != nil {
+		return err
+	}
+	_ = os.Remove(vkturnproxy.GetBinaryPath())
 	if err := os.Rename(tmpPath, vkturnproxy.GetBinaryPath()); err != nil {
 		return err
 	}
 	return os.Chmod(vkturnproxy.GetBinaryPath(), 0o755)
+}
+
+func (s *VKTurnProxyService) UpdateBinary(version string) error {
+	version = strings.TrimSpace(version)
+	if version == "" {
+		return common.NewError("vk-turn-proxy version is empty")
+	}
+
+	s.mu.Lock()
+	previousManualStop := s.manualStop
+	s.manualStop = true
+	s.lastError = ""
+	stopErr := s.stopAllLocked()
+	s.mu.Unlock()
+	if stopErr != nil {
+		return stopErr
+	}
+
+	if err := s.downloadBinary(version); err != nil {
+		s.mu.Lock()
+		s.manualStop = previousManualStop
+		s.lastError = err.Error()
+		s.mu.Unlock()
+		if !previousManualStop {
+			_ = s.EnsureRunning()
+		}
+		return err
+	}
+
+	s.mu.Lock()
+	s.manualStop = false
+	s.lastError = ""
+	s.mu.Unlock()
+	return s.EnsureRunning()
 }
 
 func (s *InboundService) getVKTurnProxySettings(raw string) (*VKTurnProxySettings, error) {

@@ -190,6 +190,10 @@
                       <a-icon type="reload"></a-icon>
                       <span v-if="!isMobile">{{ i18n "pages.index.restartXray" }}</span>
                     </a-space>
+                    <a-space direction="horizontal" @click="openSelectVKTurnProxyVersion" class="jc-center">
+                      <a-icon type="tool"></a-icon>
+                      <span v-if="!isMobile">Update</span>
+                    </a-space>
                   </template>
                 </a-card>
               </a-col>
@@ -376,7 +380,18 @@
           </a-list-item>
         </a-list>
       </a-collapse-panel>
-      <a-collapse-panel key="2" header='Geofiles'>
+      <a-collapse-panel key="2" header='vk-turn-proxy'>
+        <a-alert type="warning" class="mb-12 w-100" message='Select a vk-turn-proxy release from WINGS-N/vk-turn-proxy. The panel will stop vk-turn-proxy, replace the server binary, and start enabled inbounds again.'
+          show-icon></a-alert>
+        <a-list v-if="versionModal.vkTurnProxyVersions.length > 0" class="ant-version-list w-100" bordered>
+          <a-list-item class="ant-version-list-item" v-for="version, index in versionModal.vkTurnProxyVersions">
+            <a-tag :color="index % 2 == 0 ? 'purple' : 'green'">[[ version ]]</a-tag>
+            <a-icon type="download" class="mr-8" @click="switchVKTurnProxyVersion(version)" />
+          </a-list-item>
+        </a-list>
+        <a-empty v-else description="No vk-turn-proxy releases found"></a-empty>
+      </a-collapse-panel>
+      <a-collapse-panel key="3" header='Geofiles'>
         <a-list class="ant-version-list w-100" bordered>
           <a-list-item class="ant-version-list-item"
             v-for="file, index in ['geosite.dat', 'geoip.dat', 'geosite_IR.dat', 'geoip_IR.dat', 'geosite_RU.dat', 'geoip_RU.dat']">
@@ -836,9 +851,11 @@
   const versionModal = {
     visible: false,
     versions: [],
-    show(versions) {
+    vkTurnProxyVersions: [],
+    show(versions, vkTurnProxyVersions = []) {
       this.visible = true;
       this.versions = versions;
+      this.vkTurnProxyVersions = vkTurnProxyVersions;
     },
     hide() {
       this.visible = false;
@@ -1043,12 +1060,18 @@
       },
       async openSelectV2rayVersion() {
         this.loading(true);
-        const msg = await HttpUtil.get('/panel/api/server/getXrayVersion');
+        const [msg, vkTurnProxyMsg] = await Promise.all([
+          HttpUtil.get('/panel/api/server/getXrayVersion'),
+          HttpUtil.get('/panel/api/server/getVKTurnProxyVersion'),
+        ]);
         this.loading(false);
-        if (!msg.success) {
+        if (!msg.success && !vkTurnProxyMsg.success) {
           return;
         }
-        versionModal.show(msg.obj);
+        versionModal.show(msg.success ? msg.obj : [], vkTurnProxyMsg.success ? vkTurnProxyMsg.obj : []);
+      },
+      openSelectVKTurnProxyVersion() {
+        this.openSelectV2rayVersion();
       },
       switchV2rayVersion(version) {
         this.$confirm({
@@ -1060,8 +1083,24 @@
           onOk: async () => {
             versionModal.hide();
             this.loading(true, '{{ i18n "pages.index.dontRefresh"}}');
-            await HttpUtil.post(`/panel/api/server/installXray/${version}`);
+            await HttpUtil.post(`/panel/api/server/installXray/${encodeURIComponent(version)}`);
             this.loading(false);
+          },
+        });
+      },
+      switchVKTurnProxyVersion(version) {
+        this.$confirm({
+          title: 'Update vk-turn-proxy',
+          content: `Update vk-turn-proxy to ${version}? Enabled vk-turn-proxy inbounds will be restarted.`,
+          okText: '{{ i18n "confirm"}}',
+          class: themeSwitcher.currentTheme,
+          cancelText: '{{ i18n "cancel"}}',
+          onOk: async () => {
+            versionModal.hide();
+            this.loading(true, '{{ i18n "pages.index.dontRefresh"}}');
+            await HttpUtil.post(`/panel/api/server/installVKTurnProxy/${encodeURIComponent(version)}`);
+            this.loading(false);
+            await this.getStatus();
           },
         });
       },

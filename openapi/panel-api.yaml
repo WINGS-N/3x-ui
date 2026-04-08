@@ -830,6 +830,28 @@ paths:
         "404":
           description: Missing or invalid bearer token.
 
+  /panel/api/server/getVKTurnProxyVersion:
+    get:
+      tags: [Server]
+      summary: List available vk-turn-proxy versions
+      operationId: getVkTurnProxyVersions
+      responses:
+        "200":
+          description: Version list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        type: array
+                        items:
+                          type: string
+        "404":
+          description: Missing or invalid bearer token.
+
   /panel/api/server/getConfigJson:
     get:
       tags: [Server]
@@ -1026,6 +1048,23 @@ paths:
       tags: [Server]
       summary: Install or switch to a specific Xray version
       operationId: installXray
+      parameters:
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          description: Missing or invalid bearer token.
+
+  /panel/api/server/installVKTurnProxy/{version}:
+    post:
+      tags: [Server]
+      summary: Install or switch to a specific vk-turn-proxy version
+      operationId: installVkTurnProxy
       parameters:
         - name: version
           in: path

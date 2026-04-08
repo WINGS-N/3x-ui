@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -99,6 +100,8 @@ type Status struct {
 type Release struct {
 	TagName string `json:"tag_name"` // The tag name of the release
 }
+
+const xrayReleaseRepo = "WINGS-N/Xray-core"
 
 // ServerService provides business logic for server monitoring and management.
 // It handles system status collection, IP detection, and application statistics.
@@ -519,13 +522,10 @@ func (s *ServerService) sampleCPUUtilization() (float64, error) {
 	return s.emaCPU, nil
 }
 
-func (s *ServerService) GetXrayVersions() ([]string, error) {
-	const (
-		XrayURL    = "https://api.github.com/repos/WINGS-N/Xray-core/releases"
-		bufferSize = 8192
-	)
-
-	resp, err := http.Get(XrayURL)
+func getGitHubReleaseVersions(repo string) ([]string, error) {
+	releasesURL := fmt.Sprintf("https://api.github.com/repos/%s/releases", repo)
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(releasesURL)
 	if err != nil {
 		return nil, err
 	}
@@ -543,37 +543,26 @@ func (s *ServerService) GetXrayVersions() ([]string, error) {
 		return nil, fmt.Errorf("GitHub API returned status %d: %s", resp.StatusCode, resp.Status)
 	}
 
-	buffer := bytes.NewBuffer(make([]byte, bufferSize))
-	buffer.Reset()
-	if _, err := buffer.ReadFrom(resp.Body); err != nil {
-		return nil, err
-	}
-
 	var releases []Release
-	if err := json.Unmarshal(buffer.Bytes(), &releases); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
 		return nil, err
 	}
 
 	var versions []string
 	for _, release := range releases {
-		tagVersion := strings.TrimPrefix(release.TagName, "v")
-		tagParts := strings.Split(tagVersion, ".")
-		if len(tagParts) != 3 {
-			continue
-		}
-
-		major, err1 := strconv.Atoi(tagParts[0])
-		minor, err2 := strconv.Atoi(tagParts[1])
-		patch, err3 := strconv.Atoi(tagParts[2])
-		if err1 != nil || err2 != nil || err3 != nil {
-			continue
-		}
-
-		if major > 26 || (major == 26 && minor > 2) || (major == 26 && minor == 2 && patch >= 6) {
-			versions = append(versions, release.TagName)
+		if tag := strings.TrimSpace(release.TagName); tag != "" {
+			versions = append(versions, tag)
 		}
 	}
 	return versions, nil
+}
+
+func (s *ServerService) GetXrayVersions() ([]string, error) {
+	return getGitHubReleaseVersions(xrayReleaseRepo)
+}
+
+func (s *ServerService) GetVKTurnProxyVersions() ([]string, error) {
+	return getGitHubReleaseVersions(vkTurnProxyReleaseRepo)
 }
 
 func (s *ServerService) StopXrayService() error {
@@ -618,6 +607,14 @@ func (s *ServerService) RestartVKTurnProxyService() error {
 	return nil
 }
 
+func (s *ServerService) UpdateVKTurnProxy(version string) error {
+	if err := VKTurnProxyRuntime().UpdateBinary(version); err != nil {
+		logger.Error("update vk-turn-proxy failed:", err)
+		return err
+	}
+	return nil
+}
+
 func (s *ServerService) downloadXRay(version string) (string, error) {
 	osName := runtime.GOOS
 	arch := runtime.GOARCH
@@ -647,12 +644,18 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 	}
 
 	fileName := fmt.Sprintf("Xray-%s-%s.zip", osName, arch)
-	url := fmt.Sprintf("https://github.com/WINGS-N/Xray-core/releases/download/%s/%s", version, fileName)
-	resp, err := http.Get(url)
+	downloadURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", xrayReleaseRepo, url.PathEscape(version), fileName)
+	client := &http.Client{Timeout: 2 * time.Minute}
+	resp, err := client.Get(downloadURL)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return "", fmt.Errorf("Xray download failed: %s (%s)", resp.Status, strings.TrimSpace(string(body)))
+	}
 
 	os.Remove(fileName)
 	file, err := os.Create(fileName)
