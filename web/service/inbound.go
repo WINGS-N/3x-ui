@@ -2682,7 +2682,13 @@ func (s *InboundService) MigrateDB() {
 }
 
 func (s *InboundService) GetOnlineClients() []string {
-	return p.GetOnlineClients()
+	base := p.GetOnlineClients()
+	heartbeatOnline, _, err := s.getVKTurnProxyHeartbeatPresence(time.Now())
+	if err != nil {
+		logger.Warning("get vk-turn-proxy heartbeat online clients failed:", err)
+		return append([]string(nil), base...)
+	}
+	return mergeOnlineClientLists(base, heartbeatOnline)
 }
 
 func (s *InboundService) GetClientsLastOnline() (map[string]int64, error) {
@@ -2695,6 +2701,16 @@ func (s *InboundService) GetClientsLastOnline() (map[string]int64, error) {
 	result := make(map[string]int64, len(rows))
 	for _, r := range rows {
 		result[r.Email] = r.LastOnline
+	}
+	_, heartbeatLastOnline, heartbeatErr := s.getVKTurnProxyHeartbeatPresence(time.Now())
+	if heartbeatErr != nil {
+		logger.Warning("get vk-turn-proxy heartbeat last online failed:", heartbeatErr)
+		return result, nil
+	}
+	for email, lastSeen := range heartbeatLastOnline {
+		if lastSeen > result[email] {
+			result[email] = lastSeen
+		}
 	}
 	return result, nil
 }

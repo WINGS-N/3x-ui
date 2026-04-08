@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -45,6 +47,16 @@ type Spec struct {
 	Connect     string
 	SessionMode string
 }
+
+type HeartbeatState struct {
+	Fingerprint string
+	LastSeen    time.Time
+	Online      bool
+	Active      uint32
+	Version     uint32
+}
+
+var heartbeatLinePattern = regexp.MustCompile(`protobuf heartbeat from .*: online=(true|false) active_streams=(\d+) version=(\d+) wg_fp="([^"]*)"`)
 
 func (s Spec) Key() string {
 	return strings.Join([]string{
@@ -112,6 +124,10 @@ func (p *Process) GetUptime() uint64 {
 	return uint64(time.Since(p.startedAt).Seconds())
 }
 
+func (p *Process) HeartbeatSnapshot() map[string]HeartbeatState {
+	return p.logWriter.HeartbeatSnapshot()
+}
+
 func (p *Process) Start() (err error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -171,6 +187,7 @@ type logWriter struct {
 	remark string
 	mu     sync.RWMutex
 	last   string
+	beats  map[string]HeartbeatState
 }
 
 func (w *logWriter) Write(data []byte) (int, error) {
@@ -186,6 +203,7 @@ func (w *logWriter) Write(data []byte) (int, error) {
 		w.mu.Lock()
 		w.last = line
 		w.mu.Unlock()
+		w.recordHeartbeat(line)
 		logger.Debugf("VKTURN[%d:%s] %s", w.id, w.remark, line)
 	}
 	return len(data), nil
@@ -195,6 +213,56 @@ func (w *logWriter) LastLine() string {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 	return w.last
+}
+
+func (w *logWriter) HeartbeatSnapshot() map[string]HeartbeatState {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	if len(w.beats) == 0 {
+		return nil
+	}
+
+	snapshot := make(map[string]HeartbeatState, len(w.beats))
+	for fingerprint, state := range w.beats {
+		snapshot[fingerprint] = state
+	}
+	return snapshot
+}
+
+func (w *logWriter) recordHeartbeat(line string) {
+	matches := heartbeatLinePattern.FindStringSubmatch(line)
+	if len(matches) != 5 {
+		return
+	}
+
+	fingerprint := strings.TrimSpace(matches[4])
+	if fingerprint == "" {
+		return
+	}
+
+	active, err := strconv.ParseUint(matches[2], 10, 32)
+	if err != nil {
+		return
+	}
+	version, err := strconv.ParseUint(matches[3], 10, 32)
+	if err != nil {
+		return
+	}
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if w.beats == nil {
+		w.beats = make(map[string]HeartbeatState)
+	}
+	w.beats[fingerprint] = HeartbeatState{
+		Fingerprint: fingerprint,
+		LastSeen:    time.Now(),
+		Online:      matches[1] == "true",
+		Active:      uint32(active),
+		Version:     uint32(version),
+	}
 }
 
 func EnsureBinaryExecutable() error {
