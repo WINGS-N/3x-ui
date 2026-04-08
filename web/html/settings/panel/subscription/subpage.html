@@ -195,6 +195,8 @@
                                             Android <a-icon type="down" />
                                         </a-button>
                                         <a-menu slot="overlay" :class="themeSwitcher.currentTheme">
+                                            <a-menu-item v-if="hasWingsVLinks" key="android-wingsv"
+                                                @click="open(wingsvAppUrl)">WINGS V</a-menu-item>
                                             <a-menu-item key="android-v2box"
                                                 @click="open('v2box://install-sub?url=' + encodeURIComponent(app.subUrl) + '&name=' + encodeURIComponent(app.sId))">V2Box</a-menu-item>
                                             <a-menu-item key="android-v2rayng"

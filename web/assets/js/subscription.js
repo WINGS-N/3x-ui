@@ -116,6 +116,9 @@
       isMobile() {
         return this.viewportWidth < 576;
       },
+      hasWingsVLinks() {
+        return this.links.some(link => typeof link === 'string' && link.startsWith('wingsv://'));
+      },
       isUnlimited() {
         return !this.app.totalByte;
       },
@@ -145,6 +148,9 @@
       },
       happUrl() {
         return `happ://add/${this.app.subUrl}`;
+      },
+      wingsvAppUrl() {
+        return 'https://github.com/WINGS-N/WINGSV';
       }
     },
     methods: {

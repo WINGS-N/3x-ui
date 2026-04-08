@@ -45,7 +45,7 @@ func (s *SubService) GetSubs(subId string, host string) ([]string, int64, xray.C
 	var traffic xray.ClientTraffic
 	var lastOnline int64
 	var clientTraffics []xray.ClientTraffic
-	inbounds, err := s.getInboundsBySubId(subId)
+	inbounds, err := s.getSubscriptionInboundsBySubId(subId)
 	if err != nil {
 		return nil, 0, traffic, err
 	}
@@ -76,7 +76,13 @@ func (s *SubService) GetSubs(subId string, host string) ([]string, int64, xray.C
 		}
 		for _, client := range clients {
 			if client.Enable && client.SubID == subId {
-				link := s.getLink(inbound, client.Email)
+				link, err := s.getClientSubscriptionLink(inbound, client, host)
+				if err != nil {
+					return nil, 0, traffic, err
+				}
+				if link == "" {
+					continue
+				}
 				result = append(result, link)
 				ct := s.getClientTraffics(inbound.ClientStats, client.Email)
 				clientTraffics = append(clientTraffics, ct)
@@ -129,6 +135,23 @@ func (s *SubService) getInboundsBySubId(subId string) ([]*model.Inbound, error) 
 	return inbounds, nil
 }
 
+func (s *SubService) getSubscriptionInboundsBySubId(subId string) ([]*model.Inbound, error) {
+	db := database.GetDB()
+	var inbounds []*model.Inbound
+	err := db.Model(model.Inbound{}).Preload("ClientStats").Where(`id in (
+		SELECT DISTINCT inbounds.id
+		FROM inbounds,
+			JSON_EACH(JSON_EXTRACT(inbounds.settings, '$.clients')) AS client
+		WHERE
+			protocol in ('vmess','vless','trojan','shadowsocks','vk-turn-proxy')
+			AND JSON_EXTRACT(client.value, '$.subId') = ? AND enable = ?
+	)`, subId, true).Find(&inbounds).Error
+	if err != nil {
+		return nil, err
+	}
+	return inbounds, nil
+}
+
 func (s *SubService) getClientTraffics(traffics []xray.ClientTraffic, email string) xray.ClientTraffic {
 	for _, traffic := range traffics {
 		if traffic.Email == email {
@@ -173,6 +196,13 @@ func (s *SubService) getLink(inbound *model.Inbound, email string) string {
 		return s.genShadowsocksLink(inbound, email)
 	}
 	return ""
+}
+
+func (s *SubService) getClientSubscriptionLink(inbound *model.Inbound, client model.Client, host string) (string, error) {
+	if inbound.Protocol == model.VKTurnProxy {
+		return s.inboundService.ExportVKTurnProxyClient(inbound.Id, client.ID, host)
+	}
+	return s.getLink(inbound, client.Email), nil
 }
 
 func (s *SubService) genVmessLink(inbound *model.Inbound, email string) string {
