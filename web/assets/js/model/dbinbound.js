@@ -20,11 +20,14 @@ class DBInbound {
         this.streamSettings = "";
         this.tag = "";
         this.sniffing = "";
-        this.clientStats = ""
+        this.clientStats = []
         if (data == null) {
             return;
         }
         ObjectUtil.cloneProps(this, data);
+        if (!Array.isArray(this.clientStats)) {
+            this.clientStats = [];
+        }
     }
 
     get totalGB() {

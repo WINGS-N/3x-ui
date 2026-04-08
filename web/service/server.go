@@ -654,7 +654,7 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
-		return "", fmt.Errorf("Xray download failed: %s (%s)", resp.Status, strings.TrimSpace(string(body)))
+		return "", fmt.Errorf("xray download failed: %s (%s)", resp.Status, strings.TrimSpace(string(body)))
 	}
 
 	os.Remove(fileName)

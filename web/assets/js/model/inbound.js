@@ -1187,7 +1187,7 @@ class Inbound extends XrayCommonClass {
         streamSettings = new StreamSettings(),
         tag = '',
         sniffing = new Sniffing(),
-        clientStats = '',
+        clientStats = [],
     ) {
         super();
         this.port = port;
@@ -1197,7 +1197,7 @@ class Inbound extends XrayCommonClass {
         this.stream = streamSettings;
         this.tag = tag;
         this.sniffing = sniffing;
-        this.clientStats = clientStats;
+        this.clientStats = Array.isArray(clientStats) ? clientStats : [];
     }
     getClientStats() {
         return this.clientStats;

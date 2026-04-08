@@ -826,7 +826,7 @@
       getClientCounts(dbInbound, inbound) {
         let clientCount = 0, active = [], deactive = [], depleted = [], expiring = [], online = [], comments = new Map();
         clients = inbound.clients;
-        clientStats = dbInbound.clientStats
+        clientStats = Array.isArray(dbInbound.clientStats) ? dbInbound.clientStats : []
         now = new Date().getTime()
         if (clients) {
           clientCount = clients.length;
@@ -1374,40 +1374,40 @@
       },
       getUpStats(dbInbound, email) {
         if (email.length == 0) return 0;
-        clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+        clientStats = (Array.isArray(dbInbound.clientStats) ? dbInbound.clientStats : []).find(stats => stats.email === email);
         return clientStats ? clientStats.up : 0;
       },
       getDownStats(dbInbound, email) {
         if (email.length == 0) return 0;
-        clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+        clientStats = (Array.isArray(dbInbound.clientStats) ? dbInbound.clientStats : []).find(stats => stats.email === email);
         return clientStats ? clientStats.down : 0;
       },
       getSumStats(dbInbound, email) {
         if (email.length == 0) return 0;
-        clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+        clientStats = (Array.isArray(dbInbound.clientStats) ? dbInbound.clientStats : []).find(stats => stats.email === email);
         return clientStats ? clientStats.up + clientStats.down : 0;
       },
       getAllTimeClient(dbInbound, email) {
         if (email.length == 0) return 0;
-        clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+        clientStats = (Array.isArray(dbInbound.clientStats) ? dbInbound.clientStats : []).find(stats => stats.email === email);
         if (!clientStats) return 0;
         return clientStats.allTime || (clientStats.up + clientStats.down);
       },
       getRemStats(dbInbound, email) {
         if (email.length == 0) return 0;
-        clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+        clientStats = (Array.isArray(dbInbound.clientStats) ? dbInbound.clientStats : []).find(stats => stats.email === email);
         if (!clientStats) return 0;
         remained = clientStats.total - (clientStats.up + clientStats.down);
         return remained > 0 ? remained : 0;
       },
       clientStatsColor(dbInbound, email) {
         if (email.length == 0) return ColorUtils.clientUsageColor();
-        clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+        clientStats = (Array.isArray(dbInbound.clientStats) ? dbInbound.clientStats : []).find(stats => stats.email === email);
         return ColorUtils.clientUsageColor(clientStats, app.trafficDiff)
       },
       statsProgress(dbInbound, email) {
         if (email.length == 0) return 100;
-        clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+        clientStats = (Array.isArray(dbInbound.clientStats) ? dbInbound.clientStats : []).find(stats => stats.email === email);
         if (!clientStats) return 0;
         if (clientStats.total == 0) return 100;
         return 100 * (clientStats.down + clientStats.up) / clientStats.total;
@@ -1421,7 +1421,7 @@
       },
       statsExpColor(dbInbound, email) {
         if (email.length == 0) return '#7a316f';
-        clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+        clientStats = (Array.isArray(dbInbound.clientStats) ? dbInbound.clientStats : []).find(stats => stats.email === email);
         if (!clientStats) return '#7a316f';
         statsColor = ColorUtils.usageColor(clientStats.down + clientStats.up, this.trafficDiff, clientStats.total);
         expColor = ColorUtils.usageColor(new Date().getTime(), this.expireDiff, clientStats.expiryTime);
@@ -1437,11 +1437,11 @@
         }
       },
       isClientEnabled(dbInbound, email) {
-        clientStats = dbInbound.clientStats ? dbInbound.clientStats.find(stats => stats.email === email) : null;
+        clientStats = Array.isArray(dbInbound.clientStats) ? dbInbound.clientStats.find(stats => stats.email === email) : null;
         return clientStats ? clientStats['enable'] : true;
       },
       isClientDepleted(dbInbound, email) {
-        if (!email || !dbInbound || !dbInbound.clientStats) return false;
+        if (!email || !dbInbound || !Array.isArray(dbInbound.clientStats)) return false;
         const stats = dbInbound.clientStats.find(s => s.email === email);
         if (!stats) return false;
         const total = stats.total ?? 0;
