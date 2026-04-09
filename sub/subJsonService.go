@@ -72,7 +72,7 @@ func NewSubJsonService(fragment string, noises string, mux string, rules string,
 
 // GetJson generates a JSON subscription configuration for the given subscription ID and host.
 func (s *SubJsonService) GetJson(subId string, host string) (string, string, error) {
-	inbounds, err := s.SubService.getInboundsBySubId(subId)
+	inbounds, err := s.SubService.getSubscriptionInboundsBySubId(subId)
 	if err != nil || len(inbounds) == 0 {
 		return "", "", err
 	}
@@ -194,6 +194,21 @@ func (s *SubJsonService) getConfig(inbound *model.Inbound, client model.Client, 
 			newOutbounds = append(newOutbounds, s.genVless(inbound, streamSettings, client))
 		case "trojan", "shadowsocks":
 			newOutbounds = append(newOutbounds, s.genServer(inbound, streamSettings, client))
+		case model.VKTurnProxy:
+			link, err := s.inboundService.ExportVKTurnProxyClient(inbound.Id, client.ID, host)
+			if err != nil {
+				logger.Warningf("SubJsonService - ExportVKTurnProxyClient failed for inbound %d client %s: %v", inbound.Id, client.Email, err)
+				continue
+			}
+			if link != "" {
+				rawLink, err := json.Marshal(link)
+				if err != nil {
+					logger.Warningf("SubJsonService - marshal vk-turn-proxy link failed for inbound %d client %s: %v", inbound.Id, client.Email, err)
+					continue
+				}
+				newJsonArray = append(newJsonArray, rawLink)
+			}
+			continue
 		}
 
 		newOutbounds = append(newOutbounds, s.defaultOutbounds...)

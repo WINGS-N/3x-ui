@@ -147,12 +147,15 @@ func (s *InboundService) buildVKTurnProxyHeartbeatPresence(
 				continue
 			}
 
-			lastSeen := state.LastSeen.UnixMilli()
-			if lastSeen > lastOnlineByEmail[email] {
-				lastOnlineByEmail[email] = lastSeen
+			isActive := state.Active > 0
+			if isActive {
+				lastSeen := state.LastSeen.UnixMilli()
+				if lastSeen > lastOnlineByEmail[email] {
+					lastOnlineByEmail[email] = lastSeen
+				}
 			}
 
-			if client.Enable && now.Sub(state.LastSeen) <= vkTurnProxyHeartbeatOnlineGrace {
+			if client.Enable && isActive && now.Sub(state.LastSeen) <= vkTurnProxyHeartbeatOnlineGrace {
 				onlineEmails[email] = struct{}{}
 			}
 		}

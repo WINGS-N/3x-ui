@@ -1295,10 +1295,12 @@
         newDbInbound = this.checkFallback(dbInbound);
         infoModal.show(newDbInbound, index);
       },
-      switchEnable(dbInboundId, state) {
+      async switchEnable(dbInboundId, state) {
         dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+        if (!dbInbound) return;
         dbInbound.enable = state;
-        this.submit(`/panel/api/inbounds/update/${dbInboundId}`, dbInbound);
+        const inbound = dbInbound.toInbound();
+        await this.updateInbound(inbound, dbInbound);
       },
       async switchEnableClient(dbInboundId, client) {
         this.loading()

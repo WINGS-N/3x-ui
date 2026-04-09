@@ -99,3 +99,47 @@ func TestBuildVKTurnProxyHeartbeatPresenceUsesRecentHeartbeats(t *testing.T) {
 		t.Fatalf("unexpected stale client last online: %d", got)
 	}
 }
+
+func TestBuildVKTurnProxyHeartbeatPresenceRequiresActiveStreams(t *testing.T) {
+	key := make([]byte, 32)
+	for i := range key {
+		key[i] = byte(i + 1)
+	}
+
+	publicKey := base64.StdEncoding.EncodeToString(key)
+	fingerprint, err := wireGuardPublicKeyFingerprint(publicKey)
+	if err != nil {
+		t.Fatalf("wireGuardPublicKeyFingerprint returned error: %v", err)
+	}
+
+	settings := `{
+		"forward": {"type": "wireguardInbound", "wireguardInboundId": 4},
+		"clients": [
+			{"id": "client-1", "email": "idle@example.com", "enable": true, "peerPublicKey": "` + publicKey + `"}
+		]
+	}`
+	now := time.Unix(1_760_000_000, 0)
+	service := new(InboundService)
+	inbounds := []*model.Inbound{
+		{Id: 11, Settings: settings},
+	}
+	snapshot := map[int]map[string]vkturnproxy.HeartbeatState{
+		11: {
+			fingerprint: {
+				Fingerprint: fingerprint,
+				LastSeen:    now.Add(-30 * time.Second),
+				Online:      true,
+				Active:      0,
+				Version:     1,
+			},
+		},
+	}
+
+	online, lastOnline := service.buildVKTurnProxyHeartbeatPresence(inbounds, snapshot, now)
+	if _, ok := online["idle@example.com"]; ok {
+		t.Fatalf("expected heartbeat without active streams to stay offline, got %#v", online)
+	}
+	if _, ok := lastOnline["idle@example.com"]; ok {
+		t.Fatalf("expected heartbeat without active streams to not refresh lastOnline, got %#v", lastOnline)
+	}
+}
