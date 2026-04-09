@@ -123,6 +123,7 @@ type VKTurnProxyRuntimeStatus struct {
 	Running   int          `json:"running"`
 	State     ProcessState `json:"state"`
 	ErrorMsg  string       `json:"errorMsg"`
+	Version   string       `json:"version"`
 	Uptime    uint64       `json:"uptime"`
 }
 
@@ -359,62 +360,76 @@ func (s *VKTurnProxyService) ensureBinary() error {
 		logger.Warning("vk-turn-proxy binary check failed:", err)
 	}
 
-	return s.downloadBinary("latest")
+	_, err := s.downloadBinary("latest")
+	return err
 }
 
-func (s *VKTurnProxyService) downloadBinary(version string) error {
+func (s *VKTurnProxyService) downloadBinary(version string) (string, error) {
 	assetName, err := vkturnproxy.GetReleaseAssetName()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	version = strings.TrimSpace(version)
 	if version == "" {
-		return common.NewError("vk-turn-proxy version is empty")
+		return "", common.NewError("vk-turn-proxy version is empty")
 	}
 
-	downloadURL := fmt.Sprintf("https://github.com/%s/releases/latest/download/%s", vkTurnProxyReleaseRepo, assetName)
-	if version != "latest" {
-		downloadURL = fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", vkTurnProxyReleaseRepo, url.PathEscape(version), assetName)
+	resolvedVersion := version
+	if version == "latest" {
+		resolvedVersion, err = getGitHubLatestReleaseVersion(vkTurnProxyReleaseRepo)
+		if err != nil {
+			return "", err
+		}
 	}
+	downloadURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", vkTurnProxyReleaseRepo, url.PathEscape(resolvedVersion), assetName)
 
 	client := &http.Client{Timeout: 2 * time.Minute}
 	resp, err := client.Get(downloadURL)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
-		return fmt.Errorf("vk-turn-proxy download failed: %s (%s)", resp.Status, strings.TrimSpace(string(body)))
+		return "", fmt.Errorf("vk-turn-proxy download failed: %s (%s)", resp.Status, strings.TrimSpace(string(body)))
 	}
 
 	if err := os.MkdirAll(filepath.Dir(vkturnproxy.GetBinaryPath()), 0o755); err != nil {
-		return err
+		return "", err
 	}
 
 	tmpPath := vkturnproxy.GetBinaryPath() + ".tmp"
 	defer os.Remove(tmpPath)
 	file, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if _, err := io.Copy(file, resp.Body); err != nil {
 		_ = file.Close()
-		return err
+		return "", err
 	}
 	if err := file.Close(); err != nil {
-		return err
+		return "", err
 	}
 	if err := os.Chmod(tmpPath, 0o755); err != nil {
-		return err
+		return "", err
 	}
 	_ = os.Remove(vkturnproxy.GetBinaryPath())
 	if err := os.Rename(tmpPath, vkturnproxy.GetBinaryPath()); err != nil {
-		return err
+		return "", err
 	}
-	return os.Chmod(vkturnproxy.GetBinaryPath(), 0o755)
+	if err := os.Chmod(vkturnproxy.GetBinaryPath(), 0o755); err != nil {
+		return "", err
+	}
+	if err := writeReleaseMetadata(vkturnproxy.GetBinaryPath(), resolvedVersion); err != nil {
+		return "", err
+	}
+	if err := (&SettingService{}).SetVKTurnProxyReleaseTag(resolvedVersion); err != nil {
+		return "", err
+	}
+	return resolvedVersion, nil
 }
 
 func (s *VKTurnProxyService) UpdateBinary(version string) error {
@@ -433,7 +448,7 @@ func (s *VKTurnProxyService) UpdateBinary(version string) error {
 		return stopErr
 	}
 
-	if err := s.downloadBinary(version); err != nil {
+	if _, err := s.downloadBinary(version); err != nil {
 		s.mu.Lock()
 		s.manualStop = previousManualStop
 		s.lastError = err.Error()

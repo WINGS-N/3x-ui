@@ -83,8 +83,8 @@
                   <template #title>
                     <a-space direction="horizontal">
                       <span>{{ i18n "pages.index.xrayStatus" }}</span>
-                      <a-tag v-if="isMobile && status.xray.version != 'Unknown'" color="green">
-                        v[[ status.xray.version ]]
+                      <a-tag v-if="isMobile && getDisplayedXrayVersion() != 'Unknown'" color="green">
+                        [[ getDisplayedXrayVersion() ]]
                       </a-tag>
                     </a-space>
                   </template>
@@ -130,7 +130,7 @@
                     <a-space direction="horizontal" @click="openSelectV2rayVersion" class="jc-center">
                       <a-icon type="tool"></a-icon>
                       <span v-if="!isMobile">
-                        [[ status.xray.version != 'Unknown' ? `v${status.xray.version}` : '{{ i18n
+                        [[ getDisplayedXrayVersion() != 'Unknown' ? getDisplayedXrayVersion() : '{{ i18n
                         "pages.index.xraySwitch" }}' ]]
                       </span>
                     </a-space>
@@ -142,6 +142,9 @@
                   <template #title>
                     <a-space direction="horizontal">
                       <span>vk-turn-proxy</span>
+                      <a-tag v-if="status.vkTurnProxy.version != 'Unknown'" color="green">
+                        [[ status.vkTurnProxy.version ]]
+                      </a-tag>
                       <a-tag color="blue">
                         [[ status.vkTurnProxy.running ]]/[[ status.vkTurnProxy.enabled ]]
                       </a-tag>
@@ -375,7 +378,7 @@
         <a-list class="ant-version-list w-100" bordered>
           <a-list-item class="ant-version-list-item" v-for="version, index in versionModal.versions">
             <a-tag :color="index % 2 == 0 ? 'purple' : 'green'">[[ version ]]</a-tag>
-            <a-radio :class="themeSwitcher.currentTheme" :checked="version === `v${status.xray.version}`"
+            <a-radio :class="themeSwitcher.currentTheme" :checked="isInstalledXrayVersion(version)"
               @click="switchV2rayVersion(version)"></a-radio>
           </a-list-item>
         </a-list>
@@ -386,7 +389,8 @@
         <a-list v-if="versionModal.vkTurnProxyVersions.length > 0" class="ant-version-list w-100" bordered>
           <a-list-item class="ant-version-list-item" v-for="version, index in versionModal.vkTurnProxyVersions">
             <a-tag :color="index % 2 == 0 ? 'purple' : 'green'">[[ version ]]</a-tag>
-            <a-icon type="download" class="mr-8" @click="switchVKTurnProxyVersion(version)" />
+            <a-radio :class="themeSwitcher.currentTheme" :checked="version === status.vkTurnProxy.version"
+              @click="switchVKTurnProxyVersion(version)"></a-radio>
           </a-list-item>
         </a-list>
         <a-empty v-else description="No vk-turn-proxy releases found"></a-empty>
@@ -820,8 +824,8 @@
       this.appUptime = 0;
       this.appStats = { threads: 0, mem: 0, uptime: 0 };
 
-      this.xray = Status.normalizeServiceStatus({ state: 'stop', version: "" });
-      this.vkTurnProxy = Status.normalizeServiceStatus({ state: 'stop', available: false, total: 0, enabled: 0, running: 0, uptime: 0 });
+      this.xray = Status.normalizeServiceStatus({ state: 'stop', version: "Unknown", binaryVersion: "Unknown" });
+      this.vkTurnProxy = Status.normalizeServiceStatus({ state: 'stop', version: "Unknown", available: false, total: 0, enabled: 0, running: 0, uptime: 0 });
 
       if (data == null) {
         return;
@@ -1003,6 +1007,29 @@
       loading(spinning, tip = '{{ i18n "loading"}}') {
         this.loadingStates.spinning = spinning;
         this.loadingTip = tip;
+      },
+      getDisplayedXrayVersion() {
+        const releaseTag = this.status?.xray?.version;
+        if (releaseTag && releaseTag !== 'Unknown') {
+          return releaseTag;
+        }
+        const binaryVersion = this.status?.xray?.binaryVersion;
+        if (binaryVersion && binaryVersion !== 'Unknown') {
+          return `v${binaryVersion}`;
+        }
+        return 'Unknown';
+      },
+      isInstalledXrayVersion(version) {
+        const releaseTag = this.status?.xray?.version;
+        if (version === releaseTag) {
+          return true;
+        }
+        const binaryVersion = normalizeVersionTag(this.status?.xray?.binaryVersion);
+        if (!binaryVersion) {
+          return false;
+        }
+        const candidate = normalizeVersionTag(version);
+        return candidate === binaryVersion || candidate.startsWith(`${binaryVersion}-`);
       },
       async getStatus() {
         try {
@@ -1372,6 +1399,13 @@
     });
 
     return formattedLogs;
+  }
+
+  function normalizeVersionTag(version) {
+    if (!version || version === 'Unknown') {
+      return '';
+    }
+    return String(version).trim().replace(/^v/, '');
   }
 </script>
 {{ template "page/body_end" .}}

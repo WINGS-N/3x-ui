@@ -26,6 +26,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v2/logger"
 	"github.com/mhsanaei/3x-ui/v2/util/common"
 	"github.com/mhsanaei/3x-ui/v2/util/sys"
+	"github.com/mhsanaei/3x-ui/v2/vkturnproxy"
 	"github.com/mhsanaei/3x-ui/v2/xray"
 
 	"github.com/google/uuid"
@@ -68,9 +69,10 @@ type Status struct {
 		Total   uint64 `json:"total"`
 	} `json:"disk"`
 	Xray struct {
-		State    ProcessState `json:"state"`
-		ErrorMsg string       `json:"errorMsg"`
-		Version  string       `json:"version"`
+		State         ProcessState `json:"state"`
+		ErrorMsg      string       `json:"errorMsg"`
+		Version       string       `json:"version"`
+		BinaryVersion string       `json:"binaryVersion"`
 	} `json:"xray"`
 	VKTurnProxy VKTurnProxyRuntimeStatus `json:"vkTurnProxy"`
 	Uptime      uint64                   `json:"uptime"`
@@ -108,6 +110,7 @@ const xrayReleaseRepo = "WINGS-N/Xray-core"
 type ServerService struct {
 	xrayService        XrayService
 	inboundService     InboundService
+	settingService     SettingService
 	cachedIPv4         string
 	cachedIPv6         string
 	noIPv6             bool
@@ -405,8 +408,10 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 		}
 		status.Xray.ErrorMsg = s.xrayService.GetXrayResult()
 	}
-	status.Xray.Version = s.xrayService.GetXrayVersion()
+	status.Xray.BinaryVersion = s.xrayService.GetXrayVersion()
+	status.Xray.Version = s.getInstalledXrayReleaseTag()
 	status.VKTurnProxy = VKTurnProxyRuntime().GetStatus()
+	status.VKTurnProxy.Version = s.getInstalledVKTurnProxyReleaseTag()
 
 	// Application stats
 	var rtm runtime.MemStats
@@ -699,6 +704,7 @@ func (s *ServerService) UpdateXray(version string) error {
 	if err != nil {
 		return err
 	}
+	targetBinary := xray.GetBinaryPath()
 
 	// 3. Helper to extract files
 	copyZipFile := func(zipName string, fileName string) error {
@@ -720,12 +726,18 @@ func (s *ServerService) UpdateXray(version string) error {
 
 	// 4. Extract correct binary
 	if runtime.GOOS == "windows" {
-		targetBinary := filepath.Join("bin", "xray-windows-amd64.exe")
+		targetBinary = filepath.Join("bin", "xray-windows-amd64.exe")
 		err = copyZipFile("xray.exe", targetBinary)
 	} else {
-		err = copyZipFile("xray", xray.GetBinaryPath())
+		err = copyZipFile("xray", targetBinary)
 	}
 	if err != nil {
+		return err
+	}
+	if err := writeReleaseMetadata(targetBinary, version); err != nil {
+		return err
+	}
+	if err := s.settingService.SetXrayReleaseTag(version); err != nil {
 		return err
 	}
 
@@ -888,6 +900,10 @@ func (s *ServerService) GetVKTurnProxyLogs(count string, level string) []string 
 		countInt = 20
 	}
 
+	if logs := tailMatchingLogLines(filepath.Join(config.GetLogFolder(), "3xui.log"), countInt, level, "VKTURN["); len(logs) > 0 {
+		return logs
+	}
+
 	allLogs := logger.GetLogs(10000, level)
 	filtered := make([]string, 0, min(countInt, len(allLogs)))
 	for _, line := range allLogs {
@@ -900,6 +916,84 @@ func (s *ServerService) GetVKTurnProxyLogs(count string, level string) []string 
 		}
 	}
 	return filtered
+}
+
+func (s *ServerService) getInstalledXrayReleaseTag() string {
+	return resolveInstalledReleaseTag(
+		xray.GetBinaryPath(),
+		s.settingService.GetXrayReleaseTag,
+		s.settingService.SetXrayReleaseTag,
+	)
+}
+
+func (s *ServerService) getInstalledVKTurnProxyReleaseTag() string {
+	return resolveInstalledReleaseTag(
+		vkturnproxy.GetBinaryPath(),
+		s.settingService.GetVKTurnProxyReleaseTag,
+		s.settingService.SetVKTurnProxyReleaseTag,
+	)
+}
+
+func tailMatchingLogLines(path string, limit int, maxLevel string, needle string) []string {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+
+	ring := make([]string, 0, limit)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || !strings.Contains(line, needle) || !panelLogMatchesLevel(line, maxLevel) {
+			continue
+		}
+		if len(ring) >= limit {
+			copy(ring, ring[1:])
+			ring = ring[:limit-1]
+		}
+		ring = append(ring, line)
+	}
+	for i, j := 0, len(ring)-1; i < j; i, j = i+1, j-1 {
+		ring[i], ring[j] = ring[j], ring[i]
+	}
+	return ring
+}
+
+func panelLogMatchesLevel(line string, maxLevel string) bool {
+	requested := panelLogLevelRank(maxLevel)
+	if requested == 0 {
+		requested = panelLogLevelRank("debug")
+	}
+
+	fields := strings.Fields(line)
+	if len(fields) < 3 {
+		return true
+	}
+	lineLevel := panelLogLevelRank(fields[2])
+	if lineLevel == 0 {
+		return true
+	}
+	return lineLevel <= requested
+}
+
+func panelLogLevelRank(level string) int {
+	switch strings.ToUpper(strings.TrimSpace(level)) {
+	case "ERROR":
+		return 1
+	case "WARNING", "WARN":
+		return 2
+	case "NOTICE":
+		return 3
+	case "INFO":
+		return 4
+	case "DEBUG":
+		return 5
+	default:
+		return 0
+	}
 }
 
 func logEntryContains(line string, suffixes []string) bool {

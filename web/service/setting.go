@@ -80,6 +80,8 @@ var defaultValueMap = map[string]string{
 	"externalTrafficInformEnable": "false",
 	"externalTrafficInformURI":    "",
 	"xrayOutboundTestUrl":         "https://www.google.com/generate_204",
+	"xrayReleaseTag":              "",
+	"vkTurnProxyReleaseTag":       "",
 
 	// LDAP defaults
 	"ldapEnable":            "false",
