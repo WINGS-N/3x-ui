@@ -56,7 +56,7 @@ type HeartbeatState struct {
 	Version     uint32
 }
 
-var heartbeatLinePattern = regexp.MustCompile(`protobuf heartbeat from .*: online=(true|false) active_streams=(\d+) version=(\d+) wg_fp="([^"]*)"`)
+var heartbeatLinePattern = regexp.MustCompile(`protobuf heartbeat from .*: online=(true|false) active_streams=(\d+) version=(\d+) (?:proto_fp|wg_fp)="([^"]*)"`)
 
 func (s Spec) Key() string {
 	return strings.Join([]string{

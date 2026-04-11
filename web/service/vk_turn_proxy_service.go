@@ -645,7 +645,15 @@ func splitCSV(raw string) []string {
 }
 
 func encodeVKTurnProxyConfig(config *wingsvproto.Config) (string, error) {
-	payload, err := proto.Marshal(config)
+	sanitized, ok := proto.Clone(config).(*wingsvproto.Config)
+	if !ok {
+		return "", common.NewError("failed to clone vk-turn-proxy export config")
+	}
+	if sanitized.Turn != nil {
+		sanitized.Turn.Threads = nil
+	}
+
+	payload, err := proto.Marshal(sanitized)
 	if err != nil {
 		return "", err
 	}

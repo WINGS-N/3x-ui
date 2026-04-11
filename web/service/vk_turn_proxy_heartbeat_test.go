@@ -85,12 +85,18 @@ func TestBuildVKTurnProxyHeartbeatPresenceUsesRecentHeartbeats(t *testing.T) {
 		},
 	}
 
-	online, lastOnline := service.buildVKTurnProxyHeartbeatPresence(inbounds, snapshot, now)
+	online, authoritative, lastOnline := service.buildVKTurnProxyHeartbeatPresence(inbounds, snapshot, now)
 	if _, ok := online["fresh@example.com"]; !ok {
 		t.Fatalf("expected fresh heartbeat client to be online, got %#v", online)
 	}
 	if _, ok := online["stale@example.com"]; ok {
 		t.Fatalf("expected stale heartbeat client to be offline, got %#v", online)
+	}
+	if _, ok := authoritative["fresh@example.com"]; !ok {
+		t.Fatalf("expected fresh heartbeat client to be authoritative, got %#v", authoritative)
+	}
+	if _, ok := authoritative["stale@example.com"]; !ok {
+		t.Fatalf("expected stale heartbeat client to be authoritative, got %#v", authoritative)
 	}
 	if got := lastOnline["fresh@example.com"]; got != now.Add(-30*time.Second).UnixMilli() {
 		t.Fatalf("unexpected fresh client last online: %d", got)
@@ -100,7 +106,7 @@ func TestBuildVKTurnProxyHeartbeatPresenceUsesRecentHeartbeats(t *testing.T) {
 	}
 }
 
-func TestBuildVKTurnProxyHeartbeatPresenceRequiresActiveStreams(t *testing.T) {
+func TestBuildVKTurnProxyHeartbeatPresenceDoesNotRequireActiveStreams(t *testing.T) {
 	key := make([]byte, 32)
 	for i := range key {
 		key[i] = byte(i + 1)
@@ -135,11 +141,27 @@ func TestBuildVKTurnProxyHeartbeatPresenceRequiresActiveStreams(t *testing.T) {
 		},
 	}
 
-	online, lastOnline := service.buildVKTurnProxyHeartbeatPresence(inbounds, snapshot, now)
-	if _, ok := online["idle@example.com"]; ok {
-		t.Fatalf("expected heartbeat without active streams to stay offline, got %#v", online)
+	online, authoritative, lastOnline := service.buildVKTurnProxyHeartbeatPresence(inbounds, snapshot, now)
+	if _, ok := online["idle@example.com"]; !ok {
+		t.Fatalf("expected heartbeat without active streams to be online, got %#v", online)
 	}
-	if _, ok := lastOnline["idle@example.com"]; ok {
-		t.Fatalf("expected heartbeat without active streams to not refresh lastOnline, got %#v", lastOnline)
+	if _, ok := authoritative["idle@example.com"]; !ok {
+		t.Fatalf("expected heartbeat without active streams to be authoritative, got %#v", authoritative)
+	}
+	if got := lastOnline["idle@example.com"]; got != now.Add(-30*time.Second).UnixMilli() {
+		t.Fatalf("unexpected heartbeat lastOnline: %d", got)
+	}
+}
+
+func TestMergeOnlineClientListsRemovesAuthoritativeOfflineClients(t *testing.T) {
+	base := []string{"vk@example.com", "xray@example.com"}
+	extra := map[string]struct{}{}
+	authoritative := map[string]struct{}{
+		"vk@example.com": {},
+	}
+
+	merged := mergeOnlineClientLists(base, extra, authoritative)
+	if len(merged) != 1 || merged[0] != "xray@example.com" {
+		t.Fatalf("expected authoritative offline vk client to be removed, got %#v", merged)
 	}
 }

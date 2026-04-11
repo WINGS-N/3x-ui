@@ -77,3 +77,58 @@ func TestEncodeVKTurnProxyConfigUsesWingsVZlibFormat(t *testing.T) {
 		t.Fatalf("decoded config mismatch:\nexpected: %v\nactual: %v", expected, actual)
 	}
 }
+
+func TestEncodeVKTurnProxyConfigOmitsThreads(t *testing.T) {
+	config := &wingsvproto.Config{
+		Ver:     vkTurnProxyCurrentVersion,
+		Type:    wingsvproto.ConfigType_CONFIG_TYPE_VK,
+		Backend: wingsvproto.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD,
+		Turn: &wingsvproto.Turn{
+			Endpoint: &wingsvproto.Endpoint{
+				Host: "203.0.113.10",
+				Port: 56000,
+			},
+			Link: "https://vk.com/call/join/test",
+		},
+		Wg: &wingsvproto.WireGuard{
+			Iface: &wingsvproto.Interface{
+				PrivateKey: bytes.Repeat([]byte{0x11}, 32),
+				Addrs:      []string{"10.0.0.2/32"},
+			},
+			Peer: &wingsvproto.Peer{
+				PublicKey: bytes.Repeat([]byte{0x22}, 32),
+			},
+		},
+	}
+	threads := uint32(8)
+	config.Turn.Threads = &threads
+
+	link, err := encodeVKTurnProxyConfig(config)
+	if err != nil {
+		t.Fatalf("encode config: %v", err)
+	}
+
+	payload, err := base64.URLEncoding.DecodeString(strings.TrimPrefix(link, vkTurnProxySchemePrefix))
+	if err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+
+	reader, err := zlib.NewReader(bytes.NewReader(payload[1:]))
+	if err != nil {
+		t.Fatalf("open zlib reader: %v", err)
+	}
+	defer reader.Close()
+
+	protobufPayload, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("inflate payload: %v", err)
+	}
+
+	actual := &wingsvproto.Config{}
+	if err := proto.Unmarshal(protobufPayload, actual); err != nil {
+		t.Fatalf("unmarshal proto: %v", err)
+	}
+	if actual.GetTurn().Threads != nil {
+		t.Fatalf("expected threads to be omitted, got %v", *actual.GetTurn().Threads)
+	}
+}

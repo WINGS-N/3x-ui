@@ -5,7 +5,7 @@ import "testing"
 func TestLogWriterHeartbeatSnapshotParsesFingerprint(t *testing.T) {
 	writer := &logWriter{id: 1, remark: "test"}
 
-	writer.recordHeartbeat("2026/04/08 12:34:56 protobuf heartbeat from 10.0.0.1:3456: online=true active_streams=2 version=3 wg_fp=\"sha256:test-fingerprint\"")
+	writer.recordHeartbeat("2026/04/08 12:34:56 protobuf heartbeat from 10.0.0.1:3456: online=true active_streams=2 version=3 proto_fp=\"sha256:test-fingerprint\"")
 
 	snapshot := writer.HeartbeatSnapshot()
 	if len(snapshot) != 1 {
@@ -33,10 +33,21 @@ func TestLogWriterHeartbeatSnapshotParsesFingerprint(t *testing.T) {
 func TestLogWriterHeartbeatSnapshotIgnoresEmptyFingerprint(t *testing.T) {
 	writer := &logWriter{id: 1, remark: "test"}
 
-	writer.recordHeartbeat("2026/04/08 12:34:56 protobuf heartbeat from 10.0.0.1:3456: online=true active_streams=2 version=3 wg_fp=\"\"")
+	writer.recordHeartbeat("2026/04/08 12:34:56 protobuf heartbeat from 10.0.0.1:3456: online=true active_streams=2 version=3 proto_fp=\"\"")
 
 	snapshot := writer.HeartbeatSnapshot()
 	if len(snapshot) != 0 {
 		t.Fatalf("expected no heartbeat snapshot, got %#v", snapshot)
+	}
+}
+
+func TestLogWriterHeartbeatSnapshotKeepsLegacyFingerprintField(t *testing.T) {
+	writer := &logWriter{id: 1, remark: "test"}
+
+	writer.recordHeartbeat("2026/04/08 12:34:56 protobuf heartbeat from 10.0.0.1:3456: online=true active_streams=2 version=3 wg_fp=\"sha256:legacy-fingerprint\"")
+
+	snapshot := writer.HeartbeatSnapshot()
+	if _, ok := snapshot["sha256:legacy-fingerprint"]; !ok {
+		t.Fatalf("expected legacy fingerprint to be parsed, got %#v", snapshot)
 	}
 }

@@ -1176,6 +1176,14 @@
         };
         await this.submit(`/panel/api/inbounds/updateClient/${clientId}`, data, clientModal);
       },
+      async setVKTurnProxyClientEnable(dbInboundId, clientId, enable) {
+        const msg = await HttpUtil.post(`/panel/api/inbounds/${dbInboundId}/vkTurnProxy/clients/${clientId}/enable`, {
+          enable: !!enable,
+        });
+        if (msg.success) {
+          await this.getDBInbounds();
+        }
+      },
       resetTraffic(dbInboundId) {
         dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
         this.$confirm({
@@ -1302,19 +1310,26 @@
         const inbound = dbInbound.toInbound();
         await this.updateInbound(inbound, dbInbound);
       },
-      async switchEnableClient(dbInboundId, client) {
-        this.loading()
-        dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-        if (!dbInbound) return;
-        inbound = dbInbound.toInbound();
-        clients = inbound && inbound.clients ? inbound.clients : null;
-        if (!clients || !Array.isArray(clients)) return;
-        index = this.findIndexOfClient(dbInbound.protocol, clients, client);
-        if (index < 0 || !clients[index]) return;
-        clients[index].enable = !clients[index].enable;
-        clientId = this.getClientId(dbInbound.protocol, clients[index]);
-        await this.updateClient(clients[index], dbInboundId, clientId);
-        this.loading(false);
+      async switchEnableClient(dbInboundId, client, state) {
+        this.loading();
+        try {
+          dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+          if (!dbInbound) return;
+          inbound = dbInbound.toInbound();
+          clients = inbound && inbound.clients ? inbound.clients : null;
+          if (!clients || !Array.isArray(clients)) return;
+          index = this.findIndexOfClient(dbInbound.protocol, clients, client);
+          if (index < 0 || !clients[index]) return;
+          clients[index].enable = !!state;
+          clientId = this.getClientId(dbInbound.protocol, clients[index]);
+          if (dbInbound.protocol === Protocols.VK_TURN_PROXY) {
+            await this.setVKTurnProxyClientEnable(dbInboundId, clientId, state);
+            return;
+          }
+          await this.updateClient(clients[index], dbInboundId, clientId);
+        } finally {
+          this.loading(false);
+        }
       },
       async submit(url, data, modal) {
         const msg = await HttpUtil.postWithModal(url, data, modal);
