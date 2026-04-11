@@ -1,9 +1,7 @@
 services:
-  3xui:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-    container_name: 3xui_app
+  3x-ui:
+    image: ghcr.io/wings-n/3x-ui
+    container_name: 3x-ui
     # hostname: yourhostname <- optional
     volumes:
       - $PWD/db/:/etc/x-ui/

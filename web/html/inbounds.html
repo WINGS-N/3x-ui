@@ -181,8 +181,8 @@
                       <a-radio-button value="online">{{ i18n "online" }}</a-radio-button>
                     </a-radio-group>
                   </div>
-                  <a-table :columns="isMobile ? mobileColumns : columns" :row-key="dbInbound => dbInbound.id"
-                    :data-source="searchedInbounds" :scroll="isMobile ? {} : { x: 1000 }"
+                  <a-table class="inbounds-main-table" :columns="isMobile ? mobileColumns : columns" :row-key="dbInbound => dbInbound.id"
+                    :data-source="searchedInbounds" :scroll="isMobile ? { x: 420 } : { x: 1000 }"
                     :pagination=pagination(searchedInbounds) :expand-icon-as-cell="false" :expand-row-by-click="false"
                     :expand-icon-column-index="0" :indent-size="0"
                     :row-class-name="dbInbound => (dbInbound.isMultiUser() ? '' : 'hideExpandIcon')"
@@ -575,9 +575,10 @@
                       </a-popover>
                     </template>
                     <template slot="expandedRowRender" slot-scope="record">
-                      <a-table :row-key="client => client.id" :columns="isMobile ? innerMobileColumns : innerColumns"
+                      <a-table class="inbounds-client-table" :row-key="client => client.id" :columns="isMobile ? innerMobileColumns : innerColumns"
                         :data-source="getInboundClients(record)" :pagination=pagination(getInboundClients(record))
-                        :style="{ margin: `-10px ${isMobile ? '2px' : '22px'} -11px` }">
+                        :scroll="isMobile ? { x: 360 } : {}"
+                        :style="{ margin: `-10px ${isMobile ? '0' : '22px'} -11px` }">
                         {{template "component/aClientTable"}}
                       </a-table>
                     </template>
@@ -666,22 +667,21 @@
     title: "ID",
     align: 'right',
     dataIndex: "id",
-    width: 10,
-    responsive: ["s"],
+    width: 48,
   }, {
     title: '{{ i18n "pages.inbounds.operate" }}',
     align: 'center',
-    width: 25,
+    width: 56,
     scopedSlots: { customRender: 'action' },
   }, {
     title: '{{ i18n "pages.inbounds.remark" }}',
     align: 'left',
-    width: 70,
+    width: 210,
     dataIndex: "remark",
   }, {
     title: '{{ i18n "pages.inbounds.info" }}',
     align: 'center',
-    width: 10,
+    width: 64,
     scopedSlots: { customRender: 'info' },
   }];
 
@@ -696,9 +696,9 @@
   ];
 
   const innerMobileColumns = [
-    { title: '{{ i18n "pages.inbounds.operate" }}', width: 10, align: 'center', scopedSlots: { customRender: 'actionMenu' } },
-    { title: '{{ i18n "pages.inbounds.client" }}', width: 90, align: 'left', scopedSlots: { customRender: 'client' } },
-    { title: '{{ i18n "pages.inbounds.info" }}', width: 10, align: 'center', scopedSlots: { customRender: 'info' } },
+    { title: '{{ i18n "pages.inbounds.operate" }}', width: 56, align: 'center', scopedSlots: { customRender: 'actionMenu' } },
+    { title: '{{ i18n "pages.inbounds.client" }}', width: 220, align: 'left', scopedSlots: { customRender: 'client' } },
+    { title: '{{ i18n "pages.inbounds.info" }}', width: 72, align: 'center', scopedSlots: { customRender: 'info' } },
   ];
 
   const app = new Vue({
