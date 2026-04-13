@@ -620,6 +620,14 @@ func (s *ServerService) UpdateVKTurnProxy(version string) error {
 	return nil
 }
 
+func (s *ServerService) UploadVKTurnProxyBinary(file multipart.File) error {
+	if err := VKTurnProxyRuntime().UploadCustomBinary(file); err != nil {
+		logger.Error("upload vk-turn-proxy binary failed:", err)
+		return err
+	}
+	return nil
+}
+
 func (s *ServerService) downloadXRay(version string) (string, error) {
 	osName := runtime.GOOS
 	arch := runtime.GOARCH

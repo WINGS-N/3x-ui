@@ -337,12 +337,12 @@ func (a *InboundController) addVKTurnProxyClient(c *gin.Context) {
 		return
 	}
 
-	needRestart, err := a.inboundService.AddVKTurnProxyClientDirect(inboundID, client)
+	result, needRestart, err := a.inboundService.AddVKTurnProxyClientDirect(inboundID, client, c.Request.Host)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}
-	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientAddSuccess"), nil)
+	jsonMsgObj(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientAddSuccess"), result, nil)
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}

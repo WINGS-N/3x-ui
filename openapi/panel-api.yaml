@@ -9,7 +9,12 @@ info:
     - All documented endpoints can be called with `Authorization: Bearer <token>`.
     - The implementation also accepts `X-API-Key: <token>` as an alternative.
     - If the panel is served behind a custom `webBasePath`, prepend that base path before `/panel/api`.
+    - The API uses two error channels:
+        1. Transport errors such as missing or invalid authentication can return an HTTP error status with an empty body.
+        2. Business and validation errors are usually returned as HTTP 200 with `success=false` inside the JSON envelope.
     - Most mutation endpoints return HTTP 200 even when `success=false` inside the JSON envelope.
+    - `msg` is a human-readable, often localized string and should not be treated as a stable machine-readable error code.
+    - When `success=false`, `obj` is usually omitted or `null`.
 
 servers:
   - url: "{scheme}://{host}{basePath}"
@@ -46,7 +51,7 @@ paths:
         "200":
           description: Backup task triggered. The handler returns an empty body.
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/tokens/list:
     get:
@@ -68,7 +73,7 @@ paths:
                         items:
                           $ref: "#/components/schemas/APIToken"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/tokens/create:
     post:
@@ -97,7 +102,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/ApiTokenCreateResult"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/tokens/del/{id}:
     post:
@@ -120,7 +125,7 @@ paths:
                         type: integer
                         format: int64
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/list:
     get:
@@ -142,7 +147,7 @@ paths:
                         items:
                           $ref: "#/components/schemas/Inbound"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/get/{id}:
     get:
@@ -164,7 +169,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/Inbound"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/getClientTraffics/{email}:
     get:
@@ -188,7 +193,7 @@ paths:
                         allOf:
                           - $ref: "#/components/schemas/ClientTraffic"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/getClientTrafficsById/{id}:
     get:
@@ -212,7 +217,7 @@ paths:
                         items:
                           $ref: "#/components/schemas/ClientTraffic"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/{id}/vkTurnProxy/peerOptions:
     get:
@@ -234,7 +239,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/VKTurnProxyPeerOptionsResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/{id}/vkTurnProxy/clients:
     post:
@@ -251,13 +256,18 @@ paths:
               $ref: "#/components/schemas/VKTurnProxyClient"
       responses:
         "200":
-          description: Client created.
+          description: Client created. Returns the created client ID and exported `wingsv://` link when available.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiEnvelope"
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      obj:
+                        $ref: "#/components/schemas/VKTurnProxyClientCreateResult"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/{id}/vkTurnProxy/clients/{clientId}/stats:
     get:
@@ -282,7 +292,7 @@ paths:
                         allOf:
                           - $ref: "#/components/schemas/ClientTraffic"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/{id}/vkTurnProxy/clients/{clientId}/enable:
     post:
@@ -314,7 +324,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/EnableStateResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/{id}/vkTurnProxy/exportClient/{clientId}:
     get:
@@ -337,7 +347,7 @@ paths:
                       obj:
                         type: string
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/{id}/vkTurnProxy/exportAll:
     get:
@@ -361,7 +371,7 @@ paths:
                         items:
                           $ref: "#/components/schemas/VKTurnProxyExportedClient"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/add:
     post:
@@ -390,7 +400,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/Inbound"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/del/{id}:
     post:
@@ -413,7 +423,7 @@ paths:
                         type: integer
                         format: int64
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/update/{id}:
     post:
@@ -444,7 +454,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/Inbound"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/clientIps/{email}:
     post:
@@ -470,7 +480,7 @@ paths:
                             items:
                               type: string
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/clearClientIps/{email}:
     post:
@@ -483,7 +493,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/addClient:
     post:
@@ -503,7 +513,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/addPeer:
     post:
@@ -523,7 +533,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/{id}/delClient/{clientId}:
     post:
@@ -543,7 +553,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/{id}/delPeer/{peerId}:
     post:
@@ -557,7 +567,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/updateClient/{clientId}:
     post:
@@ -579,7 +589,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/updatePeer/{peerId}:
     post:
@@ -601,7 +611,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/{id}/resetClientTraffic/{email}:
     post:
@@ -615,7 +625,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/resetAllTraffics:
     post:
@@ -626,7 +636,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/resetAllClientTraffics/{id}:
     post:
@@ -639,7 +649,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/delDepletedClients/{id}:
     post:
@@ -652,7 +662,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/import:
     post:
@@ -678,7 +688,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/Inbound"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/onlines:
     post:
@@ -700,7 +710,7 @@ paths:
                         items:
                           type: string
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/lastOnline:
     post:
@@ -723,7 +733,7 @@ paths:
                           type: integer
                           format: int64
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/updateClientTraffic/{email}:
     post:
@@ -742,7 +752,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/inbounds/{id}/delClientByEmail/{email}:
     post:
@@ -756,7 +766,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/status:
     get:
@@ -776,7 +786,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/Status"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/cpuHistory/{bucket}:
     get:
@@ -806,7 +816,7 @@ paths:
                         items:
                           $ref: "#/components/schemas/CPUHistoryPoint"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/getXrayVersion:
     get:
@@ -828,7 +838,7 @@ paths:
                         items:
                           type: string
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/getVKTurnProxyVersion:
     get:
@@ -850,7 +860,7 @@ paths:
                         items:
                           type: string
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/getConfigJson:
     get:
@@ -870,7 +880,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/GenericObject"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/getDb:
     get:
@@ -886,7 +896,7 @@ paths:
                 type: string
                 format: binary
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/getNewUUID:
     get:
@@ -906,7 +916,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/UuidResult"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/getNewX25519Cert:
     get:
@@ -926,7 +936,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/X25519KeyPair"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/getNewmldsa65:
     get:
@@ -946,7 +956,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/Mldsa65KeyPair"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/getNewmlkem768:
     get:
@@ -966,7 +976,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/Mlkem768KeyPair"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/getNewVlessEnc:
     get:
@@ -986,7 +996,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/VlessEncResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/stopXrayService:
     post:
@@ -997,7 +1007,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/restartXrayService:
     post:
@@ -1008,7 +1018,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/startVKTurnProxyService:
     post:
@@ -1019,7 +1029,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/stopVKTurnProxyService:
     post:
@@ -1030,7 +1040,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/restartVKTurnProxyService:
     post:
@@ -1041,7 +1051,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/installXray/{version}:
     post:
@@ -1058,7 +1068,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/installVKTurnProxy/{version}:
     post:
@@ -1075,7 +1085,29 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
+
+  /panel/api/server/uploadVKTurnProxyBinary:
+    post:
+      tags: [Server]
+      summary: Upload and install a custom vk-turn-proxy binary
+      operationId: uploadVkTurnProxyBinary
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [binary]
+              properties:
+                binary:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "404":
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/updateGeofile:
     post:
@@ -1086,7 +1118,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/updateGeofile/{fileName}:
     post:
@@ -1104,7 +1136,7 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/logs/{count}:
     post:
@@ -1138,7 +1170,7 @@ paths:
                         items:
                           type: string
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/xraylogs/{count}:
     post:
@@ -1172,7 +1204,7 @@ paths:
                         items:
                           $ref: "#/components/schemas/LogEntry"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/vkturnproxylogs/{count}:
     post:
@@ -1210,7 +1242,7 @@ paths:
                         items:
                           type: string
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/importDB:
     post:
@@ -1241,7 +1273,7 @@ paths:
                       obj:
                         type: string
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
   /panel/api/server/getNewEchCert:
     post:
@@ -1267,7 +1299,7 @@ paths:
                       obj:
                         $ref: "#/components/schemas/EchCertResult"
         "404":
-          description: Missing or invalid bearer token.
+          $ref: "#/components/responses/AuthNotFoundResponse"
 
 components:
   securitySchemes:
@@ -1328,11 +1360,40 @@ components:
 
   responses:
     ApiEnvelopeResponse:
-      description: Standard JSON envelope.
+      description: |
+        Standard JSON envelope used by most handlers.
+
+        Important:
+        - HTTP 200 does not guarantee that the operation succeeded.
+        - Check the `success` field first.
+        - When `success=false`, `msg` contains the human-readable failure reason and `obj` is usually `null`.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ApiEnvelope"
+          examples:
+            success:
+              summary: Logical success
+              value:
+                success: true
+                msg: Operation completed successfully
+                obj: null
+            logicalError:
+              summary: Logical failure returned with HTTP 200
+              value:
+                success: false
+                msg: Something went wrong (duplicate email: demo@example.com)
+                obj: null
+    AuthNotFoundResponse:
+      description: |
+        Returned when the request has no valid authenticated panel session and no valid API token.
+
+        The panel intentionally responds with HTTP 404 and an empty body to avoid exposing the existence of API endpoints to unauthorized callers.
+    ForbiddenDomainResponse:
+      description: |
+        Returned by the optional domain-validation middleware when the request host does not match the configured allowed domain.
+
+        Response body is empty.
 
   schemas:
     ApiEnvelope:
@@ -1341,10 +1402,31 @@ components:
       properties:
         success:
           type: boolean
+          description: Logical result of the operation. Always inspect this field even for HTTP 200 responses.
         msg:
           type: string
+          description: Human-readable status or error message. This text may be localized and is not a stable machine-readable error code.
         obj:
           nullable: true
+          description: Endpoint-specific payload. On logical failures it is usually omitted or `null`.
+
+    ApiLogicalErrorEnvelope:
+      type: object
+      required: [success, msg]
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        msg:
+          type: string
+          description: Human-readable failure reason produced by the handler.
+        obj:
+          nullable: true
+          description: Usually `null` on logical failure.
+      example:
+        success: false
+        msg: Something went wrong (wireguard peer binding is required)
+        obj: null
 
     GenericObject:
       type: object
@@ -1729,6 +1811,17 @@ components:
         link:
           type: string
           description: "`wingsv://` import link for the client."
+
+    VKTurnProxyClientCreateResult:
+      type: object
+      properties:
+        clientId:
+          type: string
+        email:
+          type: string
+        link:
+          type: string
+          description: "`wingsv://` import link for the created client when export is available."
 
     VKTurnProxyClientEnableRequest:
       type: object

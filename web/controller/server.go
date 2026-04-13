@@ -62,6 +62,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/restartVKTurnProxyService", a.restartVKTurnProxyService)
 	g.POST("/installXray/:version", a.installXray)
 	g.POST("/installVKTurnProxy/:version", a.installVKTurnProxy)
+	g.POST("/uploadVKTurnProxyBinary", a.uploadVKTurnProxyBinary)
 	g.POST("/updateGeofile", a.updateGeofile)
 	g.POST("/updateGeofile/:fileName", a.updateGeofile)
 	g.POST("/logs/:count", a.getLogs)
@@ -172,6 +173,18 @@ func (a *ServerController) installVKTurnProxy(c *gin.Context) {
 	version := c.Param("version")
 	err := a.serverService.UpdateVKTurnProxy(version)
 	jsonMsg(c, "vk-turn-proxy binary has been updated", err)
+}
+
+func (a *ServerController) uploadVKTurnProxyBinary(c *gin.Context) {
+	file, _, err := c.Request.FormFile("binary")
+	if err != nil {
+		jsonMsg(c, "read vk-turn-proxy binary", err)
+		return
+	}
+	defer file.Close()
+
+	err = a.serverService.UploadVKTurnProxyBinary(file)
+	jsonMsg(c, "vk-turn-proxy custom binary has been uploaded", err)
 }
 
 // updateGeofile updates the specified geo file for Xray.

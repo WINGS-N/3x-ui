@@ -30,6 +30,7 @@ import (
 
 const (
 	vkTurnProxyReleaseRepo         = "WINGS-N/vk-turn-proxy"
+	vkTurnProxyCustomVersion       = "custom"
 	vkTurnProxyCurrentVersion      = 1
 	vkTurnProxySchemePrefix        = "wingsv://"
 	vkTurnProxyFormatProtoDeflate  = 0x12
@@ -114,6 +115,12 @@ type VKTurnProxyExportedClient struct {
 	ClientID string `json:"clientId"`
 	Email    string `json:"email"`
 	Link     string `json:"link"`
+}
+
+type VKTurnProxyClientCreateResult struct {
+	ClientID string `json:"clientId"`
+	Email    string `json:"email"`
+	Link     string `json:"link,omitempty"`
 }
 
 type VKTurnProxyRuntimeStatus struct {
@@ -396,40 +403,63 @@ func (s *VKTurnProxyService) downloadBinary(version string) (string, error) {
 		return "", fmt.Errorf("vk-turn-proxy download failed: %s (%s)", resp.Status, strings.TrimSpace(string(body)))
 	}
 
-	if err := os.MkdirAll(filepath.Dir(vkturnproxy.GetBinaryPath()), 0o755); err != nil {
-		return "", err
-	}
-
-	tmpPath := vkturnproxy.GetBinaryPath() + ".tmp"
-	defer os.Remove(tmpPath)
-	file, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755)
-	if err != nil {
-		return "", err
-	}
-	if _, err := io.Copy(file, resp.Body); err != nil {
-		_ = file.Close()
-		return "", err
-	}
-	if err := file.Close(); err != nil {
-		return "", err
-	}
-	if err := os.Chmod(tmpPath, 0o755); err != nil {
-		return "", err
-	}
-	_ = os.Remove(vkturnproxy.GetBinaryPath())
-	if err := os.Rename(tmpPath, vkturnproxy.GetBinaryPath()); err != nil {
-		return "", err
-	}
-	if err := os.Chmod(vkturnproxy.GetBinaryPath(), 0o755); err != nil {
-		return "", err
-	}
-	if err := writeReleaseMetadata(vkturnproxy.GetBinaryPath(), resolvedVersion); err != nil {
-		return "", err
-	}
-	if err := (&SettingService{}).SetVKTurnProxyReleaseTag(resolvedVersion); err != nil {
+	if err := s.installBinary(resp.Body, resolvedVersion); err != nil {
 		return "", err
 	}
 	return resolvedVersion, nil
+}
+
+func (s *VKTurnProxyService) installBinary(reader io.Reader, version string) error {
+	if reader == nil {
+		return common.NewError("vk-turn-proxy binary reader is missing")
+	}
+
+	version = strings.TrimSpace(version)
+	if version == "" {
+		return common.NewError("vk-turn-proxy version is empty")
+	}
+
+	targetPath := vkturnproxy.GetBinaryPath()
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
+		return err
+	}
+
+	tmpPath := targetPath + ".tmp"
+	defer os.Remove(tmpPath)
+
+	file, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755)
+	if err != nil {
+		return err
+	}
+
+	written, err := io.Copy(file, reader)
+	closeErr := file.Close()
+	if err != nil {
+		return err
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	if written == 0 {
+		return common.NewError("vk-turn-proxy binary is empty")
+	}
+	if err := os.Chmod(tmpPath, 0o755); err != nil {
+		return err
+	}
+	_ = os.Remove(targetPath)
+	if err := os.Rename(tmpPath, targetPath); err != nil {
+		return err
+	}
+	if err := os.Chmod(targetPath, 0o755); err != nil {
+		return err
+	}
+	if err := writeReleaseMetadata(targetPath, version); err != nil {
+		return err
+	}
+	if err := (&SettingService{}).SetVKTurnProxyReleaseTag(version); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *VKTurnProxyService) UpdateBinary(version string) error {
@@ -449,6 +479,39 @@ func (s *VKTurnProxyService) UpdateBinary(version string) error {
 	}
 
 	if _, err := s.downloadBinary(version); err != nil {
+		s.mu.Lock()
+		s.manualStop = previousManualStop
+		s.lastError = err.Error()
+		s.mu.Unlock()
+		if !previousManualStop {
+			_ = s.EnsureRunning()
+		}
+		return err
+	}
+
+	s.mu.Lock()
+	s.manualStop = false
+	s.lastError = ""
+	s.mu.Unlock()
+	return s.EnsureRunning()
+}
+
+func (s *VKTurnProxyService) UploadCustomBinary(reader io.Reader) error {
+	if reader == nil {
+		return common.NewError("vk-turn-proxy binary file is missing")
+	}
+
+	s.mu.Lock()
+	previousManualStop := s.manualStop
+	s.manualStop = true
+	s.lastError = ""
+	stopErr := s.stopAllLocked()
+	s.mu.Unlock()
+	if stopErr != nil {
+		return stopErr
+	}
+
+	if err := s.installBinary(reader, vkTurnProxyCustomVersion); err != nil {
 		s.mu.Lock()
 		s.manualStop = previousManualStop
 		s.lastError = err.Error()

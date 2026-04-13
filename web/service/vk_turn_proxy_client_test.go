@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/mhsanaei/3x-ui/v2/database"
@@ -141,6 +142,84 @@ func TestSetVKTurnProxyClientEnableRestoresWireGuardPeer(t *testing.T) {
 	}
 	if len(peersAfterEnable[0].AllowedIPs) != 1 || peersAfterEnable[0].AllowedIPs[0] != allowedIPs[0] {
 		t.Fatalf("expected restored peer allowedIPs %v, got %v", allowedIPs, peersAfterEnable[0].AllowedIPs)
+	}
+}
+
+func TestAddVKTurnProxyClientDirectReturnsWingsVLink(t *testing.T) {
+	setupVKTurnProxyClientDB(t)
+
+	service := new(InboundService)
+	wgPrivateKey := testWireGuardPrivateKey(0x55)
+
+	wgInbound := &model.Inbound{
+		Enable:         true,
+		Remark:         "wg",
+		Listen:         "0.0.0.0",
+		Port:           51820,
+		Protocol:       model.WireGuard,
+		Tag:            "inbound-51820",
+		Settings:       `{"secretKey":"` + wgPrivateKey + `","peers":[]}`,
+		StreamSettings: `{}`,
+		Sniffing:       `{}`,
+	}
+	if err := database.GetDB().Create(wgInbound).Error; err != nil {
+		t.Fatalf("create wireguard inbound: %v", err)
+	}
+
+	vkSettings := &VKTurnProxySettings{
+		Forward: VKTurnProxyForward{
+			Type:               VKTurnProxyForwardWireGuardInbound,
+			WireGuardInboundID: wgInbound.Id,
+		},
+	}
+	rawSettings, err := service.marshalVKTurnProxySettings(vkSettings)
+	if err != nil {
+		t.Fatalf("marshal vk-turn-proxy settings: %v", err)
+	}
+
+	vkInbound := &model.Inbound{
+		Enable:         true,
+		Remark:         "vk",
+		Listen:         "0.0.0.0",
+		Port:           56000,
+		Protocol:       model.VKTurnProxy,
+		Tag:            "inbound-56000",
+		Settings:       rawSettings,
+		StreamSettings: `{}`,
+		Sniffing:       `{}`,
+	}
+	if err := database.GetDB().Create(vkInbound).Error; err != nil {
+		t.Fatalf("create vk-turn-proxy inbound: %v", err)
+	}
+
+	client := &VKTurnProxyClient{
+		Email:       "vk-client@example.com",
+		Enable:      true,
+		Link:        "https://vk.com/call/join/test",
+		PeerManaged: true,
+		Peer: &VKTurnProxyClientPeer{
+			PrivateKey: testWireGuardPrivateKey(0x66),
+			AllowedIPs: []string{"10.0.0.2/32"},
+		},
+	}
+	result, _, err := service.AddVKTurnProxyClientDirect(vkInbound.Id, client, "203.0.113.10:2053")
+	if err != nil {
+		t.Fatalf("add vk-turn-proxy client direct: %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected create result, got nil")
+	}
+	if result.ClientID == "" {
+		t.Fatal("expected clientId in create result")
+	}
+	if result.Email != client.Email {
+		t.Fatalf("expected email %q, got %q", client.Email, result.Email)
+	}
+	if result.Link == "" {
+		t.Fatal("expected wingsv link in create result")
+	}
+	if !strings.HasPrefix(result.Link, vkTurnProxySchemePrefix) {
+		t.Fatalf("expected link prefix %q, got %q", vkTurnProxySchemePrefix, result.Link)
 	}
 }
 

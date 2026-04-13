@@ -451,15 +451,35 @@ func marshalVKTurnProxyClientEnvelope(client *VKTurnProxyClient) (string, error)
 	return string(raw), nil
 }
 
-func (s *InboundService) AddVKTurnProxyClientDirect(inboundID int, client *VKTurnProxyClient) (bool, error) {
+func (s *InboundService) AddVKTurnProxyClientDirect(inboundID int, client *VKTurnProxyClient, requestHost string) (*VKTurnProxyClientCreateResult, bool, error) {
+	if client == nil {
+		return nil, false, common.NewError("vk-turn-proxy client is required")
+	}
+
+	s.normalizeVKTurnProxyClient(client, true)
 	rawSettings, err := marshalVKTurnProxyClientEnvelope(client)
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
-	return s.AddVKTurnProxyClient(&model.Inbound{
+
+	needRestart, err := s.AddVKTurnProxyClient(&model.Inbound{
 		Id:       inboundID,
 		Settings: rawSettings,
 	})
+	if err != nil {
+		return nil, needRestart, err
+	}
+
+	result := &VKTurnProxyClientCreateResult{
+		ClientID: client.ID,
+		Email:    client.Email,
+	}
+	link, err := s.ExportVKTurnProxyClient(inboundID, client.ID, requestHost)
+	if err != nil {
+		return result, needRestart, nil
+	}
+	result.Link = link
+	return result, needRestart, nil
 }
 
 func (s *InboundService) GetVKTurnProxyClientTraffic(inboundID int, clientID string) (*xray.ClientTraffic, error) {

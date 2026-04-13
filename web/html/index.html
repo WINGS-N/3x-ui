@@ -145,9 +145,6 @@
                       <a-tag v-if="status.vkTurnProxy.version != 'Unknown'" color="green">
                         [[ status.vkTurnProxy.version ]]
                       </a-tag>
-                      <a-tag color="blue">
-                        [[ status.vkTurnProxy.running ]]/[[ status.vkTurnProxy.enabled ]]
-                      </a-tag>
                     </a-space>
                   </template>
                   <template #extra>
@@ -386,6 +383,9 @@
       <a-collapse-panel key="2" header='vk-turn-proxy'>
         <a-alert type="warning" class="mb-12 w-100" message='Select a vk-turn-proxy release from WINGS-N/vk-turn-proxy. The panel will stop vk-turn-proxy, replace the server binary, and start enabled inbounds again.'
           show-icon></a-alert>
+        <div class="mb-12 d-flex justify-end">
+          <a-button icon="upload" @click="uploadVKTurnProxyBinary">Загрузить свой бинарник</a-button>
+        </div>
         <a-list v-if="versionModal.vkTurnProxyVersions.length > 0" class="ant-version-list w-100" bordered>
           <a-list-item class="ant-version-list-item" v-for="version, index in versionModal.vkTurnProxyVersions">
             <a-tag :color="index % 2 == 0 ? 'purple' : 'green'">[[ version ]]</a-tag>
@@ -1130,6 +1130,33 @@
             await this.getStatus();
           },
         });
+      },
+      uploadVKTurnProxyBinary() {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.addEventListener('change', async (event) => {
+          const binaryFile = event.target.files && event.target.files[0];
+          if (!binaryFile) {
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append('binary', binaryFile);
+
+          versionModal.hide();
+          this.loading(true, '{{ i18n "pages.index.dontRefresh"}}');
+          const uploadMsg = await HttpUtil.post('/panel/api/server/uploadVKTurnProxyBinary', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            }
+          });
+          this.loading(false);
+          if (!uploadMsg.success) {
+            return;
+          }
+          await this.getStatus();
+        });
+        fileInput.click();
       },
       updateGeofile(fileName) {
         const isSingleFile = !!fileName;
