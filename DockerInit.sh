@@ -4,7 +4,7 @@ set -eu
 
 arch="$1"
 variant="$2"
-XRAY_VERSION="v26.3.27-wv"
+XRAY_VERSION="v26.4.25-wv"
 
 case "${arch}${variant:+/${variant}}" in
     amd64)
