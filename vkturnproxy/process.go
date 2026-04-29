@@ -41,11 +41,14 @@ func GetReleaseAssetName() (string, error) {
 }
 
 type Spec struct {
-	ID          int
-	Remark      string
-	Listen      string
-	Connect     string
-	SessionMode string
+	ID                  int
+	Remark              string
+	Listen              string
+	Connect             string
+	SessionMode         string
+	WbStreamRoomID      string
+	WbStreamDisplayName string
+	WbStreamE2ESecret   string
 }
 
 type HeartbeatState struct {
@@ -64,8 +67,16 @@ func (s Spec) Key() string {
 		s.Listen,
 		s.Connect,
 		s.SessionMode,
+		s.WbStreamRoomID,
+		s.WbStreamDisplayName,
+		s.WbStreamE2ESecret,
 	}, "\x00")
 }
+
+const (
+	stopGracePeriod = 5 * time.Second
+	stopKillTimeout = 5 * time.Second
+)
 
 type Process struct {
 	spec      Spec
@@ -73,6 +84,7 @@ type Process struct {
 	logWriter *logWriter
 	exitErr   error
 	startedAt time.Time
+	done      chan struct{}
 	mu        sync.RWMutex
 }
 
@@ -143,6 +155,15 @@ func (p *Process) Start() (err error) {
 	if strings.TrimSpace(p.spec.SessionMode) != "" && p.spec.SessionMode != "auto" {
 		args = append(args, "-session-mode", p.spec.SessionMode)
 	}
+	if roomID := strings.TrimSpace(p.spec.WbStreamRoomID); roomID != "" {
+		args = append(args, "-wb-stream-room-id", roomID)
+		if displayName := strings.TrimSpace(p.spec.WbStreamDisplayName); displayName != "" {
+			args = append(args, "-wb-stream-display-name", displayName)
+		}
+		if secret := strings.TrimSpace(p.spec.WbStreamE2ESecret); secret != "" {
+			args = append(args, "-wb-stream-e2e-secret", secret)
+		}
+	}
 
 	cmd := exec.Command(GetBinaryPath(), args...)
 	cmd.Stdout = p.logWriter
@@ -150,6 +171,7 @@ func (p *Process) Start() (err error) {
 	setSysProcAttr(cmd)
 
 	if err = cmd.Start(); err != nil {
+		err = decorateExecStartError(GetBinaryPath(), err)
 		p.exitErr = err
 		return err
 	}
@@ -157,15 +179,18 @@ func (p *Process) Start() (err error) {
 	p.cmd = cmd
 	p.exitErr = nil
 	p.startedAt = time.Now()
+	p.done = make(chan struct{})
+	done := p.done
 
 	go func() {
 		waitErr := cmd.Wait()
 		p.mu.Lock()
-		defer p.mu.Unlock()
 		if waitErr != nil {
 			logger.Warningf("vk-turn-proxy[%d] exited: %v", p.spec.ID, waitErr)
 		}
 		p.exitErr = waitErr
+		p.mu.Unlock()
+		close(done)
 	}()
 
 	return nil
@@ -173,13 +198,39 @@ func (p *Process) Start() (err error) {
 
 func (p *Process) Stop() error {
 	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	if p.cmd == nil || p.cmd.Process == nil || p.cmd.ProcessState != nil {
+		p.mu.Unlock()
+		return nil
+	}
+	cmd := p.cmd
+	done := p.done
+	p.mu.Unlock()
+
+	if err := stopCmdProcess(cmd); err != nil {
+		logger.Warningf("vk-turn-proxy[%d] SIGTERM failed: %v", p.spec.ID, err)
+	}
+
+	if done == nil {
 		return nil
 	}
 
-	return stopCmdProcess(p.cmd)
+	select {
+	case <-done:
+		return nil
+	case <-time.After(stopGracePeriod):
+	}
+
+	logger.Warningf("vk-turn-proxy[%d] did not exit within %s, sending SIGKILL", p.spec.ID, stopGracePeriod)
+	if err := killCmdProcess(cmd); err != nil {
+		logger.Warningf("vk-turn-proxy[%d] SIGKILL failed: %v", p.spec.ID, err)
+	}
+
+	select {
+	case <-done:
+		return nil
+	case <-time.After(stopKillTimeout):
+		return fmt.Errorf("vk-turn-proxy[%d] did not exit after SIGKILL", p.spec.ID)
+	}
 }
 
 type logWriter struct {
@@ -274,4 +325,14 @@ func EnsureBinaryExecutable() error {
 		return fmt.Errorf("%s is a directory", GetBinaryPath())
 	}
 	return os.Chmod(GetBinaryPath(), 0o755)
+}
+
+func decorateExecStartError(path string, err error) error {
+	if err == nil {
+		return nil
+	}
+	if _, statErr := os.Stat(path); statErr == nil && errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("%w (the file exists but the kernel could not load it; verify that the binary matches this host architecture and that any required dynamic loader/shared libraries are present)", err)
+	}
+	return err
 }

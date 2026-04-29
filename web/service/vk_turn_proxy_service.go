@@ -77,19 +77,31 @@ type VKTurnProxyClient struct {
 	CreatedAt     int64                  `json:"created_at,omitempty"`
 	UpdatedAt     int64                  `json:"updated_at,omitempty"`
 	Link          string                 `json:"link"`
+	Links         []string               `json:"links,omitempty"`
+	LinkSecondary string                 `json:"linkSecondary,omitempty"`
 	PeerPublicKey string                 `json:"peerPublicKey"`
 	PeerManaged   bool                   `json:"peerManaged,omitempty"`
 	Peer          *VKTurnProxyClientPeer `json:"peer,omitempty"`
 }
 
 type VKTurnProxySettings struct {
-	Forward       VKTurnProxyForward  `json:"forward"`
-	SessionMode   string              `json:"sessionMode,omitempty"`
-	LocalEndpoint string              `json:"localEndpoint,omitempty"`
-	WGDNS         string              `json:"wgDns,omitempty"`
-	WGMTU         int                 `json:"wgMtu,omitempty"`
-	WGAllowedIPs  string              `json:"wgAllowedIps,omitempty"`
-	Clients       []VKTurnProxyClient `json:"clients,omitempty"`
+	Forward                   VKTurnProxyForward  `json:"forward"`
+	SessionMode               string              `json:"sessionMode,omitempty"`
+	LocalEndpoint             string              `json:"localEndpoint,omitempty"`
+	WGDNS                     string              `json:"wgDns,omitempty"`
+	WGMTU                     int                 `json:"wgMtu,omitempty"`
+	WGAllowedIPs              string              `json:"wgAllowedIps,omitempty"`
+	Threads                   int                 `json:"threads,omitempty"`
+	UseUDP                    *bool               `json:"useUdp,omitempty"`
+	NoObfuscation             *bool               `json:"noObfuscation,omitempty"`
+	CredsGroupSize            int                 `json:"credsGroupSize,omitempty"`
+	WbStreamEnabled           bool                `json:"wbStreamEnabled,omitempty"`
+	WbStreamRoomID            string              `json:"wbStreamRoomId,omitempty"`
+	WbStreamDisplayName       string              `json:"wbStreamDisplayName,omitempty"`
+	WbStreamE2EEnabled        bool                `json:"wbStreamE2eEnabled,omitempty"`
+	WbStreamE2ESecret         string              `json:"wbStreamE2eSecret,omitempty"`
+	WbStreamExchangeViaVKTurn bool                `json:"wbStreamExchangeViaVkTurn,omitempty"`
+	Clients                   []VKTurnProxyClient `json:"clients,omitempty"`
 }
 
 type VKTurnProxyPeerBinding struct {
@@ -135,11 +147,12 @@ type VKTurnProxyRuntimeStatus struct {
 }
 
 type VKTurnProxyService struct {
-	inboundService InboundService
-	mu             sync.Mutex
-	processes      map[int]*vkturnproxy.Process
-	manualStop     bool
-	lastError      string
+	inboundService   InboundService
+	mu               sync.Mutex
+	processes        map[int]*vkturnproxy.Process
+	manualStop       bool
+	manualStopLoaded bool
+	lastError        string
 }
 
 var vkTurnProxyRuntime = &VKTurnProxyService{
@@ -150,10 +163,32 @@ func VKTurnProxyRuntime() *VKTurnProxyService {
 	return vkTurnProxyRuntime
 }
 
+func (s *VKTurnProxyService) ensureManualStopLoadedLocked() {
+	if s.manualStopLoaded {
+		return
+	}
+	s.manualStopLoaded = true
+	stored, err := (&SettingService{}).GetVKTurnProxyManualStop()
+	if err != nil {
+		logger.Warning("vk-turn-proxy: failed to load manualStop flag:", err)
+		return
+	}
+	s.manualStop = stored
+}
+
+func (s *VKTurnProxyService) persistManualStopLocked(value bool) {
+	s.manualStop = value
+	s.manualStopLoaded = true
+	if err := (&SettingService{}).SetVKTurnProxyManualStop(value); err != nil {
+		logger.Warning("vk-turn-proxy: failed to persist manualStop flag:", err)
+	}
+}
+
 func (s *VKTurnProxyService) EnsureRunning() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	s.ensureManualStopLoadedLocked()
 	if s.manualStop {
 		s.lastError = ""
 		return nil
@@ -206,7 +241,7 @@ func (s *VKTurnProxyService) EnsureRunning() error {
 func (s *VKTurnProxyService) StopAll() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.manualStop = true
+	s.persistManualStopLocked(true)
 	s.lastError = ""
 	logger.Infof("VKTURN[service] stop requested")
 	return s.stopAllLocked()
@@ -214,7 +249,7 @@ func (s *VKTurnProxyService) StopAll() error {
 
 func (s *VKTurnProxyService) StartAll() error {
 	s.mu.Lock()
-	s.manualStop = false
+	s.persistManualStopLocked(false)
 	s.lastError = ""
 	s.mu.Unlock()
 	logger.Infof("VKTURN[service] start requested")
@@ -223,7 +258,7 @@ func (s *VKTurnProxyService) StartAll() error {
 
 func (s *VKTurnProxyService) RestartAll() error {
 	s.mu.Lock()
-	s.manualStop = false
+	s.persistManualStopLocked(false)
 	s.lastError = ""
 	logger.Infof("VKTURN[service] restart requested")
 	err := s.stopAllLocked()
@@ -232,6 +267,13 @@ func (s *VKTurnProxyService) RestartAll() error {
 		return err
 	}
 	return s.EnsureRunning()
+}
+
+func (s *VKTurnProxyService) ShutdownForRestart() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	logger.Infof("VKTURN[service] shutdown for panel restart")
+	return s.stopAllLocked()
 }
 
 func (s *VKTurnProxyService) GetStatus() VKTurnProxyRuntimeStatus {
@@ -299,13 +341,35 @@ func (s *VKTurnProxyService) GetStatus() VKTurnProxyRuntimeStatus {
 }
 
 func (s *VKTurnProxyService) stopAllLocked() error {
+	if len(s.processes) == 0 {
+		return nil
+	}
+
+	type stopResult struct {
+		inboundID int
+		err       error
+	}
+	results := make(chan stopResult, len(s.processes))
+	var wg sync.WaitGroup
+	for inboundID, proc := range s.processes {
+		wg.Add(1)
+		go func(id int, p *vkturnproxy.Process) {
+			defer wg.Done()
+			results <- stopResult{inboundID: id, err: p.Stop()}
+		}(inboundID, proc)
+	}
+	wg.Wait()
+	close(results)
+
+	for id := range s.processes {
+		delete(s.processes, id)
+	}
 
 	var errs []error
-	for inboundID, proc := range s.processes {
-		if err := proc.Stop(); err != nil {
-			errs = append(errs, fmt.Errorf("inbound %d: %w", inboundID, err))
+	for r := range results {
+		if r.err != nil {
+			errs = append(errs, fmt.Errorf("inbound %d: %w", r.inboundID, r.err))
 		}
-		delete(s.processes, inboundID)
 	}
 	return common.Combine(errs...)
 }
@@ -349,13 +413,21 @@ func (s *VKTurnProxyService) loadDesiredSpecs() (map[int]vkturnproxy.Spec, error
 		if listenHost == "" || listenHost == "0.0.0.0" || listenHost == "::" || listenHost == "::0" {
 			listenHost = "0.0.0.0"
 		}
-		specs[inbound.Id] = vkturnproxy.Spec{
+		spec := vkturnproxy.Spec{
 			ID:          inbound.Id,
 			Remark:      inbound.Remark,
 			Listen:      net.JoinHostPort(listenHost, fmt.Sprintf("%d", inbound.Port)),
 			Connect:     connect,
 			SessionMode: settings.SessionMode,
 		}
+		if settings.WbStreamEnabled && !settings.WbStreamExchangeViaVKTurn {
+			spec.WbStreamRoomID = strings.TrimSpace(settings.WbStreamRoomID)
+			spec.WbStreamDisplayName = strings.TrimSpace(settings.WbStreamDisplayName)
+			if settings.WbStreamE2EEnabled {
+				spec.WbStreamE2ESecret = strings.TrimSpace(settings.WbStreamE2ESecret)
+			}
+		}
+		specs[inbound.Id] = spec
 	}
 	return specs, nil
 }
@@ -446,6 +518,9 @@ func (s *VKTurnProxyService) installBinary(reader io.Reader, version string) err
 	if err := os.Chmod(tmpPath, 0o755); err != nil {
 		return err
 	}
+	if err := vkturnproxy.ValidateBinary(tmpPath); err != nil {
+		return err
+	}
 	_ = os.Remove(targetPath)
 	if err := os.Rename(tmpPath, targetPath); err != nil {
 		return err
@@ -469,6 +544,7 @@ func (s *VKTurnProxyService) UpdateBinary(version string) error {
 	}
 
 	s.mu.Lock()
+	s.ensureManualStopLoadedLocked()
 	previousManualStop := s.manualStop
 	s.manualStop = true
 	s.lastError = ""
@@ -480,7 +556,7 @@ func (s *VKTurnProxyService) UpdateBinary(version string) error {
 
 	if _, err := s.downloadBinary(version); err != nil {
 		s.mu.Lock()
-		s.manualStop = previousManualStop
+		s.persistManualStopLocked(previousManualStop)
 		s.lastError = err.Error()
 		s.mu.Unlock()
 		if !previousManualStop {
@@ -490,9 +566,12 @@ func (s *VKTurnProxyService) UpdateBinary(version string) error {
 	}
 
 	s.mu.Lock()
-	s.manualStop = false
+	s.persistManualStopLocked(previousManualStop)
 	s.lastError = ""
 	s.mu.Unlock()
+	if previousManualStop {
+		return nil
+	}
 	return s.EnsureRunning()
 }
 
@@ -502,6 +581,7 @@ func (s *VKTurnProxyService) UploadCustomBinary(reader io.Reader) error {
 	}
 
 	s.mu.Lock()
+	s.ensureManualStopLoadedLocked()
 	previousManualStop := s.manualStop
 	s.manualStop = true
 	s.lastError = ""
@@ -513,7 +593,7 @@ func (s *VKTurnProxyService) UploadCustomBinary(reader io.Reader) error {
 
 	if err := s.installBinary(reader, vkTurnProxyCustomVersion); err != nil {
 		s.mu.Lock()
-		s.manualStop = previousManualStop
+		s.persistManualStopLocked(previousManualStop)
 		s.lastError = err.Error()
 		s.mu.Unlock()
 		if !previousManualStop {
@@ -523,9 +603,12 @@ func (s *VKTurnProxyService) UploadCustomBinary(reader io.Reader) error {
 	}
 
 	s.mu.Lock()
-	s.manualStop = false
+	s.persistManualStopLocked(previousManualStop)
 	s.lastError = ""
 	s.mu.Unlock()
+	if previousManualStop {
+		return nil
+	}
 	return s.EnsureRunning()
 }
 
@@ -659,6 +742,26 @@ func (s *InboundService) validateVKTurnProxySettings(settings *VKTurnProxySettin
 
 	if !allowClients && len(settings.Clients) > 0 {
 		return common.NewError("clients can be configured only for wireguard inbound forwarding")
+	}
+
+	if settings.WbStreamEnabled {
+		if settings.Forward.Type != VKTurnProxyForwardWireGuardInbound {
+			return common.NewError("WB Stream requires forwarding to a wireguard inbound")
+		}
+		if !settings.WbStreamExchangeViaVKTurn && strings.TrimSpace(settings.WbStreamRoomID) == "" {
+			return common.NewError("WB Stream room id is required when room exchange via VK TURN is disabled")
+		}
+		if settings.WbStreamE2EEnabled {
+			secret := strings.TrimSpace(settings.WbStreamE2ESecret)
+			if secret == "" {
+				return common.NewError("WB Stream E2E secret is required when E2E is enabled")
+			}
+			if _, err := base64.StdEncoding.DecodeString(secret); err != nil {
+				if _, err := base64.RawStdEncoding.DecodeString(secret); err != nil {
+					return common.NewError("WB Stream E2E secret must be base64-encoded")
+				}
+			}
+		}
 	}
 	return nil
 }

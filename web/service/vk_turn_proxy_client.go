@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net"
 	"strconv"
@@ -13,6 +14,47 @@ import (
 	"github.com/mhsanaei/3x-ui/v2/xray"
 	"gorm.io/gorm"
 )
+
+func dedupedClientLinks(client *VKTurnProxyClient) []string {
+	if client == nil {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	addLink := func(link string) {
+		link = strings.TrimSpace(link)
+		if link == "" {
+			return
+		}
+		if _, ok := seen[link]; ok {
+			return
+		}
+		seen[link] = struct{}{}
+	}
+	addLink(client.Link)
+	for _, link := range client.Links {
+		addLink(link)
+	}
+	if len(seen) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(seen))
+	addUnique := func(link string) {
+		link = strings.TrimSpace(link)
+		if link == "" {
+			return
+		}
+		if _, ok := seen[link]; !ok {
+			return
+		}
+		delete(seen, link)
+		out = append(out, link)
+	}
+	addUnique(client.Link)
+	for _, link := range client.Links {
+		addUnique(link)
+	}
+	return out
+}
 
 func sanitizeIPv4Host(raw string) string {
 	host := strings.TrimSpace(strings.Trim(raw, "[]"))
@@ -227,8 +269,15 @@ func (s *InboundService) validateVKTurnProxyClient(client *VKTurnProxyClient) er
 	if strings.TrimSpace(client.Email) == "" {
 		return common.NewError("vk-turn-proxy client email is empty")
 	}
-	if strings.TrimSpace(client.Link) == "" {
+	links := dedupedClientLinks(client)
+	if len(links) == 0 {
 		return common.NewError("vk-turn-proxy client link is empty")
+	}
+	client.Link = links[0]
+	if len(links) > 1 {
+		client.Links = append([]string(nil), links[1:]...)
+	} else {
+		client.Links = nil
 	}
 	if client.PeerManaged {
 		if client.Peer == nil {
@@ -772,16 +821,29 @@ func (s *InboundService) buildVKTurnProxyExportConfig(inbound *model.Inbound, se
 		return nil, err
 	}
 
+	links := dedupedClientLinks(client)
+	primaryLink := client.Link
+	if primaryLink == "" && len(links) > 0 {
+		primaryLink = links[0]
+	}
+
+	configType := wingsvproto.ConfigType_CONFIG_TYPE_VK
+	backend := wingsvproto.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD
+	if settings.WbStreamEnabled {
+		configType = wingsvproto.ConfigType_CONFIG_TYPE_WB_STREAM
+		backend = wingsvproto.BackendType_BACKEND_TYPE_WB_STREAM
+	}
+
 	config := &wingsvproto.Config{
 		Ver:     vkTurnProxyCurrentVersion,
-		Type:    wingsvproto.ConfigType_CONFIG_TYPE_VK,
-		Backend: wingsvproto.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD,
+		Type:    configType,
+		Backend: backend,
 		Turn: &wingsvproto.Turn{
 			Endpoint: &wingsvproto.Endpoint{
 				Host: host,
 				Port: uint32(inbound.Port),
 			},
-			Link:        client.Link,
+			Link:        primaryLink,
 			SessionMode: wingsvproto.TurnSessionMode_TURN_SESSION_MODE_AUTO,
 		},
 		Wg: &wingsvproto.WireGuard{
@@ -793,6 +855,53 @@ func (s *InboundService) buildVKTurnProxyExportConfig(inbound *model.Inbound, se
 				PublicKey: serverPublicKeyBytes,
 			},
 		},
+	}
+
+	if settings.WbStreamEnabled {
+		wb := &wingsvproto.WbStream{
+			RoomId:            strings.TrimSpace(settings.WbStreamRoomID),
+			ExchangeViaVkTurn: settings.WbStreamExchangeViaVKTurn,
+			E2EEnabled:        settings.WbStreamE2EEnabled,
+			DisplayName:       strings.TrimSpace(settings.WbStreamDisplayName),
+		}
+		if wb.DisplayName == "" {
+			wb.DisplayName = strings.TrimSpace(client.Email)
+		}
+		if settings.WbStreamE2EEnabled {
+			secret := strings.TrimSpace(settings.WbStreamE2ESecret)
+			decoded, err := base64.StdEncoding.DecodeString(secret)
+			if err != nil {
+				decoded, err = base64.RawStdEncoding.DecodeString(secret)
+				if err != nil {
+					return nil, common.NewError("WB Stream E2E secret must be base64-encoded")
+				}
+			}
+			wb.E2ESecret = decoded
+		}
+		config.WbStream = wb
+	}
+
+	if len(links) > 1 {
+		config.Turn.Links = links
+	}
+	if secondary := strings.TrimSpace(client.LinkSecondary); secondary != "" {
+		config.Turn.LinkSecondary = secondary
+	}
+	if settings.Threads > 0 {
+		threads := uint32(settings.Threads)
+		config.Turn.Threads = &threads
+	}
+	if settings.UseUDP != nil {
+		flag := *settings.UseUDP
+		config.Turn.UseUdp = &flag
+	}
+	if settings.NoObfuscation != nil {
+		flag := *settings.NoObfuscation
+		config.Turn.NoObfuscation = &flag
+	}
+	if settings.CredsGroupSize > 0 {
+		size := uint32(settings.CredsGroupSize)
+		config.Turn.CredsGroupSize = &size
 	}
 
 	if settings.LocalEndpoint != "" && settings.LocalEndpoint != vkTurnProxyDefaultLocalAddress {

@@ -1145,11 +1145,7 @@
 
           versionModal.hide();
           this.loading(true, '{{ i18n "pages.index.dontRefresh"}}');
-          const uploadMsg = await HttpUtil.post('/panel/api/server/uploadVKTurnProxyBinary', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            }
-          });
+          const uploadMsg = await HttpUtil.post('/panel/api/server/uploadVKTurnProxyBinary', formData);
           this.loading(false);
           if (!uploadMsg.success) {
             return;
@@ -1299,11 +1295,7 @@
             formData.append('db', dbFile);
             backupModal.hide();
             this.loading(true);
-            const uploadMsg = await HttpUtil.post('/panel/api/server/importDB', formData, {
-              headers: {
-                'Content-Type': 'multipart/form-data',
-              }
-            });
+            const uploadMsg = await HttpUtil.post('/panel/api/server/importDB', formData);
             this.loading(false);
             if (!uploadMsg.success) {
               return;

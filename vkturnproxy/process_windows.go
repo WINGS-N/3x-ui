@@ -9,3 +9,7 @@ func setSysProcAttr(cmd *exec.Cmd) {}
 func stopCmdProcess(cmd *exec.Cmd) error {
 	return cmd.Process.Kill()
 }
+
+func killCmdProcess(cmd *exec.Cmd) error {
+	return cmd.Process.Kill()
+}

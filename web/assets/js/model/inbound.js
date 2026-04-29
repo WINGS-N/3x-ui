@@ -2735,6 +2735,16 @@ Inbound.VKTurnProxySettings = class extends Inbound.Settings {
         wgDns = '1.1.1.1, 1.0.0.1',
         wgMtu = 1280,
         wgAllowedIps = '0.0.0.0/0, ::/0',
+        threads = 0,
+        useUdp = null,
+        noObfuscation = null,
+        credsGroupSize = 0,
+        wbStreamEnabled = false,
+        wbStreamRoomId = '',
+        wbStreamDisplayName = '',
+        wbStreamE2eEnabled = false,
+        wbStreamE2eSecret = '',
+        wbStreamExchangeViaVkTurn = false,
         clients = []
     ) {
         super(protocol);
@@ -2744,6 +2754,16 @@ Inbound.VKTurnProxySettings = class extends Inbound.Settings {
         this.wgDns = wgDns;
         this.wgMtu = wgMtu;
         this.wgAllowedIps = wgAllowedIps;
+        this.threads = threads;
+        this.useUdp = useUdp;
+        this.noObfuscation = noObfuscation;
+        this.credsGroupSize = credsGroupSize;
+        this.wbStreamEnabled = wbStreamEnabled;
+        this.wbStreamRoomId = wbStreamRoomId;
+        this.wbStreamDisplayName = wbStreamDisplayName;
+        this.wbStreamE2eEnabled = wbStreamE2eEnabled;
+        this.wbStreamE2eSecret = wbStreamE2eSecret;
+        this.wbStreamExchangeViaVkTurn = wbStreamExchangeViaVkTurn;
         this.clients = clients;
     }
 
@@ -2756,6 +2776,16 @@ Inbound.VKTurnProxySettings = class extends Inbound.Settings {
             json.wgDns ?? '1.1.1.1, 1.0.0.1',
             json.wgMtu ?? 1280,
             json.wgAllowedIps ?? '0.0.0.0/0, ::/0',
+            json.threads ?? 0,
+            json.useUdp ?? null,
+            json.noObfuscation ?? null,
+            json.credsGroupSize ?? 0,
+            json.wbStreamEnabled ?? false,
+            json.wbStreamRoomId ?? '',
+            json.wbStreamDisplayName ?? '',
+            json.wbStreamE2eEnabled ?? false,
+            json.wbStreamE2eSecret ?? '',
+            json.wbStreamExchangeViaVkTurn ?? false,
             (json.clients || []).map(client => Inbound.VKTurnProxySettings.Client.fromJson(client)),
         );
     }
@@ -2768,6 +2798,16 @@ Inbound.VKTurnProxySettings = class extends Inbound.Settings {
             wgDns: this.wgDns || '1.1.1.1, 1.0.0.1',
             wgMtu: this.wgMtu || 1280,
             wgAllowedIps: this.wgAllowedIps || '0.0.0.0/0, ::/0',
+            threads: this.threads > 0 ? this.threads : undefined,
+            useUdp: this.useUdp == null ? undefined : this.useUdp,
+            noObfuscation: this.noObfuscation == null ? undefined : this.noObfuscation,
+            credsGroupSize: this.credsGroupSize > 0 ? this.credsGroupSize : undefined,
+            wbStreamEnabled: this.wbStreamEnabled || undefined,
+            wbStreamRoomId: this.wbStreamEnabled ? (this.wbStreamRoomId || undefined) : undefined,
+            wbStreamDisplayName: this.wbStreamEnabled ? (this.wbStreamDisplayName || undefined) : undefined,
+            wbStreamE2eEnabled: this.wbStreamEnabled && this.wbStreamE2eEnabled ? true : undefined,
+            wbStreamE2eSecret: this.wbStreamEnabled && this.wbStreamE2eEnabled ? (this.wbStreamE2eSecret || undefined) : undefined,
+            wbStreamExchangeViaVkTurn: this.wbStreamEnabled && this.wbStreamExchangeViaVkTurn ? true : undefined,
             clients: Inbound.VKTurnProxySettings.Client.toJsonArray(this.clients),
         };
     }
@@ -2818,6 +2858,8 @@ Inbound.VKTurnProxySettings.Client = class extends XrayCommonClass {
         subId = RandomUtil.randomLowerAndNum(16),
         reset = 0,
         link = '',
+        links = [],
+        linkSecondary = '',
         peerPublicKey = '',
         peerManaged = true,
         peer = new Inbound.VKTurnProxySettings.Peer(),
@@ -2836,6 +2878,8 @@ Inbound.VKTurnProxySettings.Client = class extends XrayCommonClass {
         this.subId = subId;
         this.reset = reset;
         this.link = link;
+        this.links = Array.isArray(links) ? links.filter(value => typeof value === 'string' && value.trim().length > 0) : [];
+        this.linkSecondary = linkSecondary || '';
         this.peerPublicKey = peerPublicKey || peer.publicKey;
         this.peerManaged = peerManaged;
         this.peer = peer;
@@ -2856,6 +2900,8 @@ Inbound.VKTurnProxySettings.Client = class extends XrayCommonClass {
             json.subId,
             json.reset,
             json.link,
+            json.links || [],
+            json.linkSecondary || '',
             json.peerPublicKey,
             json.peerManaged ?? false,
             Inbound.VKTurnProxySettings.Peer.fromJson(json.peer || {}),
@@ -2865,6 +2911,7 @@ Inbound.VKTurnProxySettings.Client = class extends XrayCommonClass {
     }
 
     toJson() {
+        const cleanedLinks = (this.links || []).map(value => (value || '').trim()).filter(Boolean);
         return {
             id: this.id,
             email: this.email,
@@ -2877,6 +2924,8 @@ Inbound.VKTurnProxySettings.Client = class extends XrayCommonClass {
             subId: this.subId,
             reset: this.reset,
             link: this.link,
+            links: cleanedLinks.length > 0 ? cleanedLinks : undefined,
+            linkSecondary: (this.linkSecondary || '').trim() || undefined,
             peerPublicKey: this.peerPublicKey || this.peer.publicKey,
             peerManaged: this.peerManaged,
             peer: this.peer ? this.peer.toJson() : undefined,

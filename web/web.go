@@ -463,7 +463,7 @@ func (s *Server) Start() (err error) {
 func (s *Server) Stop() error {
 	s.cancel()
 	s.xrayService.StopXray()
-	_ = service.VKTurnProxyRuntime().StopAll()
+	_ = service.VKTurnProxyRuntime().ShutdownForRestart()
 	if s.cron != nil {
 		s.cron.Stop()
 	}

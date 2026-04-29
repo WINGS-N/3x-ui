@@ -14,3 +14,7 @@ func setSysProcAttr(cmd *exec.Cmd) {
 func stopCmdProcess(cmd *exec.Cmd) error {
 	return syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
 }
+
+func killCmdProcess(cmd *exec.Cmd) error {
+	return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+}

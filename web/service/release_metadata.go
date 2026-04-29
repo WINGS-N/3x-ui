@@ -13,6 +13,7 @@ import (
 const (
 	xrayReleaseTagSettingKey        = "xrayReleaseTag"
 	vkTurnProxyReleaseTagSettingKey = "vkTurnProxyReleaseTag"
+	vkTurnProxyManualStopSettingKey = "vkTurnProxyManualStop"
 	releaseMetadataSuffix           = ".release"
 	unknownInstalledRelease         = "Unknown"
 )
@@ -31,6 +32,14 @@ func (s *SettingService) GetVKTurnProxyReleaseTag() (string, error) {
 
 func (s *SettingService) SetVKTurnProxyReleaseTag(value string) error {
 	return s.setString(vkTurnProxyReleaseTagSettingKey, strings.TrimSpace(value))
+}
+
+func (s *SettingService) GetVKTurnProxyManualStop() (bool, error) {
+	return s.getBool(vkTurnProxyManualStopSettingKey)
+}
+
+func (s *SettingService) SetVKTurnProxyManualStop(value bool) error {
+	return s.setBool(vkTurnProxyManualStopSettingKey, value)
 }
 
 func releaseMetadataPath(binaryPath string) string {

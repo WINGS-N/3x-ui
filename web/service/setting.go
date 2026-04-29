@@ -82,6 +82,7 @@ var defaultValueMap = map[string]string{
 	"xrayOutboundTestUrl":         "https://www.google.com/generate_204",
 	"xrayReleaseTag":              "",
 	"vkTurnProxyReleaseTag":       "",
+	"vkTurnProxyManualStop":       "false",
 
 	// LDAP defaults
 	"ldapEnable":            "false",

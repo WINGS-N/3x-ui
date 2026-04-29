@@ -16,8 +16,41 @@
         <a-input v-model.trim="client.email"></a-input>
     </a-form-item>
     <template v-if="inbound.protocol === Protocols.VK_TURN_PROXY">
-        <a-form-item label='VK Link'>
+        <a-form-item label='Основная VK ссылка'>
             <a-input v-model.trim="client.link" placeholder="https://vk.com/call/join/..."></a-input>
+        </a-form-item>
+        <a-form-item>
+            <template slot="label">
+                Резервные ссылки
+                <a-tooltip title="Дополнительные VK ссылки. Клиент будет ротировать их вместе с основной для распределения нагрузки и обхода капчи.">
+                    <a-icon type="question-circle"></a-icon>
+                </a-tooltip>
+                <a-button icon="plus" type="primary" size="small" @click="(client.links = client.links || []).push('')"></a-button>
+            </template>
+            <template v-if="!client.links || client.links.length === 0">
+                <span style="color: rgba(255,255,255,0.4); font-size: 12px;">Нет дополнительных ссылок</span>
+            </template>
+            <template v-for="(extraLink, extraLinkIndex) in (client.links || [])">
+                <a-input
+                    v-model.trim="client.links[extraLinkIndex]"
+                    placeholder="https://vk.com/call/join/..."
+                    style="margin-bottom: 4px;">
+                    <a-button
+                        icon="minus"
+                        slot="addonAfter"
+                        size="small"
+                        @click="client.links.splice(extraLinkIndex, 1)"></a-button>
+                </a-input>
+            </template>
+        </a-form-item>
+        <a-form-item>
+            <template slot="label">
+                Аварийная ссылка
+                <a-tooltip title="Используется только если все основные ссылки недоступны (rate-limit, dead-link). Это последний резерв.">
+                    <a-icon type="question-circle"></a-icon>
+                </a-tooltip>
+            </template>
+            <a-input v-model.trim="client.linkSecondary" placeholder="https://vk.com/call/join/..."></a-input>
         </a-form-item>
         <a-form-item label='Peer Binding'>
             <a-radio-group

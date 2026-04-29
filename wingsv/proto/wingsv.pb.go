@@ -24,10 +24,14 @@ const (
 type ConfigType int32
 
 const (
-	ConfigType_CONFIG_TYPE_UNSPECIFIED ConfigType = 0
-	ConfigType_CONFIG_TYPE_VK          ConfigType = 1
-	ConfigType_CONFIG_TYPE_XRAY        ConfigType = 2
-	ConfigType_CONFIG_TYPE_AMNEZIAWG   ConfigType = 3
+	ConfigType_CONFIG_TYPE_UNSPECIFIED  ConfigType = 0
+	ConfigType_CONFIG_TYPE_VK           ConfigType = 1
+	ConfigType_CONFIG_TYPE_XRAY         ConfigType = 2
+	ConfigType_CONFIG_TYPE_AMNEZIAWG    ConfigType = 3
+	ConfigType_CONFIG_TYPE_ALL          ConfigType = 4
+	ConfigType_CONFIG_TYPE_APP_ROUTING  ConfigType = 5
+	ConfigType_CONFIG_TYPE_XRAY_ROUTING ConfigType = 6
+	ConfigType_CONFIG_TYPE_WB_STREAM    ConfigType = 7
 )
 
 // Enum value maps for ConfigType.
@@ -37,12 +41,20 @@ var (
 		1: "CONFIG_TYPE_VK",
 		2: "CONFIG_TYPE_XRAY",
 		3: "CONFIG_TYPE_AMNEZIAWG",
+		4: "CONFIG_TYPE_ALL",
+		5: "CONFIG_TYPE_APP_ROUTING",
+		6: "CONFIG_TYPE_XRAY_ROUTING",
+		7: "CONFIG_TYPE_WB_STREAM",
 	}
 	ConfigType_value = map[string]int32{
-		"CONFIG_TYPE_UNSPECIFIED": 0,
-		"CONFIG_TYPE_VK":          1,
-		"CONFIG_TYPE_XRAY":        2,
-		"CONFIG_TYPE_AMNEZIAWG":   3,
+		"CONFIG_TYPE_UNSPECIFIED":  0,
+		"CONFIG_TYPE_VK":           1,
+		"CONFIG_TYPE_XRAY":         2,
+		"CONFIG_TYPE_AMNEZIAWG":    3,
+		"CONFIG_TYPE_ALL":          4,
+		"CONFIG_TYPE_APP_ROUTING":  5,
+		"CONFIG_TYPE_XRAY_ROUTING": 6,
+		"CONFIG_TYPE_WB_STREAM":    7,
 	}
 )
 
@@ -80,6 +92,9 @@ const (
 	BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD BackendType = 1
 	BackendType_BACKEND_TYPE_XRAY              BackendType = 2
 	BackendType_BACKEND_TYPE_AMNEZIAWG         BackendType = 3
+	BackendType_BACKEND_TYPE_WIREGUARD         BackendType = 4
+	BackendType_BACKEND_TYPE_AMNEZIAWG_PLAIN   BackendType = 5
+	BackendType_BACKEND_TYPE_WB_STREAM         BackendType = 6
 )
 
 // Enum value maps for BackendType.
@@ -89,12 +104,18 @@ var (
 		1: "BACKEND_TYPE_VK_TURN_WIREGUARD",
 		2: "BACKEND_TYPE_XRAY",
 		3: "BACKEND_TYPE_AMNEZIAWG",
+		4: "BACKEND_TYPE_WIREGUARD",
+		5: "BACKEND_TYPE_AMNEZIAWG_PLAIN",
+		6: "BACKEND_TYPE_WB_STREAM",
 	}
 	BackendType_value = map[string]int32{
 		"BACKEND_TYPE_UNSPECIFIED":       0,
 		"BACKEND_TYPE_VK_TURN_WIREGUARD": 1,
 		"BACKEND_TYPE_XRAY":              2,
 		"BACKEND_TYPE_AMNEZIAWG":         3,
+		"BACKEND_TYPE_WIREGUARD":         4,
+		"BACKEND_TYPE_AMNEZIAWG_PLAIN":   5,
+		"BACKEND_TYPE_WB_STREAM":         6,
 	}
 )
 
@@ -177,6 +198,165 @@ func (TurnSessionMode) EnumDescriptor() ([]byte, []int) {
 	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{2}
 }
 
+type XrayRoutingMatchType int32
+
+const (
+	XrayRoutingMatchType_XRAY_ROUTING_MATCH_UNSPECIFIED XrayRoutingMatchType = 0
+	XrayRoutingMatchType_XRAY_ROUTING_MATCH_GEOIP       XrayRoutingMatchType = 1
+	XrayRoutingMatchType_XRAY_ROUTING_MATCH_GEOSITE     XrayRoutingMatchType = 2
+	XrayRoutingMatchType_XRAY_ROUTING_MATCH_DOMAIN      XrayRoutingMatchType = 3
+	XrayRoutingMatchType_XRAY_ROUTING_MATCH_IP          XrayRoutingMatchType = 4
+	XrayRoutingMatchType_XRAY_ROUTING_MATCH_PORT        XrayRoutingMatchType = 5
+)
+
+// Enum value maps for XrayRoutingMatchType.
+var (
+	XrayRoutingMatchType_name = map[int32]string{
+		0: "XRAY_ROUTING_MATCH_UNSPECIFIED",
+		1: "XRAY_ROUTING_MATCH_GEOIP",
+		2: "XRAY_ROUTING_MATCH_GEOSITE",
+		3: "XRAY_ROUTING_MATCH_DOMAIN",
+		4: "XRAY_ROUTING_MATCH_IP",
+		5: "XRAY_ROUTING_MATCH_PORT",
+	}
+	XrayRoutingMatchType_value = map[string]int32{
+		"XRAY_ROUTING_MATCH_UNSPECIFIED": 0,
+		"XRAY_ROUTING_MATCH_GEOIP":       1,
+		"XRAY_ROUTING_MATCH_GEOSITE":     2,
+		"XRAY_ROUTING_MATCH_DOMAIN":      3,
+		"XRAY_ROUTING_MATCH_IP":          4,
+		"XRAY_ROUTING_MATCH_PORT":        5,
+	}
+)
+
+func (x XrayRoutingMatchType) Enum() *XrayRoutingMatchType {
+	p := new(XrayRoutingMatchType)
+	*p = x
+	return p
+}
+
+func (x XrayRoutingMatchType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (XrayRoutingMatchType) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_wingsv_proto_enumTypes[3].Descriptor()
+}
+
+func (XrayRoutingMatchType) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_wingsv_proto_enumTypes[3]
+}
+
+func (x XrayRoutingMatchType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use XrayRoutingMatchType.Descriptor instead.
+func (XrayRoutingMatchType) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{3}
+}
+
+type XrayRoutingAction int32
+
+const (
+	XrayRoutingAction_XRAY_ROUTING_ACTION_UNSPECIFIED XrayRoutingAction = 0
+	XrayRoutingAction_XRAY_ROUTING_ACTION_PROXY       XrayRoutingAction = 1
+	XrayRoutingAction_XRAY_ROUTING_ACTION_DIRECT      XrayRoutingAction = 2
+	XrayRoutingAction_XRAY_ROUTING_ACTION_BLOCK       XrayRoutingAction = 3
+)
+
+// Enum value maps for XrayRoutingAction.
+var (
+	XrayRoutingAction_name = map[int32]string{
+		0: "XRAY_ROUTING_ACTION_UNSPECIFIED",
+		1: "XRAY_ROUTING_ACTION_PROXY",
+		2: "XRAY_ROUTING_ACTION_DIRECT",
+		3: "XRAY_ROUTING_ACTION_BLOCK",
+	}
+	XrayRoutingAction_value = map[string]int32{
+		"XRAY_ROUTING_ACTION_UNSPECIFIED": 0,
+		"XRAY_ROUTING_ACTION_PROXY":       1,
+		"XRAY_ROUTING_ACTION_DIRECT":      2,
+		"XRAY_ROUTING_ACTION_BLOCK":       3,
+	}
+)
+
+func (x XrayRoutingAction) Enum() *XrayRoutingAction {
+	p := new(XrayRoutingAction)
+	*p = x
+	return p
+}
+
+func (x XrayRoutingAction) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (XrayRoutingAction) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_wingsv_proto_enumTypes[4].Descriptor()
+}
+
+func (XrayRoutingAction) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_wingsv_proto_enumTypes[4]
+}
+
+func (x XrayRoutingAction) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use XrayRoutingAction.Descriptor instead.
+func (XrayRoutingAction) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{4}
+}
+
+type XrayTransportMode int32
+
+const (
+	XrayTransportMode_XRAY_TRANSPORT_MODE_UNSPECIFIED XrayTransportMode = 0
+	XrayTransportMode_XRAY_TRANSPORT_MODE_DIRECT      XrayTransportMode = 1
+	XrayTransportMode_XRAY_TRANSPORT_MODE_VK_TURN_TCP XrayTransportMode = 2
+)
+
+// Enum value maps for XrayTransportMode.
+var (
+	XrayTransportMode_name = map[int32]string{
+		0: "XRAY_TRANSPORT_MODE_UNSPECIFIED",
+		1: "XRAY_TRANSPORT_MODE_DIRECT",
+		2: "XRAY_TRANSPORT_MODE_VK_TURN_TCP",
+	}
+	XrayTransportMode_value = map[string]int32{
+		"XRAY_TRANSPORT_MODE_UNSPECIFIED": 0,
+		"XRAY_TRANSPORT_MODE_DIRECT":      1,
+		"XRAY_TRANSPORT_MODE_VK_TURN_TCP": 2,
+	}
+)
+
+func (x XrayTransportMode) Enum() *XrayTransportMode {
+	p := new(XrayTransportMode)
+	*p = x
+	return p
+}
+
+func (x XrayTransportMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (XrayTransportMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_wingsv_proto_enumTypes[5].Descriptor()
+}
+
+func (XrayTransportMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_wingsv_proto_enumTypes[5]
+}
+
+func (x XrayTransportMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use XrayTransportMode.Descriptor instead.
+func (XrayTransportMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{5}
+}
+
 type Config struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ver           uint32                 `protobuf:"varint,1,opt,name=ver,proto3" json:"ver,omitempty"`
@@ -186,6 +366,8 @@ type Config struct {
 	Backend       BackendType            `protobuf:"varint,5,opt,name=backend,proto3,enum=wingsv.BackendType" json:"backend,omitempty"`
 	Xray          *Xray                  `protobuf:"bytes,6,opt,name=xray,proto3" json:"xray,omitempty"`
 	Awg           *AmneziaWG             `protobuf:"bytes,7,opt,name=awg,proto3" json:"awg,omitempty"`
+	AppRouting    *AppRouting            `protobuf:"bytes,8,opt,name=app_routing,json=appRouting,proto3" json:"app_routing,omitempty"`
+	WbStream      *WbStream              `protobuf:"bytes,9,opt,name=wb_stream,json=wbStream,proto3" json:"wb_stream,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -269,6 +451,96 @@ func (x *Config) GetAwg() *AmneziaWG {
 	return nil
 }
 
+func (x *Config) GetAppRouting() *AppRouting {
+	if x != nil {
+		return x.AppRouting
+	}
+	return nil
+}
+
+func (x *Config) GetWbStream() *WbStream {
+	if x != nil {
+		return x.WbStream
+	}
+	return nil
+}
+
+type WbStream struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	RoomId            string                 `protobuf:"bytes,1,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	ExchangeViaVkTurn bool                   `protobuf:"varint,2,opt,name=exchange_via_vk_turn,json=exchangeViaVkTurn,proto3" json:"exchange_via_vk_turn,omitempty"`
+	E2EEnabled        bool                   `protobuf:"varint,3,opt,name=e2e_enabled,json=e2eEnabled,proto3" json:"e2e_enabled,omitempty"`
+	E2ESecret         []byte                 `protobuf:"bytes,4,opt,name=e2e_secret,json=e2eSecret,proto3" json:"e2e_secret,omitempty"`
+	DisplayName       string                 `protobuf:"bytes,5,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *WbStream) Reset() {
+	*x = WbStream{}
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WbStream) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WbStream) ProtoMessage() {}
+
+func (x *WbStream) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WbStream.ProtoReflect.Descriptor instead.
+func (*WbStream) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *WbStream) GetRoomId() string {
+	if x != nil {
+		return x.RoomId
+	}
+	return ""
+}
+
+func (x *WbStream) GetExchangeViaVkTurn() bool {
+	if x != nil {
+		return x.ExchangeViaVkTurn
+	}
+	return false
+}
+
+func (x *WbStream) GetE2EEnabled() bool {
+	if x != nil {
+		return x.E2EEnabled
+	}
+	return false
+}
+
+func (x *WbStream) GetE2ESecret() []byte {
+	if x != nil {
+		return x.E2ESecret
+	}
+	return nil
+}
+
+func (x *WbStream) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
 type AmneziaWG struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	AwgQuickConfig string                 `protobuf:"bytes,1,opt,name=awg_quick_config,json=awgQuickConfig,proto3" json:"awg_quick_config,omitempty"`
@@ -278,7 +550,7 @@ type AmneziaWG struct {
 
 func (x *AmneziaWG) Reset() {
 	*x = AmneziaWG{}
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[1]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -290,7 +562,7 @@ func (x *AmneziaWG) String() string {
 func (*AmneziaWG) ProtoMessage() {}
 
 func (x *AmneziaWG) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[1]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -303,7 +575,7 @@ func (x *AmneziaWG) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AmneziaWG.ProtoReflect.Descriptor instead.
 func (*AmneziaWG) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{1}
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *AmneziaWG) GetAwgQuickConfig() string {
@@ -323,7 +595,7 @@ type Endpoint struct {
 
 func (x *Endpoint) Reset() {
 	*x = Endpoint{}
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[2]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -335,7 +607,7 @@ func (x *Endpoint) String() string {
 func (*Endpoint) ProtoMessage() {}
 
 func (x *Endpoint) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[2]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -348,7 +620,7 @@ func (x *Endpoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Endpoint.ProtoReflect.Descriptor instead.
 func (*Endpoint) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{2}
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Endpoint) GetHost() string {
@@ -375,7 +647,7 @@ type Cidr struct {
 
 func (x *Cidr) Reset() {
 	*x = Cidr{}
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[3]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -387,7 +659,7 @@ func (x *Cidr) String() string {
 func (*Cidr) ProtoMessage() {}
 
 func (x *Cidr) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[3]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -400,7 +672,7 @@ func (x *Cidr) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Cidr.ProtoReflect.Descriptor instead.
 func (*Cidr) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{3}
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Cidr) GetAddr() []byte {
@@ -418,23 +690,26 @@ func (x *Cidr) GetPrefix() uint32 {
 }
 
 type Turn struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Endpoint      *Endpoint              `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	Link          string                 `protobuf:"bytes,2,opt,name=link,proto3" json:"link,omitempty"`
-	Threads       *uint32                `protobuf:"varint,3,opt,name=threads,proto3,oneof" json:"threads,omitempty"`
-	UseUdp        *bool                  `protobuf:"varint,4,opt,name=use_udp,json=useUdp,proto3,oneof" json:"use_udp,omitempty"`
-	NoObfuscation *bool                  `protobuf:"varint,5,opt,name=no_obfuscation,json=noObfuscation,proto3,oneof" json:"no_obfuscation,omitempty"`
-	LocalEndpoint *Endpoint              `protobuf:"bytes,6,opt,name=local_endpoint,json=localEndpoint,proto3" json:"local_endpoint,omitempty"`
-	Host          string                 `protobuf:"bytes,7,opt,name=host,proto3" json:"host,omitempty"`
-	Port          *uint32                `protobuf:"varint,8,opt,name=port,proto3,oneof" json:"port,omitempty"`
-	SessionMode   TurnSessionMode        `protobuf:"varint,9,opt,name=session_mode,json=sessionMode,proto3,enum=wingsv.TurnSessionMode" json:"session_mode,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Endpoint       *Endpoint              `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	Link           string                 `protobuf:"bytes,2,opt,name=link,proto3" json:"link,omitempty"`
+	Threads        *uint32                `protobuf:"varint,3,opt,name=threads,proto3,oneof" json:"threads,omitempty"`
+	UseUdp         *bool                  `protobuf:"varint,4,opt,name=use_udp,json=useUdp,proto3,oneof" json:"use_udp,omitempty"`
+	NoObfuscation  *bool                  `protobuf:"varint,5,opt,name=no_obfuscation,json=noObfuscation,proto3,oneof" json:"no_obfuscation,omitempty"`
+	LocalEndpoint  *Endpoint              `protobuf:"bytes,6,opt,name=local_endpoint,json=localEndpoint,proto3" json:"local_endpoint,omitempty"`
+	Host           string                 `protobuf:"bytes,7,opt,name=host,proto3" json:"host,omitempty"`
+	Port           *uint32                `protobuf:"varint,8,opt,name=port,proto3,oneof" json:"port,omitempty"`
+	SessionMode    TurnSessionMode        `protobuf:"varint,9,opt,name=session_mode,json=sessionMode,proto3,enum=wingsv.TurnSessionMode" json:"session_mode,omitempty"`
+	Links          []string               `protobuf:"bytes,10,rep,name=links,proto3" json:"links,omitempty"`
+	LinkSecondary  string                 `protobuf:"bytes,11,opt,name=link_secondary,json=linkSecondary,proto3" json:"link_secondary,omitempty"`
+	CredsGroupSize *uint32                `protobuf:"varint,12,opt,name=creds_group_size,json=credsGroupSize,proto3,oneof" json:"creds_group_size,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Turn) Reset() {
 	*x = Turn{}
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[4]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -446,7 +721,7 @@ func (x *Turn) String() string {
 func (*Turn) ProtoMessage() {}
 
 func (x *Turn) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[4]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -459,7 +734,7 @@ func (x *Turn) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Turn.ProtoReflect.Descriptor instead.
 func (*Turn) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{4}
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Turn) GetEndpoint() *Endpoint {
@@ -525,17 +800,39 @@ func (x *Turn) GetSessionMode() TurnSessionMode {
 	return TurnSessionMode_TURN_SESSION_MODE_UNSPECIFIED
 }
 
+func (x *Turn) GetLinks() []string {
+	if x != nil {
+		return x.Links
+	}
+	return nil
+}
+
+func (x *Turn) GetLinkSecondary() string {
+	if x != nil {
+		return x.LinkSecondary
+	}
+	return ""
+}
+
+func (x *Turn) GetCredsGroupSize() uint32 {
+	if x != nil && x.CredsGroupSize != nil {
+		return *x.CredsGroupSize
+	}
+	return 0
+}
+
 type WireGuard struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Iface         *Interface             `protobuf:"bytes,1,opt,name=iface,proto3" json:"iface,omitempty"`
 	Peer          *Peer                  `protobuf:"bytes,2,opt,name=peer,proto3" json:"peer,omitempty"`
+	Endpoint      *Endpoint              `protobuf:"bytes,3,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WireGuard) Reset() {
 	*x = WireGuard{}
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[5]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -547,7 +844,7 @@ func (x *WireGuard) String() string {
 func (*WireGuard) ProtoMessage() {}
 
 func (x *WireGuard) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[5]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -560,7 +857,7 @@ func (x *WireGuard) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WireGuard.ProtoReflect.Descriptor instead.
 func (*WireGuard) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{5}
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *WireGuard) GetIface() *Interface {
@@ -577,6 +874,13 @@ func (x *WireGuard) GetPeer() *Peer {
 	return nil
 }
 
+func (x *WireGuard) GetEndpoint() *Endpoint {
+	if x != nil {
+		return x.Endpoint
+	}
+	return nil
+}
+
 type Interface struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PrivateKey    []byte                 `protobuf:"bytes,1,opt,name=private_key,json=privateKey,proto3" json:"private_key,omitempty"`
@@ -589,7 +893,7 @@ type Interface struct {
 
 func (x *Interface) Reset() {
 	*x = Interface{}
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[6]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -601,7 +905,7 @@ func (x *Interface) String() string {
 func (*Interface) ProtoMessage() {}
 
 func (x *Interface) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[6]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -614,7 +918,7 @@ func (x *Interface) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Interface.ProtoReflect.Descriptor instead.
 func (*Interface) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{6}
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Interface) GetPrivateKey() []byte {
@@ -656,7 +960,7 @@ type Peer struct {
 
 func (x *Peer) Reset() {
 	*x = Peer{}
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[7]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -668,7 +972,7 @@ func (x *Peer) String() string {
 func (*Peer) ProtoMessage() {}
 
 func (x *Peer) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[7]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -681,7 +985,7 @@ func (x *Peer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Peer.ProtoReflect.Descriptor instead.
 func (*Peer) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{7}
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Peer) GetPublicKey() []byte {
@@ -713,13 +1017,14 @@ type Xray struct {
 	Settings         *XraySettings          `protobuf:"bytes,4,opt,name=settings,proto3" json:"settings,omitempty"`
 	SubscriptionJson string                 `protobuf:"bytes,5,opt,name=subscription_json,json=subscriptionJson,proto3" json:"subscription_json,omitempty"`
 	MergeOnly        *bool                  `protobuf:"varint,6,opt,name=merge_only,json=mergeOnly,proto3,oneof" json:"merge_only,omitempty"`
+	Routing          *XrayRouting           `protobuf:"bytes,7,opt,name=routing,proto3" json:"routing,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Xray) Reset() {
 	*x = Xray{}
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[8]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -731,7 +1036,7 @@ func (x *Xray) String() string {
 func (*Xray) ProtoMessage() {}
 
 func (x *Xray) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[8]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -744,7 +1049,7 @@ func (x *Xray) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Xray.ProtoReflect.Descriptor instead.
 func (*Xray) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{8}
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Xray) GetActiveProfileId() string {
@@ -789,22 +1094,218 @@ func (x *Xray) GetMergeOnly() bool {
 	return false
 }
 
+func (x *Xray) GetRouting() *XrayRouting {
+	if x != nil {
+		return x.Routing
+	}
+	return nil
+}
+
+type AppRouting struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Bypass        *bool                  `protobuf:"varint,1,opt,name=bypass,proto3,oneof" json:"bypass,omitempty"`
+	Packages      []string               `protobuf:"bytes,2,rep,name=packages,proto3" json:"packages,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AppRouting) Reset() {
+	*x = AppRouting{}
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AppRouting) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AppRouting) ProtoMessage() {}
+
+func (x *AppRouting) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AppRouting.ProtoReflect.Descriptor instead.
+func (*AppRouting) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *AppRouting) GetBypass() bool {
+	if x != nil && x.Bypass != nil {
+		return *x.Bypass
+	}
+	return false
+}
+
+func (x *AppRouting) GetPackages() []string {
+	if x != nil {
+		return x.Packages
+	}
+	return nil
+}
+
+type XrayRouting struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rules         []*XrayRoutingRule     `protobuf:"bytes,1,rep,name=rules,proto3" json:"rules,omitempty"`
+	GeoipUrl      string                 `protobuf:"bytes,2,opt,name=geoip_url,json=geoipUrl,proto3" json:"geoip_url,omitempty"`
+	GeositeUrl    string                 `protobuf:"bytes,3,opt,name=geosite_url,json=geositeUrl,proto3" json:"geosite_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *XrayRouting) Reset() {
+	*x = XrayRouting{}
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *XrayRouting) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*XrayRouting) ProtoMessage() {}
+
+func (x *XrayRouting) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use XrayRouting.ProtoReflect.Descriptor instead.
+func (*XrayRouting) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *XrayRouting) GetRules() []*XrayRoutingRule {
+	if x != nil {
+		return x.Rules
+	}
+	return nil
+}
+
+func (x *XrayRouting) GetGeoipUrl() string {
+	if x != nil {
+		return x.GeoipUrl
+	}
+	return ""
+}
+
+func (x *XrayRouting) GetGeositeUrl() string {
+	if x != nil {
+		return x.GeositeUrl
+	}
+	return ""
+}
+
+type XrayRoutingRule struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	MatchType     XrayRoutingMatchType   `protobuf:"varint,2,opt,name=match_type,json=matchType,proto3,enum=wingsv.XrayRoutingMatchType" json:"match_type,omitempty"`
+	Code          string                 `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
+	Action        XrayRoutingAction      `protobuf:"varint,4,opt,name=action,proto3,enum=wingsv.XrayRoutingAction" json:"action,omitempty"`
+	Enabled       *bool                  `protobuf:"varint,5,opt,name=enabled,proto3,oneof" json:"enabled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *XrayRoutingRule) Reset() {
+	*x = XrayRoutingRule{}
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *XrayRoutingRule) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*XrayRoutingRule) ProtoMessage() {}
+
+func (x *XrayRoutingRule) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use XrayRoutingRule.ProtoReflect.Descriptor instead.
+func (*XrayRoutingRule) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *XrayRoutingRule) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *XrayRoutingRule) GetMatchType() XrayRoutingMatchType {
+	if x != nil {
+		return x.MatchType
+	}
+	return XrayRoutingMatchType_XRAY_ROUTING_MATCH_UNSPECIFIED
+}
+
+func (x *XrayRoutingRule) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *XrayRoutingRule) GetAction() XrayRoutingAction {
+	if x != nil {
+		return x.Action
+	}
+	return XrayRoutingAction_XRAY_ROUTING_ACTION_UNSPECIFIED
+}
+
+func (x *XrayRoutingRule) GetEnabled() bool {
+	if x != nil && x.Enabled != nil {
+		return *x.Enabled
+	}
+	return false
+}
+
 type Subscription struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Title                string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Url                  string                 `protobuf:"bytes,3,opt,name=url,proto3" json:"url,omitempty"`
-	FormatHint           string                 `protobuf:"bytes,4,opt,name=format_hint,json=formatHint,proto3" json:"format_hint,omitempty"`
-	RefreshIntervalHours *uint32                `protobuf:"varint,5,opt,name=refresh_interval_hours,json=refreshIntervalHours,proto3,oneof" json:"refresh_interval_hours,omitempty"`
-	AutoUpdate           *bool                  `protobuf:"varint,6,opt,name=auto_update,json=autoUpdate,proto3,oneof" json:"auto_update,omitempty"`
-	LastUpdatedAt        *int64                 `protobuf:"varint,7,opt,name=last_updated_at,json=lastUpdatedAt,proto3,oneof" json:"last_updated_at,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title                  string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Url                    string                 `protobuf:"bytes,3,opt,name=url,proto3" json:"url,omitempty"`
+	FormatHint             string                 `protobuf:"bytes,4,opt,name=format_hint,json=formatHint,proto3" json:"format_hint,omitempty"`
+	RefreshIntervalHours   *uint32                `protobuf:"varint,5,opt,name=refresh_interval_hours,json=refreshIntervalHours,proto3,oneof" json:"refresh_interval_hours,omitempty"`
+	AutoUpdate             *bool                  `protobuf:"varint,6,opt,name=auto_update,json=autoUpdate,proto3,oneof" json:"auto_update,omitempty"`
+	LastUpdatedAt          *int64                 `protobuf:"varint,7,opt,name=last_updated_at,json=lastUpdatedAt,proto3,oneof" json:"last_updated_at,omitempty"`
+	RefreshIntervalMinutes *uint32                `protobuf:"varint,8,opt,name=refresh_interval_minutes,json=refreshIntervalMinutes,proto3,oneof" json:"refresh_interval_minutes,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *Subscription) Reset() {
 	*x = Subscription{}
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[9]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -816,7 +1317,7 @@ func (x *Subscription) String() string {
 func (*Subscription) ProtoMessage() {}
 
 func (x *Subscription) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[9]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -829,7 +1330,7 @@ func (x *Subscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Subscription.ProtoReflect.Descriptor instead.
 func (*Subscription) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{9}
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Subscription) GetId() string {
@@ -881,6 +1382,13 @@ func (x *Subscription) GetLastUpdatedAt() int64 {
 	return 0
 }
 
+func (x *Subscription) GetRefreshIntervalMinutes() uint32 {
+	if x != nil && x.RefreshIntervalMinutes != nil {
+		return *x.RefreshIntervalMinutes
+	}
+	return 0
+}
+
 type VlessProfile struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -896,7 +1404,7 @@ type VlessProfile struct {
 
 func (x *VlessProfile) Reset() {
 	*x = VlessProfile{}
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[10]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -908,7 +1416,7 @@ func (x *VlessProfile) String() string {
 func (*VlessProfile) ProtoMessage() {}
 
 func (x *VlessProfile) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[10]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -921,7 +1429,7 @@ func (x *VlessProfile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VlessProfile.ProtoReflect.Descriptor instead.
 func (*VlessProfile) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{10}
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *VlessProfile) GetId() string {
@@ -974,21 +1482,28 @@ func (x *VlessProfile) GetPort() uint32 {
 }
 
 type XraySettings struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	AllowLan        *bool                  `protobuf:"varint,1,opt,name=allow_lan,json=allowLan,proto3,oneof" json:"allow_lan,omitempty"`
-	AllowInsecure   *bool                  `protobuf:"varint,2,opt,name=allow_insecure,json=allowInsecure,proto3,oneof" json:"allow_insecure,omitempty"`
-	LocalProxyPort  *uint32                `protobuf:"varint,3,opt,name=local_proxy_port,json=localProxyPort,proto3,oneof" json:"local_proxy_port,omitempty"`
-	RemoteDns       string                 `protobuf:"bytes,4,opt,name=remote_dns,json=remoteDns,proto3" json:"remote_dns,omitempty"`
-	DirectDns       string                 `protobuf:"bytes,5,opt,name=direct_dns,json=directDns,proto3" json:"direct_dns,omitempty"`
-	Ipv6            *bool                  `protobuf:"varint,6,opt,name=ipv6,proto3,oneof" json:"ipv6,omitempty"`
-	SniffingEnabled *bool                  `protobuf:"varint,7,opt,name=sniffing_enabled,json=sniffingEnabled,proto3,oneof" json:"sniffing_enabled,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	AllowLan               *bool                  `protobuf:"varint,1,opt,name=allow_lan,json=allowLan,proto3,oneof" json:"allow_lan,omitempty"`
+	AllowInsecure          *bool                  `protobuf:"varint,2,opt,name=allow_insecure,json=allowInsecure,proto3,oneof" json:"allow_insecure,omitempty"`
+	LocalProxyPort         *uint32                `protobuf:"varint,3,opt,name=local_proxy_port,json=localProxyPort,proto3,oneof" json:"local_proxy_port,omitempty"`
+	RemoteDns              string                 `protobuf:"bytes,4,opt,name=remote_dns,json=remoteDns,proto3" json:"remote_dns,omitempty"`
+	DirectDns              string                 `protobuf:"bytes,5,opt,name=direct_dns,json=directDns,proto3" json:"direct_dns,omitempty"`
+	Ipv6                   *bool                  `protobuf:"varint,6,opt,name=ipv6,proto3,oneof" json:"ipv6,omitempty"`
+	SniffingEnabled        *bool                  `protobuf:"varint,7,opt,name=sniffing_enabled,json=sniffingEnabled,proto3,oneof" json:"sniffing_enabled,omitempty"`
+	ProxyQuicEnabled       *bool                  `protobuf:"varint,8,opt,name=proxy_quic_enabled,json=proxyQuicEnabled,proto3,oneof" json:"proxy_quic_enabled,omitempty"`
+	LocalProxyEnabled      *bool                  `protobuf:"varint,9,opt,name=local_proxy_enabled,json=localProxyEnabled,proto3,oneof" json:"local_proxy_enabled,omitempty"`
+	LocalProxyAuthEnabled  *bool                  `protobuf:"varint,10,opt,name=local_proxy_auth_enabled,json=localProxyAuthEnabled,proto3,oneof" json:"local_proxy_auth_enabled,omitempty"`
+	LocalProxyUsername     string                 `protobuf:"bytes,11,opt,name=local_proxy_username,json=localProxyUsername,proto3" json:"local_proxy_username,omitempty"`
+	LocalProxyPassword     string                 `protobuf:"bytes,12,opt,name=local_proxy_password,json=localProxyPassword,proto3" json:"local_proxy_password,omitempty"`
+	RestartOnNetworkChange *bool                  `protobuf:"varint,13,opt,name=restart_on_network_change,json=restartOnNetworkChange,proto3,oneof" json:"restart_on_network_change,omitempty"`
+	TransportMode          XrayTransportMode      `protobuf:"varint,14,opt,name=transport_mode,json=transportMode,proto3,enum=wingsv.XrayTransportMode" json:"transport_mode,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *XraySettings) Reset() {
 	*x = XraySettings{}
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[11]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1000,7 +1515,7 @@ func (x *XraySettings) String() string {
 func (*XraySettings) ProtoMessage() {}
 
 func (x *XraySettings) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_wingsv_proto_msgTypes[11]
+	mi := &file_wingsv_proto_wingsv_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1013,7 +1528,7 @@ func (x *XraySettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use XraySettings.ProtoReflect.Descriptor instead.
 func (*XraySettings) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{11}
+	return file_wingsv_proto_wingsv_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *XraySettings) GetAllowLan() bool {
@@ -1065,11 +1580,60 @@ func (x *XraySettings) GetSniffingEnabled() bool {
 	return false
 }
 
+func (x *XraySettings) GetProxyQuicEnabled() bool {
+	if x != nil && x.ProxyQuicEnabled != nil {
+		return *x.ProxyQuicEnabled
+	}
+	return false
+}
+
+func (x *XraySettings) GetLocalProxyEnabled() bool {
+	if x != nil && x.LocalProxyEnabled != nil {
+		return *x.LocalProxyEnabled
+	}
+	return false
+}
+
+func (x *XraySettings) GetLocalProxyAuthEnabled() bool {
+	if x != nil && x.LocalProxyAuthEnabled != nil {
+		return *x.LocalProxyAuthEnabled
+	}
+	return false
+}
+
+func (x *XraySettings) GetLocalProxyUsername() string {
+	if x != nil {
+		return x.LocalProxyUsername
+	}
+	return ""
+}
+
+func (x *XraySettings) GetLocalProxyPassword() string {
+	if x != nil {
+		return x.LocalProxyPassword
+	}
+	return ""
+}
+
+func (x *XraySettings) GetRestartOnNetworkChange() bool {
+	if x != nil && x.RestartOnNetworkChange != nil {
+		return *x.RestartOnNetworkChange
+	}
+	return false
+}
+
+func (x *XraySettings) GetTransportMode() XrayTransportMode {
+	if x != nil {
+		return x.TransportMode
+	}
+	return XrayTransportMode_XRAY_TRANSPORT_MODE_UNSPECIFIED
+}
+
 var File_wingsv_proto_wingsv_proto protoreflect.FileDescriptor
 
 const file_wingsv_proto_wingsv_proto_rawDesc = "" +
 	"\n" +
-	"\x19wingsv/proto/wingsv.proto\x12\x06wingsv\"\xfd\x01\n" +
+	"\x19wingsv/proto/wingsv.proto\x12\x06wingsv\"\xe1\x02\n" +
 	"\x06Config\x12\x10\n" +
 	"\x03ver\x18\x01 \x01(\rR\x03ver\x12&\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x12.wingsv.ConfigTypeR\x04type\x12 \n" +
@@ -1077,7 +1641,18 @@ const file_wingsv_proto_wingsv_proto_rawDesc = "" +
 	"\x02wg\x18\x04 \x01(\v2\x11.wingsv.WireGuardR\x02wg\x12-\n" +
 	"\abackend\x18\x05 \x01(\x0e2\x13.wingsv.BackendTypeR\abackend\x12 \n" +
 	"\x04xray\x18\x06 \x01(\v2\f.wingsv.XrayR\x04xray\x12#\n" +
-	"\x03awg\x18\a \x01(\v2\x11.wingsv.AmneziaWGR\x03awg\"5\n" +
+	"\x03awg\x18\a \x01(\v2\x11.wingsv.AmneziaWGR\x03awg\x123\n" +
+	"\vapp_routing\x18\b \x01(\v2\x12.wingsv.AppRoutingR\n" +
+	"appRouting\x12-\n" +
+	"\twb_stream\x18\t \x01(\v2\x10.wingsv.WbStreamR\bwbStream\"\xb7\x01\n" +
+	"\bWbStream\x12\x17\n" +
+	"\aroom_id\x18\x01 \x01(\tR\x06roomId\x12/\n" +
+	"\x14exchange_via_vk_turn\x18\x02 \x01(\bR\x11exchangeViaVkTurn\x12\x1f\n" +
+	"\ve2e_enabled\x18\x03 \x01(\bR\n" +
+	"e2eEnabled\x12\x1d\n" +
+	"\n" +
+	"e2e_secret\x18\x04 \x01(\fR\te2eSecret\x12!\n" +
+	"\fdisplay_name\x18\x05 \x01(\tR\vdisplayName\"5\n" +
 	"\tAmneziaWG\x12(\n" +
 	"\x10awg_quick_config\x18\x01 \x01(\tR\x0eawgQuickConfig\"2\n" +
 	"\bEndpoint\x12\x12\n" +
@@ -1085,7 +1660,7 @@ const file_wingsv_proto_wingsv_proto_rawDesc = "" +
 	"\x04port\x18\x02 \x01(\rR\x04port\"2\n" +
 	"\x04Cidr\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\fR\x04addr\x12\x16\n" +
-	"\x06prefix\x18\x02 \x01(\rR\x06prefix\"\x87\x03\n" +
+	"\x06prefix\x18\x02 \x01(\rR\x06prefix\"\x88\x04\n" +
 	"\x04Turn\x12,\n" +
 	"\bendpoint\x18\x01 \x01(\v2\x10.wingsv.EndpointR\bendpoint\x12\x12\n" +
 	"\x04link\x18\x02 \x01(\tR\x04link\x12\x1d\n" +
@@ -1095,16 +1670,22 @@ const file_wingsv_proto_wingsv_proto_rawDesc = "" +
 	"\x0elocal_endpoint\x18\x06 \x01(\v2\x10.wingsv.EndpointR\rlocalEndpoint\x12\x12\n" +
 	"\x04host\x18\a \x01(\tR\x04host\x12\x17\n" +
 	"\x04port\x18\b \x01(\rH\x03R\x04port\x88\x01\x01\x12:\n" +
-	"\fsession_mode\x18\t \x01(\x0e2\x17.wingsv.TurnSessionModeR\vsessionModeB\n" +
+	"\fsession_mode\x18\t \x01(\x0e2\x17.wingsv.TurnSessionModeR\vsessionMode\x12\x14\n" +
+	"\x05links\x18\n" +
+	" \x03(\tR\x05links\x12%\n" +
+	"\x0elink_secondary\x18\v \x01(\tR\rlinkSecondary\x12-\n" +
+	"\x10creds_group_size\x18\f \x01(\rH\x04R\x0ecredsGroupSize\x88\x01\x01B\n" +
 	"\n" +
 	"\b_threadsB\n" +
 	"\n" +
 	"\b_use_udpB\x11\n" +
 	"\x0f_no_obfuscationB\a\n" +
-	"\x05_port\"V\n" +
+	"\x05_portB\x13\n" +
+	"\x11_creds_group_size\"\x84\x01\n" +
 	"\tWireGuard\x12'\n" +
 	"\x05iface\x18\x01 \x01(\v2\x11.wingsv.InterfaceR\x05iface\x12 \n" +
-	"\x04peer\x18\x02 \x01(\v2\f.wingsv.PeerR\x04peer\"s\n" +
+	"\x04peer\x18\x02 \x01(\v2\f.wingsv.PeerR\x04peer\x12,\n" +
+	"\bendpoint\x18\x03 \x01(\v2\x10.wingsv.EndpointR\bendpoint\"s\n" +
 	"\tInterface\x12\x1f\n" +
 	"\vprivate_key\x18\x01 \x01(\fR\n" +
 	"privateKey\x12\x14\n" +
@@ -1117,7 +1698,7 @@ const file_wingsv_proto_wingsv_proto_rawDesc = "" +
 	"public_key\x18\x01 \x01(\fR\tpublicKey\x12#\n" +
 	"\rpreshared_key\x18\x02 \x01(\fR\fpresharedKey\x12-\n" +
 	"\vallowed_ips\x18\x03 \x03(\v2\f.wingsv.CidrR\n" +
-	"allowedIps\"\xb2\x02\n" +
+	"allowedIps\"\xe1\x02\n" +
 	"\x04Xray\x12*\n" +
 	"\x11active_profile_id\x18\x01 \x01(\tR\x0factiveProfileId\x120\n" +
 	"\bprofiles\x18\x02 \x03(\v2\x14.wingsv.VlessProfileR\bprofiles\x12:\n" +
@@ -1125,8 +1706,28 @@ const file_wingsv_proto_wingsv_proto_rawDesc = "" +
 	"\bsettings\x18\x04 \x01(\v2\x14.wingsv.XraySettingsR\bsettings\x12+\n" +
 	"\x11subscription_json\x18\x05 \x01(\tR\x10subscriptionJson\x12\"\n" +
 	"\n" +
-	"merge_only\x18\x06 \x01(\bH\x00R\tmergeOnly\x88\x01\x01B\r\n" +
-	"\v_merge_only\"\xb4\x02\n" +
+	"merge_only\x18\x06 \x01(\bH\x00R\tmergeOnly\x88\x01\x01\x12-\n" +
+	"\arouting\x18\a \x01(\v2\x13.wingsv.XrayRoutingR\aroutingB\r\n" +
+	"\v_merge_only\"P\n" +
+	"\n" +
+	"AppRouting\x12\x1b\n" +
+	"\x06bypass\x18\x01 \x01(\bH\x00R\x06bypass\x88\x01\x01\x12\x1a\n" +
+	"\bpackages\x18\x02 \x03(\tR\bpackagesB\t\n" +
+	"\a_bypass\"z\n" +
+	"\vXrayRouting\x12-\n" +
+	"\x05rules\x18\x01 \x03(\v2\x17.wingsv.XrayRoutingRuleR\x05rules\x12\x1b\n" +
+	"\tgeoip_url\x18\x02 \x01(\tR\bgeoipUrl\x12\x1f\n" +
+	"\vgeosite_url\x18\x03 \x01(\tR\n" +
+	"geositeUrl\"\xd0\x01\n" +
+	"\x0fXrayRoutingRule\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12;\n" +
+	"\n" +
+	"match_type\x18\x02 \x01(\x0e2\x1c.wingsv.XrayRoutingMatchTypeR\tmatchType\x12\x12\n" +
+	"\x04code\x18\x03 \x01(\tR\x04code\x121\n" +
+	"\x06action\x18\x04 \x01(\x0e2\x19.wingsv.XrayRoutingActionR\x06action\x12\x1d\n" +
+	"\aenabled\x18\x05 \x01(\bH\x00R\aenabled\x88\x01\x01B\n" +
+	"\n" +
+	"\b_enabled\"\x90\x03\n" +
 	"\fSubscription\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
@@ -1136,10 +1737,12 @@ const file_wingsv_proto_wingsv_proto_rawDesc = "" +
 	"\x16refresh_interval_hours\x18\x05 \x01(\rH\x00R\x14refreshIntervalHours\x88\x01\x01\x12$\n" +
 	"\vauto_update\x18\x06 \x01(\bH\x01R\n" +
 	"autoUpdate\x88\x01\x01\x12+\n" +
-	"\x0flast_updated_at\x18\a \x01(\x03H\x02R\rlastUpdatedAt\x88\x01\x01B\x19\n" +
+	"\x0flast_updated_at\x18\a \x01(\x03H\x02R\rlastUpdatedAt\x88\x01\x01\x12=\n" +
+	"\x18refresh_interval_minutes\x18\b \x01(\rH\x03R\x16refreshIntervalMinutes\x88\x01\x01B\x19\n" +
 	"\x17_refresh_interval_hoursB\x0e\n" +
 	"\f_auto_updateB\x12\n" +
-	"\x10_last_updated_at\"\xe3\x01\n" +
+	"\x10_last_updated_atB\x1b\n" +
+	"\x19_refresh_interval_minutes\"\xe3\x01\n" +
 	"\fVlessProfile\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x19\n" +
@@ -1148,7 +1751,7 @@ const file_wingsv_proto_wingsv_proto_rawDesc = "" +
 	"\x12subscription_title\x18\x05 \x01(\tR\x11subscriptionTitle\x12\x18\n" +
 	"\aaddress\x18\x06 \x01(\tR\aaddress\x12\x17\n" +
 	"\x04port\x18\a \x01(\rH\x00R\x04port\x88\x01\x01B\a\n" +
-	"\x05_port\"\xe6\x02\n" +
+	"\x05_port\"\xdc\x06\n" +
 	"\fXraySettings\x12 \n" +
 	"\tallow_lan\x18\x01 \x01(\bH\x00R\ballowLan\x88\x01\x01\x12*\n" +
 	"\x0eallow_insecure\x18\x02 \x01(\bH\x01R\rallowInsecure\x88\x01\x01\x12-\n" +
@@ -1158,29 +1761,64 @@ const file_wingsv_proto_wingsv_proto_rawDesc = "" +
 	"\n" +
 	"direct_dns\x18\x05 \x01(\tR\tdirectDns\x12\x17\n" +
 	"\x04ipv6\x18\x06 \x01(\bH\x03R\x04ipv6\x88\x01\x01\x12.\n" +
-	"\x10sniffing_enabled\x18\a \x01(\bH\x04R\x0fsniffingEnabled\x88\x01\x01B\f\n" +
+	"\x10sniffing_enabled\x18\a \x01(\bH\x04R\x0fsniffingEnabled\x88\x01\x01\x121\n" +
+	"\x12proxy_quic_enabled\x18\b \x01(\bH\x05R\x10proxyQuicEnabled\x88\x01\x01\x123\n" +
+	"\x13local_proxy_enabled\x18\t \x01(\bH\x06R\x11localProxyEnabled\x88\x01\x01\x12<\n" +
+	"\x18local_proxy_auth_enabled\x18\n" +
+	" \x01(\bH\aR\x15localProxyAuthEnabled\x88\x01\x01\x120\n" +
+	"\x14local_proxy_username\x18\v \x01(\tR\x12localProxyUsername\x120\n" +
+	"\x14local_proxy_password\x18\f \x01(\tR\x12localProxyPassword\x12>\n" +
+	"\x19restart_on_network_change\x18\r \x01(\bH\bR\x16restartOnNetworkChange\x88\x01\x01\x12@\n" +
+	"\x0etransport_mode\x18\x0e \x01(\x0e2\x19.wingsv.XrayTransportModeR\rtransportModeB\f\n" +
 	"\n" +
 	"_allow_lanB\x11\n" +
 	"\x0f_allow_insecureB\x13\n" +
 	"\x11_local_proxy_portB\a\n" +
 	"\x05_ipv6B\x13\n" +
-	"\x11_sniffing_enabled*n\n" +
+	"\x11_sniffing_enabledB\x15\n" +
+	"\x13_proxy_quic_enabledB\x16\n" +
+	"\x14_local_proxy_enabledB\x1b\n" +
+	"\x19_local_proxy_auth_enabledB\x1c\n" +
+	"\x1a_restart_on_network_change*\xd9\x01\n" +
 	"\n" +
 	"ConfigType\x12\x1b\n" +
 	"\x17CONFIG_TYPE_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eCONFIG_TYPE_VK\x10\x01\x12\x14\n" +
 	"\x10CONFIG_TYPE_XRAY\x10\x02\x12\x19\n" +
-	"\x15CONFIG_TYPE_AMNEZIAWG\x10\x03*\x82\x01\n" +
+	"\x15CONFIG_TYPE_AMNEZIAWG\x10\x03\x12\x13\n" +
+	"\x0fCONFIG_TYPE_ALL\x10\x04\x12\x1b\n" +
+	"\x17CONFIG_TYPE_APP_ROUTING\x10\x05\x12\x1c\n" +
+	"\x18CONFIG_TYPE_XRAY_ROUTING\x10\x06\x12\x19\n" +
+	"\x15CONFIG_TYPE_WB_STREAM\x10\a*\xdc\x01\n" +
 	"\vBackendType\x12\x1c\n" +
 	"\x18BACKEND_TYPE_UNSPECIFIED\x10\x00\x12\"\n" +
 	"\x1eBACKEND_TYPE_VK_TURN_WIREGUARD\x10\x01\x12\x15\n" +
 	"\x11BACKEND_TYPE_XRAY\x10\x02\x12\x1a\n" +
-	"\x16BACKEND_TYPE_AMNEZIAWG\x10\x03*\x8b\x01\n" +
+	"\x16BACKEND_TYPE_AMNEZIAWG\x10\x03\x12\x1a\n" +
+	"\x16BACKEND_TYPE_WIREGUARD\x10\x04\x12 \n" +
+	"\x1cBACKEND_TYPE_AMNEZIAWG_PLAIN\x10\x05\x12\x1a\n" +
+	"\x16BACKEND_TYPE_WB_STREAM\x10\x06*\x8b\x01\n" +
 	"\x0fTurnSessionMode\x12!\n" +
 	"\x1dTURN_SESSION_MODE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16TURN_SESSION_MODE_AUTO\x10\x01\x12\x1e\n" +
 	"\x1aTURN_SESSION_MODE_MAINLINE\x10\x02\x12\x19\n" +
-	"\x15TURN_SESSION_MODE_MUX\x10\x03BU\n" +
+	"\x15TURN_SESSION_MODE_MUX\x10\x03*\xcf\x01\n" +
+	"\x14XrayRoutingMatchType\x12\"\n" +
+	"\x1eXRAY_ROUTING_MATCH_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18XRAY_ROUTING_MATCH_GEOIP\x10\x01\x12\x1e\n" +
+	"\x1aXRAY_ROUTING_MATCH_GEOSITE\x10\x02\x12\x1d\n" +
+	"\x19XRAY_ROUTING_MATCH_DOMAIN\x10\x03\x12\x19\n" +
+	"\x15XRAY_ROUTING_MATCH_IP\x10\x04\x12\x1b\n" +
+	"\x17XRAY_ROUTING_MATCH_PORT\x10\x05*\x96\x01\n" +
+	"\x11XrayRoutingAction\x12#\n" +
+	"\x1fXRAY_ROUTING_ACTION_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19XRAY_ROUTING_ACTION_PROXY\x10\x01\x12\x1e\n" +
+	"\x1aXRAY_ROUTING_ACTION_DIRECT\x10\x02\x12\x1d\n" +
+	"\x19XRAY_ROUTING_ACTION_BLOCK\x10\x03*}\n" +
+	"\x11XrayTransportMode\x12#\n" +
+	"\x1fXRAY_TRANSPORT_MODE_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aXRAY_TRANSPORT_MODE_DIRECT\x10\x01\x12#\n" +
+	"\x1fXRAY_TRANSPORT_MODE_VK_TURN_TCP\x10\x02BU\n" +
 	"\rwings.v.protoB\vWingsvProtoH\x03Z5github.com/mhsanaei/3x-ui/v2/wingsv/proto;wingsvprotob\x06proto3"
 
 var (
@@ -1195,46 +1833,61 @@ func file_wingsv_proto_wingsv_proto_rawDescGZIP() []byte {
 	return file_wingsv_proto_wingsv_proto_rawDescData
 }
 
-var file_wingsv_proto_wingsv_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_wingsv_proto_wingsv_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_wingsv_proto_wingsv_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
+var file_wingsv_proto_wingsv_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_wingsv_proto_wingsv_proto_goTypes = []any{
-	(ConfigType)(0),      // 0: wingsv.ConfigType
-	(BackendType)(0),     // 1: wingsv.BackendType
-	(TurnSessionMode)(0), // 2: wingsv.TurnSessionMode
-	(*Config)(nil),       // 3: wingsv.Config
-	(*AmneziaWG)(nil),    // 4: wingsv.AmneziaWG
-	(*Endpoint)(nil),     // 5: wingsv.Endpoint
-	(*Cidr)(nil),         // 6: wingsv.Cidr
-	(*Turn)(nil),         // 7: wingsv.Turn
-	(*WireGuard)(nil),    // 8: wingsv.WireGuard
-	(*Interface)(nil),    // 9: wingsv.Interface
-	(*Peer)(nil),         // 10: wingsv.Peer
-	(*Xray)(nil),         // 11: wingsv.Xray
-	(*Subscription)(nil), // 12: wingsv.Subscription
-	(*VlessProfile)(nil), // 13: wingsv.VlessProfile
-	(*XraySettings)(nil), // 14: wingsv.XraySettings
+	(ConfigType)(0),           // 0: wingsv.ConfigType
+	(BackendType)(0),          // 1: wingsv.BackendType
+	(TurnSessionMode)(0),      // 2: wingsv.TurnSessionMode
+	(XrayRoutingMatchType)(0), // 3: wingsv.XrayRoutingMatchType
+	(XrayRoutingAction)(0),    // 4: wingsv.XrayRoutingAction
+	(XrayTransportMode)(0),    // 5: wingsv.XrayTransportMode
+	(*Config)(nil),            // 6: wingsv.Config
+	(*WbStream)(nil),          // 7: wingsv.WbStream
+	(*AmneziaWG)(nil),         // 8: wingsv.AmneziaWG
+	(*Endpoint)(nil),          // 9: wingsv.Endpoint
+	(*Cidr)(nil),              // 10: wingsv.Cidr
+	(*Turn)(nil),              // 11: wingsv.Turn
+	(*WireGuard)(nil),         // 12: wingsv.WireGuard
+	(*Interface)(nil),         // 13: wingsv.Interface
+	(*Peer)(nil),              // 14: wingsv.Peer
+	(*Xray)(nil),              // 15: wingsv.Xray
+	(*AppRouting)(nil),        // 16: wingsv.AppRouting
+	(*XrayRouting)(nil),       // 17: wingsv.XrayRouting
+	(*XrayRoutingRule)(nil),   // 18: wingsv.XrayRoutingRule
+	(*Subscription)(nil),      // 19: wingsv.Subscription
+	(*VlessProfile)(nil),      // 20: wingsv.VlessProfile
+	(*XraySettings)(nil),      // 21: wingsv.XraySettings
 }
 var file_wingsv_proto_wingsv_proto_depIdxs = []int32{
 	0,  // 0: wingsv.Config.type:type_name -> wingsv.ConfigType
-	7,  // 1: wingsv.Config.turn:type_name -> wingsv.Turn
-	8,  // 2: wingsv.Config.wg:type_name -> wingsv.WireGuard
+	11, // 1: wingsv.Config.turn:type_name -> wingsv.Turn
+	12, // 2: wingsv.Config.wg:type_name -> wingsv.WireGuard
 	1,  // 3: wingsv.Config.backend:type_name -> wingsv.BackendType
-	11, // 4: wingsv.Config.xray:type_name -> wingsv.Xray
-	4,  // 5: wingsv.Config.awg:type_name -> wingsv.AmneziaWG
-	5,  // 6: wingsv.Turn.endpoint:type_name -> wingsv.Endpoint
-	5,  // 7: wingsv.Turn.local_endpoint:type_name -> wingsv.Endpoint
-	2,  // 8: wingsv.Turn.session_mode:type_name -> wingsv.TurnSessionMode
-	9,  // 9: wingsv.WireGuard.iface:type_name -> wingsv.Interface
-	10, // 10: wingsv.WireGuard.peer:type_name -> wingsv.Peer
-	6,  // 11: wingsv.Peer.allowed_ips:type_name -> wingsv.Cidr
-	13, // 12: wingsv.Xray.profiles:type_name -> wingsv.VlessProfile
-	12, // 13: wingsv.Xray.subscriptions:type_name -> wingsv.Subscription
-	14, // 14: wingsv.Xray.settings:type_name -> wingsv.XraySettings
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	15, // 4: wingsv.Config.xray:type_name -> wingsv.Xray
+	8,  // 5: wingsv.Config.awg:type_name -> wingsv.AmneziaWG
+	16, // 6: wingsv.Config.app_routing:type_name -> wingsv.AppRouting
+	7,  // 7: wingsv.Config.wb_stream:type_name -> wingsv.WbStream
+	9,  // 8: wingsv.Turn.endpoint:type_name -> wingsv.Endpoint
+	9,  // 9: wingsv.Turn.local_endpoint:type_name -> wingsv.Endpoint
+	2,  // 10: wingsv.Turn.session_mode:type_name -> wingsv.TurnSessionMode
+	13, // 11: wingsv.WireGuard.iface:type_name -> wingsv.Interface
+	14, // 12: wingsv.WireGuard.peer:type_name -> wingsv.Peer
+	9,  // 13: wingsv.WireGuard.endpoint:type_name -> wingsv.Endpoint
+	10, // 14: wingsv.Peer.allowed_ips:type_name -> wingsv.Cidr
+	20, // 15: wingsv.Xray.profiles:type_name -> wingsv.VlessProfile
+	19, // 16: wingsv.Xray.subscriptions:type_name -> wingsv.Subscription
+	21, // 17: wingsv.Xray.settings:type_name -> wingsv.XraySettings
+	17, // 18: wingsv.Xray.routing:type_name -> wingsv.XrayRouting
+	18, // 19: wingsv.XrayRouting.rules:type_name -> wingsv.XrayRoutingRule
+	3,  // 20: wingsv.XrayRoutingRule.match_type:type_name -> wingsv.XrayRoutingMatchType
+	4,  // 21: wingsv.XrayRoutingRule.action:type_name -> wingsv.XrayRoutingAction
+	5,  // 22: wingsv.XraySettings.transport_mode:type_name -> wingsv.XrayTransportMode
+	23, // [23:23] is the sub-list for method output_type
+	23, // [23:23] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_wingsv_proto_wingsv_proto_init() }
@@ -1242,19 +1895,21 @@ func file_wingsv_proto_wingsv_proto_init() {
 	if File_wingsv_proto_wingsv_proto != nil {
 		return
 	}
-	file_wingsv_proto_wingsv_proto_msgTypes[4].OneofWrappers = []any{}
-	file_wingsv_proto_wingsv_proto_msgTypes[6].OneofWrappers = []any{}
-	file_wingsv_proto_wingsv_proto_msgTypes[8].OneofWrappers = []any{}
+	file_wingsv_proto_wingsv_proto_msgTypes[5].OneofWrappers = []any{}
+	file_wingsv_proto_wingsv_proto_msgTypes[7].OneofWrappers = []any{}
 	file_wingsv_proto_wingsv_proto_msgTypes[9].OneofWrappers = []any{}
 	file_wingsv_proto_wingsv_proto_msgTypes[10].OneofWrappers = []any{}
-	file_wingsv_proto_wingsv_proto_msgTypes[11].OneofWrappers = []any{}
+	file_wingsv_proto_wingsv_proto_msgTypes[12].OneofWrappers = []any{}
+	file_wingsv_proto_wingsv_proto_msgTypes[13].OneofWrappers = []any{}
+	file_wingsv_proto_wingsv_proto_msgTypes[14].OneofWrappers = []any{}
+	file_wingsv_proto_wingsv_proto_msgTypes[15].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wingsv_proto_wingsv_proto_rawDesc), len(file_wingsv_proto_wingsv_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   12,
+			NumEnums:      6,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

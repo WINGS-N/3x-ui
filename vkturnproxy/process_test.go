@@ -1,6 +1,11 @@
 package vkturnproxy
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 func TestLogWriterHeartbeatSnapshotParsesFingerprint(t *testing.T) {
 	writer := &logWriter{id: 1, remark: "test"}
@@ -49,5 +54,20 @@ func TestLogWriterHeartbeatSnapshotKeepsLegacyFingerprintField(t *testing.T) {
 	snapshot := writer.HeartbeatSnapshot()
 	if _, ok := snapshot["sha256:legacy-fingerprint"]; !ok {
 		t.Fatalf("expected legacy fingerprint to be parsed, got %#v", snapshot)
+	}
+}
+
+func TestDecorateExecStartErrorHintsExistingBinary(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "vk-turn-proxy")
+	if err := os.WriteFile(path, []byte("not-a-real-binary"), 0o755); err != nil {
+		t.Fatalf("write fake binary: %v", err)
+	}
+
+	err := decorateExecStartError(path, &os.PathError{Op: "fork/exec", Path: path, Err: os.ErrNotExist})
+	if err == nil {
+		t.Fatal("expected decorated error")
+	}
+	if !strings.Contains(err.Error(), "host architecture") {
+		t.Fatalf("expected architecture hint in error, got %v", err)
 	}
 }
