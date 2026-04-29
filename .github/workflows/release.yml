@@ -4,20 +4,20 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - '**'
+      - "**"
     tags:
       - "v*.*.*"
     paths:
-      - '**.js'
-      - '**.css'
-      - '**.html'
-      - '**.sh'
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - 'x-ui.service.debian'
-      - 'x-ui.service.arch'
-      - 'x-ui.service.rhel'
+      - "**.js"
+      - "**.css"
+      - "**.html"
+      - "**.sh"
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+      - "x-ui.service.debian"
+      - "x-ui.service.arch"
+      - "x-ui.service.rhel"
   pull_request:
 
 jobs:
@@ -114,7 +114,7 @@ jobs:
           go build -ldflags "-w -s -linkmode external -extldflags '-static'" -o xui-release -v main.go
           file xui-release
           ldd xui-release || echo "Static binary confirmed"
-          
+
           mkdir x-ui
           cp xui-release x-ui/
           cp x-ui.service.debian x-ui/
@@ -124,9 +124,13 @@ jobs:
           mv x-ui/xui-release x-ui/x-ui
           mkdir x-ui/bin
           cd x-ui/bin
-          
+
           # Download dependencies
+<<<<<<< HEAD
           Xray_URL="https://github.com/WINGS-N/Xray-core/releases/download/v26.3.27-wv/"
+=======
+          Xray_URL="https://github.com/XTLS/Xray-core/releases/download/v26.4.25/"
+>>>>>>> upstream/main
           if [ "${{ matrix.platform }}" == "amd64" ]; then
             wget -q ${Xray_URL}Xray-linux-64.zip
             unzip Xray-linux-64.zip
@@ -166,7 +170,7 @@ jobs:
           mv xray xray-linux-${{ matrix.platform }}
           printf '%s\n' 'v26.3.27-wv' > xray-linux-${{ matrix.platform }}.release
           cd ../..
-          
+
       - name: Package
         run: tar -zcvf x-ui-linux-${{ matrix.platform }}.tar.gz x-ui
 
@@ -243,9 +247,13 @@ jobs:
           Copy-Item xui-release.exe x-ui\x-ui.exe
           mkdir x-ui\bin
           cd x-ui\bin
-          
+
           # Download Xray for Windows
+<<<<<<< HEAD
           $Xray_URL = "https://github.com/WINGS-N/Xray-core/releases/download/v26.3.27-wv/"
+=======
+          $Xray_URL = "https://github.com/XTLS/Xray-core/releases/download/v26.4.25/"
+>>>>>>> upstream/main
           Invoke-WebRequest -Uri "${Xray_URL}Xray-windows-64.zip" -OutFile "Xray-windows-64.zip"
           Expand-Archive -Path "Xray-windows-64.zip" -DestinationPath .
           Remove-Item "Xray-windows-64.zip"

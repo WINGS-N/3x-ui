@@ -39,6 +39,7 @@ func initModels() error {
 		&model.InboundClientIps{},
 		&xray.ClientTraffic{},
 		&model.HistoryOfSeeders{},
+		&model.CustomGeoResource{},
 	}
 	for _, model := range models {
 		if err := db.AutoMigrate(model); err != nil {
@@ -176,9 +177,8 @@ func GetDB() *gorm.DB {
 	return db
 }
 
-// IsNotFound checks if the given error is a GORM record not found error.
 func IsNotFound(err error) bool {
-	return err == gorm.ErrRecordNotFound
+	return errors.Is(err, gorm.ErrRecordNotFound)
 }
 
 // IsSQLiteDB checks if the given file is a valid SQLite database by reading its signature.

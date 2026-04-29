@@ -22,6 +22,7 @@ type ServerController struct {
 
 	serverService  service.ServerService
 	settingService service.SettingService
+	panelService   service.PanelService
 
 	lastStatus *service.Status
 
@@ -47,6 +48,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.GET("/cpuHistory/:bucket", a.getCpuHistoryBucket)
 	g.GET("/getXrayVersion", a.getXrayVersion)
 	g.GET("/getVKTurnProxyVersion", a.getVKTurnProxyVersion)
+	g.GET("/getPanelUpdateInfo", a.getPanelUpdateInfo)
 	g.GET("/getConfigJson", a.getConfigJson)
 	g.GET("/getDb", a.getDb)
 	g.GET("/getNewUUID", a.getNewUUID)
@@ -63,6 +65,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/installXray/:version", a.installXray)
 	g.POST("/installVKTurnProxy/:version", a.installVKTurnProxy)
 	g.POST("/uploadVKTurnProxyBinary", a.uploadVKTurnProxyBinary)
+	g.POST("/updatePanel", a.updatePanel)
 	g.POST("/updateGeofile", a.updateGeofile)
 	g.POST("/updateGeofile/:fileName", a.updateGeofile)
 	g.POST("/logs/:count", a.getLogs)
@@ -161,6 +164,16 @@ func (a *ServerController) getVKTurnProxyVersion(c *gin.Context) {
 	jsonObj(c, versions, nil)
 }
 
+// getPanelUpdateInfo retrieves the current and latest panel version.
+func (a *ServerController) getPanelUpdateInfo(c *gin.Context) {
+	info, err := a.panelService.GetUpdateInfo()
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.index.panelUpdateCheckPopover"), err)
+		return
+	}
+	jsonObj(c, info, nil)
+}
+
 // installXray installs or updates Xray to the specified version.
 func (a *ServerController) installXray(c *gin.Context) {
 	version := c.Param("version")
@@ -185,6 +198,12 @@ func (a *ServerController) uploadVKTurnProxyBinary(c *gin.Context) {
 
 	err = a.serverService.UploadVKTurnProxyBinary(file)
 	jsonMsg(c, "vk-turn-proxy custom binary has been uploaded", err)
+}
+
+// updatePanel starts a panel self-update to the latest release.
+func (a *ServerController) updatePanel(c *gin.Context) {
+	err := a.panelService.StartUpdate()
+	jsonMsg(c, I18nWeb(c, "pages.index.panelUpdateStartedPopover"), err)
 }
 
 // updateGeofile updates the specified geo file for Xray.
