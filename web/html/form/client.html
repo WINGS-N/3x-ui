@@ -34,10 +34,9 @@
         <a-tooltip title="Дополнительные VK ссылки. Клиент будет ротировать их вместе с основной для распределения нагрузки и обхода капчи.">
           <a-icon type="question-circle"></a-icon>
         </a-tooltip>
-        <a-button icon="plus" type="primary" size="small" @click="(client.links = client.links || []).push('')"></a-button>
       </template>
       <template v-if="!client.links || client.links.length === 0">
-        <span style="color: rgba(255,255,255,0.4); font-size: 12px;">Нет дополнительных ссылок</span>
+        <div style="color: rgba(255,255,255,0.4); font-size: 12px; margin-bottom: 4px;">Нет дополнительных ссылок</div>
       </template>
       <template v-for="(extraLink, extraLinkIndex) in (client.links || [])">
         <a-input
@@ -51,6 +50,12 @@
             @click="client.links.splice(extraLinkIndex, 1)"></a-button>
         </a-input>
       </template>
+      <a-button
+        icon="plus"
+        type="dashed"
+        size="small"
+        block
+        @click="(client.links = client.links || []).push('')">Добавить ссылку</a-button>
     </a-form-item>
     <a-form-item>
       <template slot="label">
