@@ -24,6 +24,11 @@ main
 # Ignore script and executable files
 /release.sh
 /x-ui
+/3x-ui
+
+# Ignore local toolchain caches and stray editor artefacts
+/build/
+/.codex
 
 # Ignore OS specific files
 .DS_Store
