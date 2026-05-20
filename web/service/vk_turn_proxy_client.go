@@ -1,8 +1,10 @@
 package service
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -14,6 +16,131 @@ import (
 	"github.com/mhsanaei/3x-ui/v2/xray"
 	"gorm.io/gorm"
 )
+
+// vkTurnProxyPeerAllocator hands out the next free 10.0.0.X/32 address
+// for newly-provisioned managed peers. It scans the target WG inbound's
+// existing peers and the current VK-TURN inbound's clients (those with
+// managed peer entries) so allocated addresses never collide.
+type vkTurnProxyPeerAllocator struct {
+	used map[byte]struct{}
+	next byte
+}
+
+func (s *InboundService) newVKTurnProxyPeerAllocator(settings *VKTurnProxySettings) (*vkTurnProxyPeerAllocator, error) {
+	a := &vkTurnProxyPeerAllocator{used: map[byte]struct{}{}, next: 2}
+	collect := func(allowed []string) {
+		for _, addr := range allowed {
+			octet, ok := extractVKTurnAllocOctet(addr)
+			if !ok {
+				continue
+			}
+			a.used[octet] = struct{}{}
+		}
+	}
+	for _, c := range settings.Clients {
+		if c.Peer != nil {
+			collect(c.Peer.AllowedIPs)
+		}
+	}
+	if settings != nil && settings.Forward.Type == VKTurnProxyForwardWireGuardInbound &&
+		settings.Forward.WireGuardInboundID > 0 {
+		wgInbound, err := s.GetInbound(settings.Forward.WireGuardInboundID)
+		if err == nil && wgInbound != nil {
+			_, peers, perr := s.getWireguardSettings(wgInbound.Settings)
+			if perr == nil {
+				for _, p := range peers {
+					collect(p.AllowedIPs)
+				}
+			}
+		}
+	}
+	return a, nil
+}
+
+// next returns the next free 10.0.0.X/32 address and reserves it.
+func (a *vkTurnProxyPeerAllocator) Allocate() (string, error) {
+	for octet := a.next; octet <= 254; octet++ {
+		if _, taken := a.used[octet]; taken {
+			continue
+		}
+		a.used[octet] = struct{}{}
+		a.next = octet + 1
+		return fmt.Sprintf("10.0.0.%d/32", octet), nil
+	}
+	return "", common.NewError("vk-turn-proxy: no free 10.0.0.X/32 slot left in the target WG inbound pool")
+}
+
+// extractVKTurnAllocOctet parses "10.0.0.X" or "10.0.0.X/32" and returns
+// the last octet if it falls in 2..254. Anything else is rejected so
+// unrelated AllowedIPs (e.g. 0.0.0.0/0) don't poison the pool.
+func extractVKTurnAllocOctet(addr string) (byte, bool) {
+	cleaned := strings.TrimSpace(addr)
+	if cleaned == "" {
+		return 0, false
+	}
+	if idx := strings.Index(cleaned, "/"); idx >= 0 {
+		cleaned = cleaned[:idx]
+	}
+	const prefix = "10.0.0."
+	if !strings.HasPrefix(cleaned, prefix) {
+		return 0, false
+	}
+	octetStr := cleaned[len(prefix):]
+	n, err := strconv.Atoi(octetStr)
+	if err != nil || n < 2 || n > 254 {
+		return 0, false
+	}
+	return byte(n), true
+}
+
+// autoProvisionVKTurnProxyManagedPeer mints a fresh WG keypair and IP
+// for a client that has no per-client peer info (typical for the
+// "copy clients from another inbound" path which collapses every
+// protocol into the generic model.Client shape). Clients that already
+// carry a peer or peerPublicKey are left untouched.
+func (s *InboundService) autoProvisionVKTurnProxyManagedPeer(client *VKTurnProxyClient, allocator *vkTurnProxyPeerAllocator) error {
+	if client == nil {
+		return nil
+	}
+	if client.Peer != nil || strings.TrimSpace(client.PeerPublicKey) != "" {
+		return nil
+	}
+	privateKey, err := generateWireGuardPrivateKey()
+	if err != nil {
+		return err
+	}
+	publicKey, err := deriveWireGuardPublicKey(privateKey)
+	if err != nil {
+		return err
+	}
+	addr, err := allocator.Allocate()
+	if err != nil {
+		return err
+	}
+	client.PeerManaged = true
+	client.Peer = &VKTurnProxyClientPeer{
+		PrivateKey: privateKey,
+		PublicKey:  publicKey,
+		AllowedIPs: []string{addr},
+	}
+	client.PeerPublicKey = publicKey
+	return nil
+}
+
+// generateWireGuardPrivateKey returns a freshly-generated, clamped
+// X25519 private key in base64 — the canonical WireGuard private key
+// representation.
+func generateWireGuardPrivateKey() (string, error) {
+	var key [32]byte
+	if _, err := rand.Read(key[:]); err != nil {
+		return "", err
+	}
+	// X25519 clamping per RFC 7748 §5.
+	key[0] &= 248
+	key[31] &= 127
+	key[31] |= 64
+	return base64.StdEncoding.EncodeToString(key[:]), nil
+}
 
 // inboundHasVKTurnLinks reports whether the inbound-level settings carry
 // at least one non-empty VK call link (primary or extras).
@@ -667,8 +794,18 @@ func (s *InboundService) AddVKTurnProxyClient(data *model.Inbound) (bool, error)
 	}
 
 	checkEmails := make([]model.Client, 0, len(clients))
+	allocator, allocErr := s.newVKTurnProxyPeerAllocator(settings)
+	if allocErr != nil {
+		return false, allocErr
+	}
 	for i := range clients {
 		s.normalizeVKTurnProxyClient(&clients[i], true)
+		// Bulk-copy from other inbounds arrives with no per-client
+		// VK-TURN-specific fields (no peer, no peerPublicKey). Mint a
+		// fresh managed WG peer so the client passes binding validation.
+		if err := s.autoProvisionVKTurnProxyManagedPeer(&clients[i], allocator); err != nil {
+			return false, err
+		}
 		if err := s.validateVKTurnProxyClient(&clients[i], settings); err != nil {
 			return false, err
 		}
