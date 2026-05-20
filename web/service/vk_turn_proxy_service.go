@@ -85,7 +85,13 @@ type VKTurnProxyClient struct {
 }
 
 type VKTurnProxySettings struct {
-	Forward                   VKTurnProxyForward  `json:"forward"`
+	Forward VKTurnProxyForward `json:"forward"`
+	// VK call links shared by every client of this inbound. Per-client
+	// link/links/linkSecondary may still override these on the export
+	// path (legacy data and edge cases).
+	Link                      string              `json:"link,omitempty"`
+	Links                     []string            `json:"links,omitempty"`
+	LinkSecondary             string              `json:"linkSecondary,omitempty"`
 	SessionMode               string              `json:"sessionMode,omitempty"`
 	LocalEndpoint             string              `json:"localEndpoint,omitempty"`
 	WGDNS                     string              `json:"wgDns,omitempty"`

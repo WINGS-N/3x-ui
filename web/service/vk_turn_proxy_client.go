@@ -15,6 +15,66 @@ import (
 	"gorm.io/gorm"
 )
 
+// inboundHasVKTurnLinks reports whether the inbound-level settings carry
+// at least one non-empty VK call link (primary or extras).
+func inboundHasVKTurnLinks(settings *VKTurnProxySettings) bool {
+	if settings == nil {
+		return false
+	}
+	if strings.TrimSpace(settings.Link) != "" {
+		return true
+	}
+	for _, link := range settings.Links {
+		if strings.TrimSpace(link) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// effectiveVKTurnLinks merges per-client override (highest priority)
+// with inbound-level defaults. Returns deduped, trimmed list.
+func effectiveVKTurnLinks(settings *VKTurnProxySettings, client *VKTurnProxyClient) []string {
+	if links := dedupedClientLinks(client); len(links) > 0 {
+		return links
+	}
+	if settings == nil {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	out := make([]string, 0, 1+len(settings.Links))
+	add := func(link string) {
+		link = strings.TrimSpace(link)
+		if link == "" {
+			return
+		}
+		if _, ok := seen[link]; ok {
+			return
+		}
+		seen[link] = struct{}{}
+		out = append(out, link)
+	}
+	add(settings.Link)
+	for _, link := range settings.Links {
+		add(link)
+	}
+	return out
+}
+
+// effectiveVKTurnLinkSecondary picks the per-client secondary link when
+// present, else falls back to the inbound-level secondary.
+func effectiveVKTurnLinkSecondary(settings *VKTurnProxySettings, client *VKTurnProxyClient) string {
+	if client != nil {
+		if secondary := strings.TrimSpace(client.LinkSecondary); secondary != "" {
+			return secondary
+		}
+	}
+	if settings == nil {
+		return ""
+	}
+	return strings.TrimSpace(settings.LinkSecondary)
+}
+
 func dedupedClientLinks(client *VKTurnProxyClient) []string {
 	if client == nil {
 		return nil
@@ -262,7 +322,7 @@ func (s *InboundService) ensureVKTurnProxyBindingAvailable(wgInboundID int, publ
 	return nil
 }
 
-func (s *InboundService) validateVKTurnProxyClient(client *VKTurnProxyClient) error {
+func (s *InboundService) validateVKTurnProxyClient(client *VKTurnProxyClient, settings *VKTurnProxySettings) error {
 	if strings.TrimSpace(client.ID) == "" {
 		return common.NewError("vk-turn-proxy client id is empty")
 	}
@@ -271,13 +331,20 @@ func (s *InboundService) validateVKTurnProxyClient(client *VKTurnProxyClient) er
 	}
 	links := dedupedClientLinks(client)
 	if len(links) == 0 {
-		return common.NewError("vk-turn-proxy client link is empty")
-	}
-	client.Link = links[0]
-	if len(links) > 1 {
-		client.Links = append([]string(nil), links[1:]...)
-	} else {
+		// Client has no per-client override — the inbound-level link is
+		// the source of truth. Bulk-copy from other inbounds lands here.
+		if settings == nil || !inboundHasVKTurnLinks(settings) {
+			return common.NewError("vk-turn-proxy link is empty: configure VK links on the inbound or per client")
+		}
+		client.Link = ""
 		client.Links = nil
+	} else {
+		client.Link = links[0]
+		if len(links) > 1 {
+			client.Links = append([]string(nil), links[1:]...)
+		} else {
+			client.Links = nil
+		}
 	}
 	if client.PeerManaged {
 		if client.Peer == nil {
@@ -595,16 +662,20 @@ func (s *InboundService) AddVKTurnProxyClient(data *model.Inbound) (bool, error)
 	if err != nil {
 		return false, err
 	}
-	if len(clients) != 1 {
-		return false, common.NewError("vk-turn-proxy add client expects exactly one client")
-	}
-	client := clients[0]
-	s.normalizeVKTurnProxyClient(&client, true)
-	if err := s.validateVKTurnProxyClient(&client); err != nil {
-		return false, err
+	if len(clients) == 0 {
+		return false, common.NewError("vk-turn-proxy add client requires at least one client")
 	}
 
-	existEmail, err := s.checkEmailsExistForClients([]model.Client{{ID: client.ID, Email: client.Email}})
+	checkEmails := make([]model.Client, 0, len(clients))
+	for i := range clients {
+		s.normalizeVKTurnProxyClient(&clients[i], true)
+		if err := s.validateVKTurnProxyClient(&clients[i], settings); err != nil {
+			return false, err
+		}
+		checkEmails = append(checkEmails, model.Client{ID: clients[i].ID, Email: clients[i].Email})
+	}
+
+	existEmail, err := s.checkEmailsExistForClients(checkEmails)
 	if err != nil {
 		return false, err
 	}
@@ -612,12 +683,18 @@ func (s *InboundService) AddVKTurnProxyClient(data *model.Inbound) (bool, error)
 		return false, common.NewError("Duplicate email:", existEmail)
 	}
 
-	needRestart, err := s.applyVKTurnProxyClientBinding(settings, &client, nil)
-	if err != nil {
-		return needRestart, err
+	needRestart := false
+	for i := range clients {
+		bindingRestart, bindingErr := s.applyVKTurnProxyClientBinding(settings, &clients[i], nil)
+		if bindingErr != nil {
+			return needRestart || bindingRestart, bindingErr
+		}
+		if bindingRestart {
+			needRestart = true
+		}
+		settings.Clients = append(settings.Clients, clients[i])
 	}
 
-	settings.Clients = append(settings.Clients, client)
 	rawSettings, err := s.marshalVKTurnProxySettings(settings)
 	if err != nil {
 		return needRestart, err
@@ -628,7 +705,12 @@ func (s *InboundService) AddVKTurnProxyClient(data *model.Inbound) (bool, error)
 		if err := tx.Save(oldInbound).Error; err != nil {
 			return err
 		}
-		return s.addVKTurnProxyClientTraffic(tx, oldInbound.Id, &client)
+		for i := range clients {
+			if err := s.addVKTurnProxyClientTraffic(tx, oldInbound.Id, &clients[i]); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	return needRestart, err
 }
@@ -666,7 +748,7 @@ func (s *InboundService) UpdateVKTurnProxyClient(data *model.Inbound, clientID s
 	}
 	client.CreatedAt = previous.CreatedAt
 	s.normalizeVKTurnProxyClient(&client, false)
-	if err := s.validateVKTurnProxyClient(&client); err != nil {
+	if err := s.validateVKTurnProxyClient(&client, settings); err != nil {
 		return false, err
 	}
 
@@ -821,9 +903,9 @@ func (s *InboundService) buildVKTurnProxyExportConfig(inbound *model.Inbound, se
 		return nil, err
 	}
 
-	links := dedupedClientLinks(client)
-	primaryLink := client.Link
-	if primaryLink == "" && len(links) > 0 {
+	links := effectiveVKTurnLinks(settings, client)
+	primaryLink := ""
+	if len(links) > 0 {
 		primaryLink = links[0]
 	}
 
@@ -884,7 +966,7 @@ func (s *InboundService) buildVKTurnProxyExportConfig(inbound *model.Inbound, se
 	if len(links) > 1 {
 		config.Turn.Links = links
 	}
-	if secondary := strings.TrimSpace(client.LinkSecondary); secondary != "" {
+	if secondary := effectiveVKTurnLinkSecondary(settings, client); secondary != "" {
 		config.Turn.LinkSecondary = secondary
 	}
 	if settings.Threads > 0 {

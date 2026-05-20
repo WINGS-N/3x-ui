@@ -3128,6 +3128,9 @@ Inbound.VKTurnProxySettings = class extends Inbound.Settings {
     constructor(
         protocol,
         forward = new Inbound.VKTurnProxySettings.Forward(),
+        link = '',
+        links = [],
+        linkSecondary = '',
         sessionMode = 'auto',
         localEndpoint = '127.0.0.1:9000',
         wgDns = '1.1.1.1, 1.0.0.1',
@@ -3151,6 +3154,9 @@ Inbound.VKTurnProxySettings = class extends Inbound.Settings {
     ) {
         super(protocol);
         this.forward = forward;
+        this.link = link;
+        this.links = links || [];
+        this.linkSecondary = linkSecondary;
         this.sessionMode = sessionMode;
         this.localEndpoint = localEndpoint;
         this.wgDns = wgDns;
@@ -3177,6 +3183,9 @@ Inbound.VKTurnProxySettings = class extends Inbound.Settings {
         return new Inbound.VKTurnProxySettings(
             Protocols.VK_TURN_PROXY,
             Inbound.VKTurnProxySettings.Forward.fromJson(json.forward),
+            json.link ?? '',
+            Array.isArray(json.links) ? [...json.links] : [],
+            json.linkSecondary ?? '',
             json.sessionMode ?? 'auto',
             json.localEndpoint ?? '127.0.0.1:9000',
             json.wgDns ?? '1.1.1.1, 1.0.0.1',
@@ -3201,8 +3210,14 @@ Inbound.VKTurnProxySettings = class extends Inbound.Settings {
     }
 
     toJson() {
+        const links = (this.links || [])
+            .map(link => (link == null ? '' : link.trim()))
+            .filter(link => link.length > 0);
         return {
             forward: this.forward.toJson(),
+            link: (this.link || '').trim() || undefined,
+            links: links.length > 0 ? links : undefined,
+            linkSecondary: (this.linkSecondary || '').trim() || undefined,
             sessionMode: this.sessionMode || 'auto',
             localEndpoint: this.localEndpoint || '127.0.0.1:9000',
             wgDns: this.wgDns || '1.1.1.1, 1.0.0.1',

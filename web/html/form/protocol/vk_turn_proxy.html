@@ -24,6 +24,60 @@
     </a-form-item>
   </template>
 
+  <a-divider style="margin: 8px 0">VK ссылки (общие для всех клиентов)</a-divider>
+
+  <a-form-item>
+    <template slot="label">
+      Основная VK ссылка
+      <a-tooltip title="Используется всеми клиентами этого инбаунда. Клиент может задать свой override, но обычно достаточно ссылок на уровне инбаунда.">
+        <a-icon type="question-circle"></a-icon>
+      </a-tooltip>
+    </template>
+    <a-input v-model.trim="inbound.settings.link" placeholder="https://vk.com/call/join/..."></a-input>
+  </a-form-item>
+
+  <a-form-item>
+    <template slot="label">
+      Резервные ссылки
+      <a-tooltip title="Дополнительные VK ссылки в пуле — клиент ротирует их вместе с основной для распределения нагрузки и обхода капчи.">
+        <a-icon type="question-circle"></a-icon>
+      </a-tooltip>
+    </template>
+    <template v-if="!inbound.settings.links || inbound.settings.links.length === 0">
+      <div style="color: rgba(255,255,255,0.4); font-size: 12px; margin-bottom: 4px;">Нет дополнительных ссылок</div>
+    </template>
+    <template v-for="(extraLink, extraLinkIndex) in (inbound.settings.links || [])">
+      <a-input
+        v-model.trim="inbound.settings.links[extraLinkIndex]"
+        placeholder="https://vk.com/call/join/..."
+        style="margin-bottom: 4px;">
+        <a-button
+          icon="minus"
+          slot="addonAfter"
+          size="small"
+          @click="inbound.settings.links.splice(extraLinkIndex, 1)"></a-button>
+      </a-input>
+    </template>
+    <a-button
+      icon="plus"
+      type="dashed"
+      size="small"
+      block
+      @click="(inbound.settings.links = inbound.settings.links || []).push('')">Добавить ссылку</a-button>
+  </a-form-item>
+
+  <a-form-item>
+    <template slot="label">
+      Аварийная ссылка
+      <a-tooltip title="Используется только если все основные ссылки недоступны (rate-limit, dead-link). Это последний резерв.">
+        <a-icon type="question-circle"></a-icon>
+      </a-tooltip>
+    </template>
+    <a-input v-model.trim="inbound.settings.linkSecondary" placeholder="https://vk.com/call/join/..."></a-input>
+  </a-form-item>
+
+  <a-divider style="margin: 8px 0"></a-divider>
+
   <a-form-item label='Session Mode'>
     <a-select v-model="inbound.settings.sessionMode" :dropdown-class-name="themeSwitcher.currentTheme">
       <a-select-option value="auto">auto</a-select-option>

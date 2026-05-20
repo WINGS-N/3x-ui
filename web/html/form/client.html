@@ -25,13 +25,24 @@
     <a-input v-model.trim="client.email"></a-input>
   </a-form-item>
   <template v-if="inbound.protocol === Protocols.VK_TURN_PROXY">
-    <a-form-item label='Основная VK ссылка'>
-      <a-input v-model.trim="client.link" placeholder="https://vk.com/call/join/..."></a-input>
-    </a-form-item>
+    <a-alert
+      type="info"
+      show-icon
+      style="margin-bottom: 8px;"
+      message="VK ссылки задаются на уровне инбаунда (общие для всех клиентов). Поля ниже — необязательный override только для этого клиента." />
     <a-form-item>
       <template slot="label">
-        Резервные ссылки
-        <a-tooltip title="Дополнительные VK ссылки. Клиент будет ротировать их вместе с основной для распределения нагрузки и обхода капчи.">
+        Основная VK ссылка (override)
+        <a-tooltip title="Опциональный override основной ссылки инбаунда. Оставьте пустым чтобы использовать общие ссылки инбаунда.">
+          <a-icon type="question-circle"></a-icon>
+        </a-tooltip>
+      </template>
+      <a-input v-model.trim="client.link" placeholder="оставьте пустым для использования ссылок инбаунда"></a-input>
+    </a-form-item>
+    <a-form-item v-if="client.link || (client.links && client.links.length > 0)">
+      <template slot="label">
+        Резервные ссылки (override)
+        <a-tooltip title="Дополнительные VK ссылки для этого клиента — заменяют список инбаунда полностью.">
           <a-icon type="question-circle"></a-icon>
         </a-tooltip>
       </template>
@@ -57,14 +68,14 @@
         block
         @click="(client.links = client.links || []).push('')">Добавить ссылку</a-button>
     </a-form-item>
-    <a-form-item>
+    <a-form-item v-if="client.link || client.linkSecondary">
       <template slot="label">
-        Аварийная ссылка
-        <a-tooltip title="Используется только если все основные ссылки недоступны (rate-limit, dead-link). Это последний резерв.">
+        Аварийная ссылка (override)
+        <a-tooltip title="Опциональный override аварийной ссылки инбаунда. Пусто = брать из настроек инбаунда.">
           <a-icon type="question-circle"></a-icon>
         </a-tooltip>
       </template>
-      <a-input v-model.trim="client.linkSecondary" placeholder="https://vk.com/call/join/..."></a-input>
+      <a-input v-model.trim="client.linkSecondary" placeholder="оставьте пустым для использования аварийной ссылки инбаунда"></a-input>
     </a-form-item>
     <a-form-item label='Peer Binding'>
       <a-radio-group
