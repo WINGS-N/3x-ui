@@ -144,6 +144,11 @@ var defaultValueMap = map[string]string{
 	"smtpPassword":       "",
 	"smtpTo":             "",
 	"smtpEncryptionType": "starttls", // no, starttls, tls
+
+	// vk-turn-proxy / installed binary release tracking
+	"vkTurnProxyManualStop": "false",
+	"vkTurnProxyReleaseTag": "",
+	"xrayReleaseTag":        "",
 }
 
 // SettingService provides business logic for application settings management.
