@@ -142,7 +142,7 @@ jobs:
           cd x-ui/bin
 
           # Download dependencies
-          Xray_URL="https://github.com/WINGS-N/Xray-core/releases/download/v26.6.1-wv/"
+          Xray_URL="https://github.com/WINGS-N/Xray-core/releases/download/v26.6.22-wv/"
           if [ "${{ matrix.platform }}" == "amd64" ]; then
             wget -q ${Xray_URL}Xray-linux-64.zip
             unzip Xray-linux-64.zip
@@ -180,7 +180,7 @@ jobs:
           wget -q -O geoip_RU.dat https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geoip.dat
           wget -q -O geosite_RU.dat https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geosite.dat
           mv xray xray-linux-${{ matrix.platform }}
-          printf '%s\n' 'v26.6.1-wv' > xray-linux-${{ matrix.platform }}.release
+          printf '%s\n' 'v26.6.22-wv' > xray-linux-${{ matrix.platform }}.release
           cd ../..
 
       - name: Package
@@ -274,7 +274,7 @@ jobs:
           cd x-ui\bin
 
           # Download Xray for Windows
-          $Xray_URL = "https://github.com/WINGS-N/Xray-core/releases/download/v26.6.1-wv/"
+          $Xray_URL = "https://github.com/WINGS-N/Xray-core/releases/download/v26.6.22-wv/"
           Invoke-WebRequest -Uri "${Xray_URL}Xray-windows-64.zip" -OutFile "Xray-windows-64.zip"
           Expand-Archive -Path "Xray-windows-64.zip" -DestinationPath .
           Remove-Item "Xray-windows-64.zip"
@@ -286,7 +286,7 @@ jobs:
           Invoke-WebRequest -Uri "https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geoip.dat" -OutFile "geoip_RU.dat"
           Invoke-WebRequest -Uri "https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geosite.dat" -OutFile "geosite_RU.dat"
           Rename-Item xray.exe xray-windows-amd64.exe
-          Set-Content -Path "xray-windows-amd64.exe.release" -Value "v26.6.1-wv"
+          Set-Content -Path "xray-windows-amd64.exe.release" -Value "v26.6.22-wv"
           cd ..
           Copy-Item -Path ..\windows_files\* -Destination . -Recurse
           cd ..
