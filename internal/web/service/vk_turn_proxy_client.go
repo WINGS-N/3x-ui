@@ -42,7 +42,7 @@ func (s *InboundService) newVKTurnProxyPeerAllocator(settings *VKTurnProxySettin
 			collect(c.Peer.AllowedIPs)
 		}
 	}
-	if settings != nil && settings.Forward.Type == VKTurnProxyForwardWireGuardInbound &&
+	if settings.Forward.Type == VKTurnProxyForwardWireGuardInbound &&
 		settings.Forward.WireGuardInboundID > 0 {
 		wgInbound, err := s.GetInbound(settings.Forward.WireGuardInboundID)
 		if err == nil && wgInbound != nil {
