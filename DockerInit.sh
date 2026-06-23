@@ -32,12 +32,14 @@ case $1 in
         ;;
 esac
 MTG_VER="2.2.8"
+XRAY_VERSION="v26.4.25-wv"
 mkdir -p build/bin
 cd build/bin
-curl -sfLRO "https://github.com/XTLS/Xray-core/releases/download/v26.6.1/Xray-linux-${ARCH}.zip"
+curl -sfLRO "https://github.com/WINGS-N/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-${ARCH}.zip"
 unzip "Xray-linux-${ARCH}.zip"
 rm -f "Xray-linux-${ARCH}.zip" geoip.dat geosite.dat
 mv xray "xray-linux-${FNAME}"
+printf '%s\n' "${XRAY_VERSION}" > "xray-linux-${FNAME}.release"
 curl -sfLRO "https://github.com/9seconds/mtg/releases/download/v${MTG_VER}/mtg-${MTG_VER}-linux-${MTG_ARCH}.tar.gz"
 tar -xzf "mtg-${MTG_VER}-linux-${MTG_ARCH}.tar.gz"
 mv "mtg-${MTG_VER}-linux-${MTG_ARCH}/mtg" "mtg-linux-${FNAME}" 2>/dev/null || mv mtg "mtg-linux-${FNAME}"
