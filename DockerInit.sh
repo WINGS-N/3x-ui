@@ -32,7 +32,7 @@ case $1 in
         ;;
 esac
 MTG_VER="2.2.8"
-XRAY_VERSION="v26.4.25-wv"
+XRAY_VERSION="v26.6.1-wv"
 mkdir -p build/bin
 cd build/bin
 curl -sfLRO "https://github.com/WINGS-N/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-${ARCH}.zip"
