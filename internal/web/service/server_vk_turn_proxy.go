@@ -59,6 +59,10 @@ func (s *ServerService) GetVKTurnProxyVersions() ([]string, error) {
 	return getGitHubReleaseVersions(vkTurnProxyReleaseRepo)
 }
 
+func (s *ServerService) GetVKTurnProxyStatus() VKTurnProxyRuntimeStatus {
+	return VKTurnProxyRuntime().GetStatus()
+}
+
 func (s *ServerService) StartVKTurnProxyService() error {
 	if err := VKTurnProxyRuntime().StartAll(); err != nil {
 		logger.Error("start vk-turn-proxy failed:", err)

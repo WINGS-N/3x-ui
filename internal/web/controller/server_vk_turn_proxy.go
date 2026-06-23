@@ -4,6 +4,7 @@ import "github.com/gin-gonic/gin"
 
 func (a *ServerController) initVKTurnProxyRouter(g *gin.RouterGroup) {
 	g.POST("/vk-turn-proxy/logs/:count", a.getVKTurnProxyLogs)
+	g.GET("/vk-turn-proxy/status", a.getVKTurnProxyStatus)
 	g.GET("/vk-turn-proxy/versions", a.getVKTurnProxyVersions)
 	g.POST("/vk-turn-proxy/start", a.startVKTurnProxyService)
 	g.POST("/vk-turn-proxy/stop", a.stopVKTurnProxyService)
@@ -15,6 +16,10 @@ func (a *ServerController) initVKTurnProxyRouter(g *gin.RouterGroup) {
 func (a *ServerController) getVKTurnProxyLogs(c *gin.Context) {
 	logs := a.serverService.GetVKTurnProxyLogs(c.Param("count"), c.PostForm("level"))
 	jsonObj(c, logs, nil)
+}
+
+func (a *ServerController) getVKTurnProxyStatus(c *gin.Context) {
+	jsonObj(c, a.serverService.GetVKTurnProxyStatus(), nil)
 }
 
 func (a *ServerController) getVKTurnProxyVersions(c *gin.Context) {
