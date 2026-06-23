@@ -32,9 +32,18 @@ func (j *XrayTrafficJob) Run() {
 	if !j.xrayService.IsXrayRunning() {
 		return
 	}
-	traffics, clientTraffics, err := j.xrayService.GetXrayTraffic()
+	traffics, clientTraffics, wireGuardPeerTraffics, err := j.xrayService.GetXrayTraffic()
 	if err != nil {
 		return
+	}
+	// Map wireguard peer traffic deltas onto the vk-turn-proxy clients that own
+	// those peers, so AddTraffic accounts them and enforces per-client quotas.
+	if len(wireGuardPeerTraffics) > 0 {
+		if vkClientTraffics, vkErr := j.inboundService.BuildVKTurnProxyClientTraffics(wireGuardPeerTraffics); vkErr != nil {
+			logger.Warning("build vk-turn-proxy client traffic failed:", vkErr)
+		} else if len(vkClientTraffics) > 0 {
+			clientTraffics = append(clientTraffics, vkClientTraffics...)
+		}
 	}
 	needRestart0, clientsDisabled, err := j.inboundService.AddTraffic(traffics, clientTraffics)
 	if err != nil {

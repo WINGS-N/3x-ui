@@ -336,7 +336,7 @@ func (s *SubService) getInboundsBySubId(subId string) ([]*model.Inbound, error) 
 		JOIN client_inbounds ON client_inbounds.inbound_id = inbounds.id
 		JOIN clients ON clients.id = client_inbounds.client_id
 		WHERE
-			inbounds.protocol in ('vmess','vless','trojan','shadowsocks','hysteria')
+			inbounds.protocol in ('vmess','vless','trojan','shadowsocks','hysteria','vk-turn-proxy')
 			AND clients.sub_id = ? AND inbounds.enable = ?
 	)`, subId, true).Order("sub_sort_index ASC").Order("id ASC").Find(&inbounds).Error
 	if err != nil {
@@ -470,6 +470,30 @@ func (s *SubService) GetLink(inbound *model.Inbound, email string) string {
 		return s.genHysteriaLink(inbound, email)
 	case "mtproto":
 		return s.genMtprotoLink(inbound, email)
+	case "vk-turn-proxy":
+		return s.genVKTurnProxyLink(inbound, email)
+	}
+	return ""
+}
+
+// genVKTurnProxyLink resolves the client by email and returns its wingsv://
+// export config. vk-turn-proxy clients live in the inbound settings JSON, so
+// the lookup goes through the vk-turn-proxy client list rather than the
+// normalized clients table.
+func (s *SubService) genVKTurnProxyLink(inbound *model.Inbound, email string) string {
+	clients, err := s.inboundService.GetClients(inbound)
+	if err != nil {
+		return ""
+	}
+	for _, client := range clients {
+		if client.Email != email {
+			continue
+		}
+		link, exErr := s.inboundService.ExportVKTurnProxyClient(inbound.Id, client.ID, s.address)
+		if exErr != nil {
+			return ""
+		}
+		return link
 	}
 	return ""
 }

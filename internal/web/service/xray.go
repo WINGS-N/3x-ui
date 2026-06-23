@@ -766,25 +766,25 @@ func stripDisabledRules(routerCfg json_util.RawMessage) json_util.RawMessage {
 }
 
 // GetXrayTraffic fetches the current traffic statistics from the running Xray process.
-func (s *XrayService) GetXrayTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, error) {
+func (s *XrayService) GetXrayTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, []*xray.WireGuardPeerTraffic, error) {
 	if !s.IsXrayRunning() {
 		err := errors.New("xray is not running")
 		logger.Debug("Attempted to fetch Xray traffic, but Xray is not running:", err)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	apiPort := p.GetAPIPort()
 	if err := s.xrayAPI.Init(apiPort); err != nil {
 		logger.Debug("Failed to initialize Xray API:", err)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	defer s.xrayAPI.Close()
 
-	traffic, clientTraffic, err := s.xrayAPI.GetTraffic()
+	traffic, clientTraffic, wireGuardPeerTraffic, err := s.xrayAPI.GetTraffic()
 	if err != nil {
 		logger.Debug("Failed to fetch Xray traffic:", err)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return traffic, clientTraffic, nil
+	return traffic, clientTraffic, wireGuardPeerTraffic, nil
 }
 
 // GetOnlineUsers returns connection-based online users (email + source IPs)

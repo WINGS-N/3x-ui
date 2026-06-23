@@ -93,6 +93,10 @@ func TestAPIRoutesDocumented(t *testing.T) {
 			basePath = "/panel/api/clients"
 		case "server.go":
 			basePath = "/panel/api/server"
+		case "server_vk_turn_proxy.go":
+			basePath = "/panel/api/server"
+		case "inbound_vk_turn_proxy.go":
+			basePath = "/panel/api/inbounds"
 		case "node.go":
 			basePath = "/panel/api/nodes"
 		case "host.go":

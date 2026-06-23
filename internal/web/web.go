@@ -333,6 +333,14 @@ func (s *Server) startTask(restartXray bool) {
 
 	s.cron.AddJob(cadenceNodeTraffic, job.NewNodeTrafficSyncJob())
 
+	// Keep the vk-turn-proxy sidecar reconciled with its inbounds: starts
+	// missing instances, stops orphaned ones, restarts on settings drift.
+	s.cron.AddFunc("@every 5s", func() {
+		if err := service.VKTurnProxyRuntime().EnsureRunning(); err != nil {
+			logger.Debug("vk-turn-proxy ensure running:", err)
+		}
+	})
+
 	// Outbound subscription auto-refresh (respects per-sub updateInterval)
 	s.cron.AddJob(cadenceOutboundSub, job.NewOutboundSubscriptionJob())
 
@@ -648,6 +656,9 @@ func (s *Server) stop(stopXray bool, stopTgBot bool) error {
 	if stopXray {
 		s.xrayService.StopXray()
 		mtproto.GetManager().StopAll()
+	}
+	if err := service.VKTurnProxyRuntime().ShutdownForRestart(); err != nil {
+		logger.Warning("vk-turn-proxy shutdown failed:", err)
 	}
 	if s.cron != nil {
 		s.cron.Stop()

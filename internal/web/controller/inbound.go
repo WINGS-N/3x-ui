@@ -79,6 +79,8 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 	g.POST("/import", a.importInbound)
 	g.POST("/:id/fallbacks", a.setFallbacks)
 	g.POST("/pushClientTraffics", a.pushClientTraffics)
+
+	a.initVKTurnProxyRouter(g)
 }
 
 // getInbounds retrieves the list of inbounds for the logged-in user.
