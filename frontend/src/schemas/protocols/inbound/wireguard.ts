@@ -40,5 +40,9 @@ export const WireguardInboundSettingsSchema = z.object({
   noKernelTun: z.boolean().default(false),
   workers: optionalClearedInt(z.number().int().min(1)),
   domainStrategy: WireguardDomainStrategySchema.optional(),
+  // Pin this inbound's egress to a specific outbound/balancer tag; the backend
+  // turns it into a routing rule so it does not fall back to the default
+  // (first) outbound. Empty leaves it on the default.
+  outboundTag: z.string().optional(),
 });
 export type WireguardInboundSettings = z.infer<typeof WireguardInboundSettingsSchema>;

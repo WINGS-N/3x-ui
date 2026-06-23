@@ -3,6 +3,7 @@ import { Button, Divider, Form, Input, InputNumber, Select, Space, Switch } from
 import { MinusOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 
 import { Wireguard } from '@/utils';
+import { useOutboundTags } from '@/api/queries/useOutboundTags';
 
 interface WireguardFieldsProps {
   wgPubKey: string;
@@ -39,6 +40,7 @@ function nextWgPeerAllowedIP(peers: Array<{ allowedIPs?: string[] }> | undefined
 export default function WireguardFields({ wgPubKey, regenInboundWg, regenWgPeerKeypair }: WireguardFieldsProps) {
   const { t } = useTranslation();
   const form = Form.useFormInstance();
+  const { data: outboundTags } = useOutboundTags();
   return (
     <>
       <Form.Item label={t('pages.xray.wireguard.secretKey')}>
@@ -75,6 +77,18 @@ export default function WireguardFields({ wgPubKey, regenInboundWg, regenWgPeerK
             { value: 'ForceIPv6', label: 'ForceIPv6' },
             { value: 'ForceIPv6v4', label: 'ForceIPv6v4' },
           ]}
+        />
+      </Form.Item>
+      <Form.Item
+        name={['settings', 'outboundTag']}
+        label={t('pages.inbounds.form.egressOutbound')}
+        tooltip={t('pages.inbounds.form.egressOutboundHint')}
+      >
+        <Select
+          allowClear
+          showSearch
+          placeholder={t('pages.inbounds.form.egressOutboundPlaceholder')}
+          options={(outboundTags ?? []).map((tag) => ({ value: tag, label: tag }))}
         />
       </Form.Item>
       <Form.List name={['settings', 'peers']}>

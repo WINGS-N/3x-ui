@@ -2,11 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { Form, Input, InputNumber, Select, Switch, type FormInstance } from 'antd';
 
 import { HeaderMapEditor } from '@/components/form';
+import { useOutboundTags } from '@/api/queries/useOutboundTags';
 
 const MASQ_PATH = ['streamSettings', 'hysteriaSettings', 'masquerade'];
 
 export default function HysteriaFields({ form }: { form: FormInstance }) {
   const { t } = useTranslation();
+  const { data: outboundTags } = useOutboundTags();
   return (
     <>
       <Form.Item
@@ -122,6 +124,18 @@ export default function HysteriaFields({ form }: { form: FormInstance }) {
             </>
           );
         }}
+      </Form.Item>
+      <Form.Item
+        name={['settings', 'outboundTag']}
+        label={t('pages.inbounds.form.egressOutbound')}
+        tooltip={t('pages.inbounds.form.egressOutboundHint')}
+      >
+        <Select
+          allowClear
+          showSearch
+          placeholder={t('pages.inbounds.form.egressOutboundPlaceholder')}
+          options={(outboundTags ?? []).map((tag) => ({ value: tag, label: tag }))}
+        />
       </Form.Item>
     </>
   );

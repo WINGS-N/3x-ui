@@ -22,5 +22,9 @@ export type HysteriaClient = z.infer<typeof HysteriaClientSchema>;
 export const HysteriaInboundSettingsSchema = z.object({
   version: z.number().int().min(1).default(2),
   clients: z.array(HysteriaClientSchema).default([]),
+  // Pin this inbound's egress to a specific outbound/balancer tag; the backend
+  // turns it into a routing rule so it does not fall back to the default
+  // (first) outbound. Empty leaves it on the default.
+  outboundTag: z.string().optional(),
 });
 export type HysteriaInboundSettings = z.infer<typeof HysteriaInboundSettingsSchema>;
