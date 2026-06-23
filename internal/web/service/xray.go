@@ -304,6 +304,22 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		injectMtprotoEgress(xrayConfig, inbound)
 	}
 
+	// Pin WireGuard/Hysteria inbounds (typical vk-turn-proxy forward targets) to
+	// a chosen egress outbound. They are real Xray inbounds, so without a rule
+	// they fall back to the default (first) outbound - adding a WARP outbound on
+	// top then routes their traffic, including vk-turn-proxy relayed traffic,
+	// through WARP and breaks most sites.
+	for i := range inbounds {
+		inbound := inbounds[i]
+		if !inbound.Enable || inbound.NodeID != nil {
+			continue
+		}
+		switch inbound.Protocol {
+		case model.WireGuard, model.Hysteria, model.Hysteria2:
+			injectInboundEgress(xrayConfig, inbound)
+		}
+	}
+
 	// Wire the panel's own HTTP traffic through the configured outbound, after
 	// the subscription merge so subscription outbound tags are valid targets.
 	if egressTag, err := s.settingService.GetPanelOutbound(); err != nil {
@@ -511,6 +527,47 @@ const mtprotoEgressSocksSettings = `{"auth":"noauth","udp":false}`
 // prepends a routing rule sending that tag to it. Both live only in the generated
 // config — the stored template is untouched — and both are hot-appliable, so
 // toggling routing never forces a full Xray restart. Mirrors injectPanelEgress.
+// injectInboundEgress pins a real inbound's traffic to a chosen outbound (or
+// balancer) with a routing rule on the inbound tag. Used for WireGuard/Hysteria
+// inbounds (vk-turn-proxy forward targets) so their egress is deterministic
+// regardless of the outbound order, instead of always using the default
+// (first) outbound. The egress outbound is read from the inbound's settings
+// (settings.outboundTag); empty means "leave on the default outbound".
+func injectInboundEgress(cfg *xray.Config, inbound *model.Inbound) {
+	var parsed struct {
+		OutboundTag string `json:"outboundTag"`
+	}
+	if err := json.Unmarshal([]byte(inbound.Settings), &parsed); err != nil {
+		return
+	}
+	if parsed.OutboundTag == "" || inbound.Tag == "" {
+		return
+	}
+	routing := map[string]any{}
+	if len(cfg.RouterConfig) > 0 {
+		if err := json.Unmarshal(cfg.RouterConfig, &routing); err != nil {
+			logger.Warning("inbound egress: routing section is unparsable, skipping rule:", err)
+			return
+		}
+	}
+	rules, _ := routing["rules"].([]any)
+	rule := map[string]any{
+		"type":       "field",
+		"inboundTag": []any{inbound.Tag},
+	}
+	if routingTagIsBalancer(routing, parsed.OutboundTag) {
+		rule["balancerTag"] = parsed.OutboundTag
+	} else {
+		rule["outboundTag"] = parsed.OutboundTag
+	}
+	routing["rules"] = append([]any{rule}, rules...)
+	if newRouting, err := json.Marshal(routing); err == nil {
+		cfg.RouterConfig = json_util.RawMessage(newRouting)
+	} else {
+		logger.Warning("inbound egress: failed to rebuild routing section, skipping rule:", err)
+	}
+}
+
 func injectMtprotoEgress(cfg *xray.Config, inbound *model.Inbound) {
 	var parsed struct {
 		RouteThroughXray bool   `json:"routeThroughXray"`
