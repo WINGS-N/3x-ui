@@ -257,7 +257,8 @@
       "importDatabasePgDesc": "Нажмите, чтобы выбрать и загрузить файл .dump для восстановления базы данных PostgreSQL. Это заменит все текущие данные.",
       "migrationDownload": "Скачать файл миграции",
       "migrationDownloadDesc": "Нажмите, чтобы скачать переносимый экспорт .dump (текст SQL) вашей базы данных SQLite.",
-      "migrationDownloadPgDesc": "Нажмите, чтобы скачать базу данных SQLite (.db), собранную из ваших данных PostgreSQL и готовую для запуска панели на SQLite."
+      "migrationDownloadPgDesc": "Нажмите, чтобы скачать базу данных SQLite (.db), собранную из ваших данных PostgreSQL и готовую для запуска панели на SQLite.",
+      "vkTurnLogs": "Логи VK Turn"
     },
     "inbounds": {
       "title": "Входящие",
@@ -676,6 +677,50 @@
           "statusDescription": "Описание статуса",
           "requestHeader": "Заголовок запроса",
           "responseHeader": "Заголовок ответа"
+        }
+      },
+      "protocols": {
+        "vkTurnProxy": {
+          "forward": "Цель пересылки",
+          "forwardType": "Тип пересылки",
+          "forwardTypes": {
+            "wireguardInbound": "Входящий WireGuard",
+            "hysteria2Inbound": "Входящий Hysteria2",
+            "host": "Произвольный host:port"
+          },
+          "wireguardInbound": "Входящий WireGuard",
+          "hysteria2Inbound": "Входящий Hysteria2",
+          "host": "Хост",
+          "links": "Ссылки VK",
+          "link": "Ссылка",
+          "linkSecondary": "Запасная ссылка",
+          "wgParams": "Параметры WireGuard",
+          "sessionMode": "Режим сессии",
+          "localEndpoint": "Локальный endpoint",
+          "wgDns": "DNS",
+          "wgAllowedIps": "Разрешённые IP",
+          "threads": "Потоки",
+          "credsGroupSize": "Размер группы учётных данных",
+          "useUdp": "Использовать UDP",
+          "noObfuscation": "Без обфускации",
+          "wrap": "WRAP",
+          "wrapMode": "Режим WRAP",
+          "wrapModes": {
+            "off": "Выкл",
+            "optional": "Опционально",
+            "required": "Обязательно"
+          },
+          "wrapCipher": "Шифр WRAP",
+          "wrapKeyHex": "Ключ WRAP (hex)",
+          "wrapAcceptClientKeys": "Принимать ключи клиента",
+          "clients": "Клиенты",
+          "addClient": "Добавить клиента",
+          "clientNumber": "Клиент {{n}}",
+          "totalGB": "Лимит трафика (ГБ)",
+          "limitIp": "Лимит IP",
+          "peerManaged": "Управляемый peer",
+          "peerManagedHint": "Создаётся автоматически при сохранении",
+          "peerPublicKey": "Публичный ключ peer"
         }
       }
     },

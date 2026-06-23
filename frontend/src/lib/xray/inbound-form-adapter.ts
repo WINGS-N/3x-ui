@@ -4,6 +4,7 @@ import {
   HysteriaClientSchema,
   ShadowsocksClientSchema,
   TrojanClientSchema,
+  VkTurnProxyClientSchema,
   VlessClientSchema,
   VmessClientSchema,
 } from '@/schemas/protocols/inbound';
@@ -234,6 +235,7 @@ function clientSchemaForProtocol(protocol: string): z.ZodType | null {
     case 'trojan': return TrojanClientSchema;
     case 'shadowsocks': return ShadowsocksClientSchema;
     case 'hysteria': return HysteriaClientSchema;
+    case 'vk-turn-proxy': return VkTurnProxyClientSchema;
     default: return null;
   }
 }

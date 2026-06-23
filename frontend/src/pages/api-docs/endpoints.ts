@@ -218,6 +218,41 @@ export const sections: readonly Section[] = [
       },
       {
         method: 'GET',
+        path: '/panel/api/inbounds/:id/vk-turn-proxy/peer-options',
+        summary: 'List the wireguard peers available for binding a vk-turn-proxy client when the inbound forwards into a wireguard inbound.',
+        params: [
+          { name: 'id', in: 'path', type: 'number', desc: 'vk-turn-proxy inbound ID.' },
+        ],
+      },
+      {
+        method: 'GET',
+        path: '/panel/api/inbounds/:id/vk-turn-proxy/export/:clientId',
+        summary: 'Build the wingsv:// config link for a single vk-turn-proxy client. Honours forwarded headers only from a trusted proxy.',
+        params: [
+          { name: 'id', in: 'path', type: 'number', desc: 'vk-turn-proxy inbound ID.' },
+          { name: 'clientId', in: 'path', type: 'string', desc: 'vk-turn-proxy client ID.' },
+        ],
+      },
+      {
+        method: 'GET',
+        path: '/panel/api/inbounds/:id/vk-turn-proxy/export-all',
+        summary: 'Build wingsv:// config links for every enabled vk-turn-proxy client of the inbound.',
+        params: [
+          { name: 'id', in: 'path', type: 'number', desc: 'vk-turn-proxy inbound ID.' },
+        ],
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/inbounds/:id/vk-turn-proxy/clients/:clientId/enable',
+        summary: 'Toggle a single vk-turn-proxy client on or off without resending the whole settings JSON. Disabling pulls the client peer from the target wireguard inbound while keeping its reserved address.',
+        params: [
+          { name: 'id', in: 'path', type: 'number', desc: 'vk-turn-proxy inbound ID.' },
+          { name: 'clientId', in: 'path', type: 'string', desc: 'vk-turn-proxy client ID.' },
+        ],
+        body: '{\n  "enable": false\n}',
+      },
+      {
+        method: 'GET',
         path: '/panel/api/inbounds/:id/fallbacks',
         summary: 'List the fallback rules attached to a master VLESS/Trojan TCP-TLS inbound. Each rule links one child inbound (the dest) to optional SNI/ALPN/path/dest/xver match criteria. When dest is empty the child inbound\'s listen+port is used.',
         params: [
@@ -426,6 +461,48 @@ export const sections: readonly Section[] = [
         ],
         body: '{\n  "level": "info",\n  "syslog": false\n}',
         response: '{\n  "success": true,\n  "obj": "2025/01/01 12:00:00 [INFO] Server started\\n2025/01/01 12:00:01 [INFO] Xray is running"\n}',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/server/vk-turn-proxy/logs/:count',
+        summary: 'Return the last N vk-turn-proxy log lines (newest first), tailed from the end of the panel log so large logs stay fast.',
+        params: [
+          { name: 'count', in: 'path', type: 'number', desc: 'Number of trailing log lines.' },
+          { name: 'level', in: 'body (form)', type: 'string', desc: 'Maximum log level to include (error, warning, notice, info, debug).' },
+        ],
+      },
+      {
+        method: 'GET',
+        path: '/panel/api/server/vk-turn-proxy/versions',
+        summary: 'List the vk-turn-proxy binary release tags available for install (cached).',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/server/vk-turn-proxy/start',
+        summary: 'Start the vk-turn-proxy sidecar for every enabled vk-turn-proxy inbound.',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/server/vk-turn-proxy/stop',
+        summary: 'Stop all running vk-turn-proxy instances.',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/server/vk-turn-proxy/restart',
+        summary: 'Restart all vk-turn-proxy instances.',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/server/vk-turn-proxy/install/:version',
+        summary: 'Download and install the given vk-turn-proxy release tag, then restart the sidecar.',
+        params: [
+          { name: 'version', in: 'path', type: 'string', desc: 'Release tag to install, or "latest".' },
+        ],
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/server/vk-turn-proxy/upload',
+        summary: 'Upload a custom vk-turn-proxy binary (multipart form field "binary") and install it.',
       },
       {
         method: 'POST',

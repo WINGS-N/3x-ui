@@ -257,7 +257,8 @@
       "importDatabasePgDesc": "Click to select and upload a .dump file to restore your PostgreSQL database. This replaces all current data.",
       "migrationDownload": "Download Migration",
       "migrationDownloadDesc": "Click to download a portable .dump (SQL text) export of your SQLite database.",
-      "migrationDownloadPgDesc": "Click to download a .db SQLite database built from your PostgreSQL data, ready to run this panel on SQLite."
+      "migrationDownloadPgDesc": "Click to download a .db SQLite database built from your PostgreSQL data, ready to run this panel on SQLite.",
+      "vkTurnLogs": "VK Turn logs"
     },
     "inbounds": {
       "title": "Inbounds",
@@ -676,6 +677,50 @@
           "statusDescription": "Status Desc",
           "requestHeader": "Request Header",
           "responseHeader": "Response Header"
+        }
+      },
+      "protocols": {
+        "vkTurnProxy": {
+          "forward": "Forward target",
+          "forwardType": "Forward type",
+          "forwardTypes": {
+            "wireguardInbound": "WireGuard inbound",
+            "hysteria2Inbound": "Hysteria2 inbound",
+            "host": "Custom host:port"
+          },
+          "wireguardInbound": "WireGuard inbound",
+          "hysteria2Inbound": "Hysteria2 inbound",
+          "host": "Host",
+          "links": "VK links",
+          "link": "Link",
+          "linkSecondary": "Secondary link",
+          "wgParams": "WireGuard parameters",
+          "sessionMode": "Session mode",
+          "localEndpoint": "Local endpoint",
+          "wgDns": "DNS",
+          "wgAllowedIps": "Allowed IPs",
+          "threads": "Threads",
+          "credsGroupSize": "Credentials group size",
+          "useUdp": "Use UDP",
+          "noObfuscation": "No obfuscation",
+          "wrap": "WRAP",
+          "wrapMode": "WRAP mode",
+          "wrapModes": {
+            "off": "Off",
+            "optional": "Optional",
+            "required": "Required"
+          },
+          "wrapCipher": "WRAP cipher",
+          "wrapKeyHex": "WRAP key (hex)",
+          "wrapAcceptClientKeys": "Accept client keys",
+          "clients": "Clients",
+          "addClient": "Add client",
+          "clientNumber": "Client {{n}}",
+          "totalGB": "Traffic limit (GB)",
+          "limitIp": "IP limit",
+          "peerManaged": "Managed peer",
+          "peerManagedHint": "Auto-provisioned on save",
+          "peerPublicKey": "Peer public key"
         }
       }
     },

@@ -8,6 +8,7 @@ import { ShadowsocksInboundSettingsSchema } from './shadowsocks';
 import { TrojanInboundSettingsSchema } from './trojan';
 import { TunInboundSettingsSchema } from './tun';
 import { TunnelInboundSettingsSchema } from './tunnel';
+import { VkTurnProxyInboundSettingsSchema } from './vk-turn-proxy';
 import { VlessInboundSettingsSchema } from './vless';
 import { VmessInboundSettingsSchema } from './vmess';
 import { WireguardInboundSettingsSchema } from './wireguard';
@@ -20,6 +21,7 @@ export * from './shadowsocks';
 export * from './trojan';
 export * from './tun';
 export * from './tunnel';
+export * from './vk-turn-proxy';
 export * from './vless';
 export * from './vmess';
 export * from './wireguard';
@@ -41,5 +43,6 @@ export const InboundSettingsSchema = z.discriminatedUnion('protocol', [
   z.object({ protocol: z.literal('tunnel'),      settings: TunnelInboundSettingsSchema }),
   z.object({ protocol: z.literal('tun'),         settings: TunInboundSettingsSchema }),
   z.object({ protocol: z.literal('mtproto'),     settings: MtprotoInboundSettingsSchema }),
+  z.object({ protocol: z.literal('vk-turn-proxy'), settings: VkTurnProxyInboundSettingsSchema }),
 ]);
 export type InboundSettings = z.infer<typeof InboundSettingsSchema>;

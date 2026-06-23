@@ -61,6 +61,7 @@ import {
   ShadowsocksFields,
   TunFields,
   TunnelFields,
+  VkTurnProxyFields,
   VlessFields,
   WireguardFields,
 } from './protocols';
@@ -685,6 +686,8 @@ export default function InboundFormModal({
 
       {protocol === Protocols.MTPROTO && <MtprotoFields />}
 
+      {protocol === Protocols.VK_TURN_PROXY && <VkTurnProxyFields />}
+
       {protocol === Protocols.SHADOWSOCKS && <ShadowsocksFields form={form} isSSWith2022={isSSWith2022} />}
 
       {protocol === Protocols.VLESS && <VlessFields saving={saving} selectedVlessAuth={selectedVlessAuth} network={network} security={security} getNewVlessEnc={getNewVlessEnc} clearVlessEnc={clearVlessEnc} />}
@@ -1019,6 +1022,7 @@ export default function InboundFormModal({
               Protocols.TUN,
               Protocols.WIREGUARD,
               Protocols.MTPROTO,
+              Protocols.VK_TURN_PROXY,
             ] as string[]).includes(protocol) || isFallbackHost
               ? [{ key: 'protocol', label: t('pages.inbounds.protocol'), children: protocolTab, forceRender: true }]
               : []),

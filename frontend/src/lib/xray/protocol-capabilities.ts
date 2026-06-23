@@ -68,9 +68,11 @@ export function canEnableStream(values: { protocol: string }): boolean {
 }
 
 // mtproto is served by an external mtg process, not Xray, so the Xray sniffing
-// block does not apply to it. Every other inbound supports sniffing.
+// block does not apply to it. vk-turn-proxy is a standalone relay listener,
+// also not Xray, so the same exclusion applies. Every other inbound supports
+// sniffing.
 export function canEnableSniffing(values: { protocol: string }): boolean {
-  return values.protocol !== 'mtproto';
+  return values.protocol !== 'mtproto' && values.protocol !== 'vk-turn-proxy';
 }
 
 // Vision seed applies only when XTLS Vision (TCP/TLS) flow is selected

@@ -53,6 +53,7 @@ const BackupModal = lazy(() => import('./BackupModal'));
 const SystemHistoryModal = lazy(() => import('./SystemHistoryModal'));
 const XrayMetricsModal = lazy(() => import('./XrayMetricsModal'));
 const XrayLogModal = lazy(() => import('./XrayLogModal'));
+const VkTurnProxyLogModal = lazy(() => import('./VkTurnProxyLogModal'));
 const VersionModal = lazy(() => import('./VersionModal'));
 import './IndexPage.css';
 
@@ -80,6 +81,7 @@ export default function IndexPage() {
   const [sysHistoryOpen, setSysHistoryOpen] = useState(false);
   const [xrayMetricsOpen, setXrayMetricsOpen] = useState(false);
   const [xrayLogsOpen, setXrayLogsOpen] = useState(false);
+  const [vkTurnLogsOpen, setVkTurnLogsOpen] = useState(false);
   const [versionOpen, setVersionOpen] = useState(false);
   const [configTextOpen, setConfigTextOpen] = useState(false);
   const [configText, setConfigText] = useState('');
@@ -203,6 +205,10 @@ export default function IndexPage() {
                         <Space className="action" key="logs" onClick={() => setLogsOpen(true)}>
                           <BarsOutlined />
                           {!isMobile && <span>{t('pages.index.logs')}</span>}
+                        </Space>,
+                        <Space className="action" key="vkturnlogs" onClick={() => setVkTurnLogsOpen(true)}>
+                          <BarsOutlined />
+                          {!isMobile && <span>{t('pages.index.vkTurnLogs')}</span>}
                         </Space>,
                         <Space className="action" key="config" onClick={openConfig}>
                           <ControlOutlined />
@@ -473,6 +479,9 @@ export default function IndexPage() {
         </LazyMount>
         <LazyMount when={xrayLogsOpen}>
           <XrayLogModal open={xrayLogsOpen} onClose={() => setXrayLogsOpen(false)} />
+        </LazyMount>
+        <LazyMount when={vkTurnLogsOpen}>
+          <VkTurnProxyLogModal open={vkTurnLogsOpen} onClose={() => setVkTurnLogsOpen(false)} />
         </LazyMount>
         <LazyMount when={versionOpen}>
           <VersionModal
