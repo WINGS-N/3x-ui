@@ -96,6 +96,13 @@ func (s *XrayService) GetXrayVersion() string {
 	if p == nil {
 		return "Unknown"
 	}
+	// Prefer the WINGS-N release tag recorded next to the binary (e.g.
+	// "26.6.1-wv"), so the panel shows it is the -wv fork. The binary itself
+	// only self-reports the plain upstream version (e.g. "26.6.1"); the tag is
+	// written as a ".release" sidecar by the docker/release build.
+	if tag, err := readReleaseMetadata(xray.GetBinaryPath()); err == nil && tag != "" {
+		return strings.TrimPrefix(tag, "v")
+	}
 	return p.GetVersion()
 }
 
