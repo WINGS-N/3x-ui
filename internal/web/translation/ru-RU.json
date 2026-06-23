@@ -258,7 +258,17 @@
       "migrationDownload": "Скачать файл миграции",
       "migrationDownloadDesc": "Нажмите, чтобы скачать переносимый экспорт .dump (текст SQL) вашей базы данных SQLite.",
       "migrationDownloadPgDesc": "Нажмите, чтобы скачать базу данных SQLite (.db), собранную из ваших данных PostgreSQL и готовую для запуска панели на SQLite.",
-      "vkTurnLogs": "Логи VK Turn"
+      "vkTurnLogs": "Логи VK Turn",
+      "vkTurnManage": "Управление VK Turn",
+      "vkTurnManageTitle": "VK Turn Proxy",
+      "vkTurnInstalled": "Установленная версия",
+      "vkTurnRunningCount": "Запущено",
+      "vkTurnStart": "Запустить",
+      "vkTurnStop": "Остановить",
+      "vkTurnRestart": "Перезапустить",
+      "vkTurnVersions": "Версии",
+      "vkTurnInstallDialog": "Установка vk-turn-proxy",
+      "vkTurnInstallDialogDesc": "Установить версию #version#?"
     },
     "inbounds": {
       "title": "Входящие",

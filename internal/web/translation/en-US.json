@@ -258,7 +258,17 @@
       "migrationDownload": "Download Migration",
       "migrationDownloadDesc": "Click to download a portable .dump (SQL text) export of your SQLite database.",
       "migrationDownloadPgDesc": "Click to download a .db SQLite database built from your PostgreSQL data, ready to run this panel on SQLite.",
-      "vkTurnLogs": "VK Turn logs"
+      "vkTurnLogs": "VK Turn logs",
+      "vkTurnManage": "VK Turn manage",
+      "vkTurnManageTitle": "VK Turn Proxy",
+      "vkTurnInstalled": "Installed version",
+      "vkTurnRunningCount": "Running",
+      "vkTurnStart": "Start",
+      "vkTurnStop": "Stop",
+      "vkTurnRestart": "Restart",
+      "vkTurnVersions": "Versions",
+      "vkTurnInstallDialog": "Install vk-turn-proxy",
+      "vkTurnInstallDialogDesc": "Install version #version#?"
     },
     "inbounds": {
       "title": "Inbounds",

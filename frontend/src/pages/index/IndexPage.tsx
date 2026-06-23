@@ -54,6 +54,7 @@ const SystemHistoryModal = lazy(() => import('./SystemHistoryModal'));
 const XrayMetricsModal = lazy(() => import('./XrayMetricsModal'));
 const XrayLogModal = lazy(() => import('./XrayLogModal'));
 const VkTurnProxyLogModal = lazy(() => import('./VkTurnProxyLogModal'));
+const VkTurnProxyManageModal = lazy(() => import('./VkTurnProxyManageModal'));
 const VersionModal = lazy(() => import('./VersionModal'));
 import './IndexPage.css';
 
@@ -82,6 +83,7 @@ export default function IndexPage() {
   const [xrayMetricsOpen, setXrayMetricsOpen] = useState(false);
   const [xrayLogsOpen, setXrayLogsOpen] = useState(false);
   const [vkTurnLogsOpen, setVkTurnLogsOpen] = useState(false);
+  const [vkTurnManageOpen, setVkTurnManageOpen] = useState(false);
   const [versionOpen, setVersionOpen] = useState(false);
   const [configTextOpen, setConfigTextOpen] = useState(false);
   const [configText, setConfigText] = useState('');
@@ -209,6 +211,14 @@ export default function IndexPage() {
                         <Space className="action" key="vkturnlogs" onClick={() => setVkTurnLogsOpen(true)}>
                           <BarsOutlined />
                           {!isMobile && <span>{t('pages.index.vkTurnLogs')}</span>}
+                        </Space>,
+                        <Space
+                          className="action"
+                          key="vkturnmanage"
+                          onClick={() => setVkTurnManageOpen(true)}
+                        >
+                          <ThunderboltOutlined />
+                          {!isMobile && <span>{t('pages.index.vkTurnManage')}</span>}
                         </Space>,
                         <Space className="action" key="config" onClick={openConfig}>
                           <ControlOutlined />
@@ -482,6 +492,13 @@ export default function IndexPage() {
         </LazyMount>
         <LazyMount when={vkTurnLogsOpen}>
           <VkTurnProxyLogModal open={vkTurnLogsOpen} onClose={() => setVkTurnLogsOpen(false)} />
+        </LazyMount>
+        <LazyMount when={vkTurnManageOpen}>
+          <VkTurnProxyManageModal
+            open={vkTurnManageOpen}
+            onClose={() => setVkTurnManageOpen(false)}
+            onBusy={setBusy}
+          />
         </LazyMount>
         <LazyMount when={versionOpen}>
           <VersionModal
