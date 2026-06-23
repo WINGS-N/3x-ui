@@ -41,14 +41,11 @@ func GetReleaseAssetName() (string, error) {
 }
 
 type Spec struct {
-	ID                  int
-	Remark              string
-	Listen              string
-	Connect             string
-	SessionMode         string
-	WbStreamRoomID      string
-	WbStreamDisplayName string
-	WbStreamE2ESecret   string
+	ID          int
+	Remark      string
+	Listen      string
+	Connect     string
+	SessionMode string
 	// WRAP SRTP-mimicry obfuscation: bypasses VK TURN content filter.
 	// WrapMode == "" or "on" enables the listener-side acceptance of
 	// client-proposed WRAP via mu/v1 SessionHello; "off" disables it
@@ -83,9 +80,6 @@ func (s Spec) Key() string {
 		s.Listen,
 		s.Connect,
 		s.SessionMode,
-		s.WbStreamRoomID,
-		s.WbStreamDisplayName,
-		s.WbStreamE2ESecret,
 		s.WrapMode,
 		s.WrapCipher,
 		s.WrapKeyHex,
@@ -190,15 +184,6 @@ func (p *Process) Start() (err error) {
 		}
 		if p.spec.WrapAcceptClientKeys != nil && !*p.spec.WrapAcceptClientKeys {
 			args = append(args, "-wrap-accept-client-keys=false")
-		}
-	}
-	if roomID := strings.TrimSpace(p.spec.WbStreamRoomID); roomID != "" {
-		args = append(args, "-wb-stream-room-id", roomID)
-		if displayName := strings.TrimSpace(p.spec.WbStreamDisplayName); displayName != "" {
-			args = append(args, "-wb-stream-display-name", displayName)
-		}
-		if secret := strings.TrimSpace(p.spec.WbStreamE2ESecret); secret != "" {
-			args = append(args, "-wb-stream-e2e-secret", secret)
 		}
 	}
 

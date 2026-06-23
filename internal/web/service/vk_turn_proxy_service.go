@@ -92,29 +92,23 @@ type VKTurnProxySettings struct {
 	// VK call links shared by every client of this inbound. Per-client
 	// link/links/linkSecondary may still override these on the export
 	// path (legacy data and edge cases).
-	Link                      string              `json:"link,omitempty"`
-	Links                     []string            `json:"links,omitempty"`
-	LinkSecondary             string              `json:"linkSecondary,omitempty"`
-	SessionMode               string              `json:"sessionMode,omitempty"`
-	LocalEndpoint             string              `json:"localEndpoint,omitempty"`
-	WGDNS                     string              `json:"wgDns,omitempty"`
-	WGMTU                     int                 `json:"wgMtu,omitempty"`
-	WGAllowedIPs              string              `json:"wgAllowedIps,omitempty"`
-	Threads                   int                 `json:"threads,omitempty"`
-	UseUDP                    *bool               `json:"useUdp,omitempty"`
-	NoObfuscation             *bool               `json:"noObfuscation,omitempty"`
-	CredsGroupSize            int                 `json:"credsGroupSize,omitempty"`
-	WbStreamEnabled           bool                `json:"wbStreamEnabled,omitempty"`
-	WbStreamRoomID            string              `json:"wbStreamRoomId,omitempty"`
-	WbStreamDisplayName       string              `json:"wbStreamDisplayName,omitempty"`
-	WbStreamE2EEnabled        bool                `json:"wbStreamE2eEnabled,omitempty"`
-	WbStreamE2ESecret         string              `json:"wbStreamE2eSecret,omitempty"`
-	WbStreamExchangeViaVKTurn bool                `json:"wbStreamExchangeViaVkTurn,omitempty"`
-	WrapMode                  string              `json:"wrapMode,omitempty"`
-	WrapCipher                string              `json:"wrapCipher,omitempty"`
-	WrapKeyHex                string              `json:"wrapKeyHex,omitempty"`
-	WrapAcceptClientKeys      *bool               `json:"wrapAcceptClientKeys,omitempty"`
-	Clients                   []VKTurnProxyClient `json:"clients,omitempty"`
+	Link                 string              `json:"link,omitempty"`
+	Links                []string            `json:"links,omitempty"`
+	LinkSecondary        string              `json:"linkSecondary,omitempty"`
+	SessionMode          string              `json:"sessionMode,omitempty"`
+	LocalEndpoint        string              `json:"localEndpoint,omitempty"`
+	WGDNS                string              `json:"wgDns,omitempty"`
+	WGMTU                int                 `json:"wgMtu,omitempty"`
+	WGAllowedIPs         string              `json:"wgAllowedIps,omitempty"`
+	Threads              int                 `json:"threads,omitempty"`
+	UseUDP               *bool               `json:"useUdp,omitempty"`
+	NoObfuscation        *bool               `json:"noObfuscation,omitempty"`
+	CredsGroupSize       int                 `json:"credsGroupSize,omitempty"`
+	WrapMode             string              `json:"wrapMode,omitempty"`
+	WrapCipher           string              `json:"wrapCipher,omitempty"`
+	WrapKeyHex           string              `json:"wrapKeyHex,omitempty"`
+	WrapAcceptClientKeys *bool               `json:"wrapAcceptClientKeys,omitempty"`
+	Clients              []VKTurnProxyClient `json:"clients,omitempty"`
 }
 
 type VKTurnProxyPeerBinding struct {
@@ -444,13 +438,6 @@ func (s *VKTurnProxyService) loadDesiredSpecs() (map[int]vkturnproxy.Spec, error
 			WrapCipher:           settings.WrapCipher,
 			WrapKeyHex:           settings.WrapKeyHex,
 			WrapAcceptClientKeys: settings.WrapAcceptClientKeys,
-		}
-		if settings.WbStreamEnabled && !settings.WbStreamExchangeViaVKTurn {
-			spec.WbStreamRoomID = strings.TrimSpace(settings.WbStreamRoomID)
-			spec.WbStreamDisplayName = strings.TrimSpace(settings.WbStreamDisplayName)
-			if settings.WbStreamE2EEnabled {
-				spec.WbStreamE2ESecret = strings.TrimSpace(settings.WbStreamE2ESecret)
-			}
 		}
 		specs[inbound.Id] = spec
 	}
@@ -783,25 +770,6 @@ func (s *InboundService) validateVKTurnProxySettings(settings *VKTurnProxySettin
 		return common.NewError("clients can be configured only for wireguard inbound forwarding")
 	}
 
-	if settings.WbStreamEnabled {
-		if settings.Forward.Type != VKTurnProxyForwardWireGuardInbound {
-			return common.NewError("WB Stream requires forwarding to a wireguard inbound")
-		}
-		if !settings.WbStreamExchangeViaVKTurn && strings.TrimSpace(settings.WbStreamRoomID) == "" {
-			return common.NewError("WB Stream room id is required when room exchange via VK TURN is disabled")
-		}
-		if settings.WbStreamE2EEnabled {
-			secret := strings.TrimSpace(settings.WbStreamE2ESecret)
-			if secret == "" {
-				return common.NewError("WB Stream E2E secret is required when E2E is enabled")
-			}
-			if _, err := base64.StdEncoding.DecodeString(secret); err != nil {
-				if _, err := base64.RawStdEncoding.DecodeString(secret); err != nil {
-					return common.NewError("WB Stream E2E secret must be base64-encoded")
-				}
-			}
-		}
-	}
 	return nil
 }
 

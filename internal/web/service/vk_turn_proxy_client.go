@@ -1048,10 +1048,6 @@ func (s *InboundService) buildVKTurnProxyExportConfig(inbound *model.Inbound, se
 
 	configType := wingsvproto.ConfigType_CONFIG_TYPE_VK
 	backend := wingsvproto.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD
-	if settings.WbStreamEnabled {
-		configType = wingsvproto.ConfigType_CONFIG_TYPE_WB_STREAM
-		backend = wingsvproto.BackendType_BACKEND_TYPE_WB_STREAM
-	}
 
 	config := &wingsvproto.Config{
 		Ver:     vkTurnProxyCurrentVersion,
@@ -1074,30 +1070,6 @@ func (s *InboundService) buildVKTurnProxyExportConfig(inbound *model.Inbound, se
 				PublicKey: serverPublicKeyBytes,
 			},
 		},
-	}
-
-	if settings.WbStreamEnabled {
-		wb := &wingsvproto.WbStream{
-			RoomId:            strings.TrimSpace(settings.WbStreamRoomID),
-			ExchangeViaVkTurn: settings.WbStreamExchangeViaVKTurn,
-			E2EEnabled:        settings.WbStreamE2EEnabled,
-			DisplayName:       strings.TrimSpace(settings.WbStreamDisplayName),
-		}
-		if wb.DisplayName == "" {
-			wb.DisplayName = strings.TrimSpace(client.Email)
-		}
-		if settings.WbStreamE2EEnabled {
-			secret := strings.TrimSpace(settings.WbStreamE2ESecret)
-			decoded, err := base64.StdEncoding.DecodeString(secret)
-			if err != nil {
-				decoded, err = base64.RawStdEncoding.DecodeString(secret)
-				if err != nil {
-					return nil, common.NewError("WB Stream E2E secret must be base64-encoded")
-				}
-			}
-			wb.E2ESecret = decoded
-		}
-		config.WbStream = wb
 	}
 
 	if len(links) > 1 {
