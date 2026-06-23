@@ -45,6 +45,7 @@ import { LazyMount } from '@/components/utility';
 import { setMessageInstance } from '@/utils/messageBus';
 import StatusCard from './StatusCard';
 import XrayStatusCard from './XrayStatusCard';
+import VkTurnProxyStatusCard from './VkTurnProxyStatusCard';
 import type { PanelUpdateInfo } from './PanelUpdateModal';
 const JsonEditor = lazy(() => import('@/components/form/JsonEditor'));
 const PanelUpdateModal = lazy(() => import('./PanelUpdateModal'));
@@ -119,6 +120,16 @@ export default function IndexPage() {
 
   const restartXray = useCallback(async () => {
     await HttpUtil.post('/panel/api/server/restartXrayService');
+    await refresh();
+  }, [refresh]);
+
+  const stopVkTurn = useCallback(async () => {
+    await HttpUtil.post('/panel/api/server/vk-turn-proxy/stop');
+    await refresh();
+  }, [refresh]);
+
+  const restartVkTurn = useCallback(async () => {
+    await HttpUtil.post('/panel/api/server/vk-turn-proxy/restart');
     await refresh();
   }, [refresh]);
 
@@ -200,6 +211,17 @@ export default function IndexPage() {
                   </Col>
 
                   <Col xs={24} lg={12}>
+                    <VkTurnProxyStatusCard
+                      status={status}
+                      isMobile={isMobile}
+                      onStop={stopVkTurn}
+                      onRestart={restartVkTurn}
+                      onOpenLogs={() => setVkTurnLogsOpen(true)}
+                      onOpenManage={() => setVkTurnManageOpen(true)}
+                    />
+                  </Col>
+
+                  <Col xs={24} lg={12}>
                     <Card
                       title={t('menu.link')}
                       hoverable
@@ -207,18 +229,6 @@ export default function IndexPage() {
                         <Space className="action" key="logs" onClick={() => setLogsOpen(true)}>
                           <BarsOutlined />
                           {!isMobile && <span>{t('pages.index.logs')}</span>}
-                        </Space>,
-                        <Space className="action" key="vkturnlogs" onClick={() => setVkTurnLogsOpen(true)}>
-                          <BarsOutlined />
-                          {!isMobile && <span>{t('pages.index.vkTurnLogs')}</span>}
-                        </Space>,
-                        <Space
-                          className="action"
-                          key="vkturnmanage"
-                          onClick={() => setVkTurnManageOpen(true)}
-                        >
-                          <ThunderboltOutlined />
-                          {!isMobile && <span>{t('pages.index.vkTurnManage')}</span>}
                         </Space>,
                         <Space className="action" key="config" onClick={openConfig}>
                           <ControlOutlined />
