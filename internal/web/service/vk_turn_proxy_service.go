@@ -348,10 +348,14 @@ func (s *VKTurnProxyService) GetStatus() VKTurnProxyRuntimeStatus {
 	switch {
 	case !status.Available:
 		status.State = Stop
+	case status.Running > 0 && status.Running == status.Enabled:
+		// Sidecars are actually alive and match every desired spec: report
+		// running even if a stale manualStop flag lingers (EnsureRunning's
+		// early return leaves live processes untouched), so the dashboard
+		// reflects reality instead of showing "stopped" for a running relay.
+		status.State = Running
 	case s.manualStop || status.Enabled == 0 || status.Running == 0 && status.ErrorMsg == "":
 		status.State = Stop
-	case status.Running == status.Enabled:
-		status.State = Running
 	default:
 		status.State = Error
 		if status.ErrorMsg == "" {
