@@ -473,6 +473,11 @@ export const sections: readonly Section[] = [
       },
       {
         method: 'GET',
+        path: '/panel/api/server/vk-turn-proxy/status',
+        summary: 'Return the vk-turn-proxy runtime status (state, running count, installed version).',
+      },
+      {
+        method: 'GET',
         path: '/panel/api/server/vk-turn-proxy/versions',
         summary: 'List the vk-turn-proxy binary release tags available for install (cached).',
       },
