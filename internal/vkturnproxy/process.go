@@ -277,7 +277,14 @@ func (w *logWriter) Write(data []byte) (int, error) {
 		w.last = line
 		w.mu.Unlock()
 		w.recordHeartbeat(line)
-		logger.Debugf("VKTURN[%d:%s] %s", w.id, w.remark, line)
+		// Surface real relay output at info so the panel log viewer (which
+		// requests info by default) actually shows it; keep the very frequent
+		// heartbeat lines at debug so they do not flood 3xui.log.
+		if heartbeatLinePattern.MatchString(line) {
+			logger.Debugf("VKTURN[%d:%s] %s", w.id, w.remark, line)
+		} else {
+			logger.Infof("VKTURN[%d:%s] %s", w.id, w.remark, line)
+		}
 	}
 	return len(data), nil
 }
