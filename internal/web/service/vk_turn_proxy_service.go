@@ -22,6 +22,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/logger"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
+	"github.com/mhsanaei/3x-ui/v3/internal/util/random"
 	"github.com/mhsanaei/3x-ui/v3/internal/vkturnproxy"
 	wingsvproto "github.com/mhsanaei/3x-ui/v3/internal/wingsv/proto"
 	"golang.org/x/crypto/curve25519"
@@ -194,6 +195,14 @@ func (s *VKTurnProxyService) persistManualStopLocked(value bool) {
 	if err := (&SettingService{}).SetVKTurnProxyManualStop(value); err != nil {
 		logger.Warning("vk-turn-proxy: failed to persist manualStop flag:", err)
 	}
+}
+
+// ReconcileClientPeers enforces per-client traffic/expiry limits by pulling or
+// restoring the managed wireguard peers of every vk-turn-proxy inbound. Runs
+// outside the process mutex so a wireguard inbound update can't stall the
+// sidecar reconcile loop.
+func (s *VKTurnProxyService) ReconcileClientPeers() error {
+	return s.inboundService.ReconcileVKTurnProxyClientPeers()
 }
 
 func (s *VKTurnProxyService) EnsureRunning() error {
@@ -715,6 +724,9 @@ func (s *InboundService) normalizeVKTurnProxyClient(client *VKTurnProxyClient, i
 	now := time.Now().UnixMilli()
 	if client.ID == "" {
 		client.ID = uuid.NewString()
+	}
+	if strings.TrimSpace(client.SubID) == "" {
+		client.SubID = random.Seq(16)
 	}
 	if isNew && client.CreatedAt == 0 {
 		client.CreatedAt = now

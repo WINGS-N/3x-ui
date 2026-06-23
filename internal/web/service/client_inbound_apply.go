@@ -246,6 +246,9 @@ func (s *ClientService) checkEmailsExistForClients(inboundSvc *InboundService, c
 }
 
 func (s *ClientService) AddInboundClient(inboundSvc *InboundService, data *model.Inbound) (bool, error) {
+	if oldInbound, err := inboundSvc.GetInbound(data.Id); err == nil && oldInbound.Protocol == model.VKTurnProxy {
+		return inboundSvc.AddVKTurnProxyClient(data)
+	}
 	return s.addInboundClient(inboundSvc, data, nil)
 }
 
@@ -439,6 +442,12 @@ func (s *ClientService) addInboundClient(inboundSvc *InboundService, data *model
 }
 
 func (s *ClientService) UpdateInboundClient(inboundSvc *InboundService, data *model.Inbound, oldEmail string) (bool, error) {
+	if oldInbound, err := inboundSvc.GetInbound(data.Id); err == nil && oldInbound.Protocol == model.VKTurnProxy {
+		if clientID, ok := inboundSvc.vkTurnProxyClientIDByEmail(data.Id, oldEmail); ok {
+			return inboundSvc.UpdateVKTurnProxyClient(data, clientID)
+		}
+		return false, common.NewError("vk-turn-proxy client not found for email:", oldEmail)
+	}
 	defer lockInbound(data.Id).Unlock()
 
 	clients, err := inboundSvc.GetClients(data)
@@ -723,6 +732,13 @@ func (s *ClientService) DelInboundClientByEmail(inboundSvc *InboundService, inbo
 	if err != nil {
 		logger.Error("Load Old Data Error")
 		return false, err
+	}
+
+	if oldInbound.Protocol == model.VKTurnProxy {
+		if clientID, ok := inboundSvc.vkTurnProxyClientIDByEmail(inboundId, email); ok {
+			return inboundSvc.DelVKTurnProxyClient(inboundId, clientID)
+		}
+		return false, nil
 	}
 
 	var settings map[string]any
