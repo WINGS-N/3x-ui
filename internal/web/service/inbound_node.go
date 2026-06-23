@@ -896,10 +896,28 @@ func (s *InboundService) restartRemoteNodesOnDisable(nodeIDs []int) {
 }
 
 func (s *InboundService) GetOnlineClients() []string {
-	if p == nil {
-		return []string{}
+	var emails []string
+	if p != nil {
+		emails = p.GetOnlineClients()
 	}
-	return p.GetOnlineClients()
+	// Fold in vk-turn-proxy clients reported online by the sidecar heartbeat
+	// (they don't show up in xray's online stats).
+	if onlineEmails, _, _, hbErr := s.getVKTurnProxyHeartbeatPresence(time.Now()); hbErr == nil && len(onlineEmails) > 0 {
+		seen := make(map[string]struct{}, len(emails))
+		for _, e := range emails {
+			seen[e] = struct{}{}
+		}
+		for email := range onlineEmails {
+			if _, ok := seen[email]; !ok {
+				emails = append(emails, email)
+				seen[email] = struct{}{}
+			}
+		}
+	}
+	if emails == nil {
+		emails = []string{}
+	}
+	return emails
 }
 
 // GetOnlineClientsByGuid returns online emails keyed by the panelGuid of the
@@ -998,6 +1016,15 @@ func (s *InboundService) GetClientsLastOnline() (map[string]int64, error) {
 	result := make(map[string]int64, len(rows))
 	for _, r := range rows {
 		result[r.Email] = r.LastOnline
+	}
+	// vk-turn-proxy clients report presence through the sidecar heartbeat, not
+	// xray stats, so fold their last-seen timestamps in (newest wins).
+	if _, _, heartbeatLastOnline, hbErr := s.getVKTurnProxyHeartbeatPresence(time.Now()); hbErr == nil {
+		for email, lastSeen := range heartbeatLastOnline {
+			if lastSeen > result[email] {
+				result[email] = lastSeen
+			}
+		}
 	}
 	return result, nil
 }
