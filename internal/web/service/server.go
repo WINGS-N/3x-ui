@@ -86,12 +86,13 @@ type Status struct {
 		ErrorMsg string       `json:"errorMsg"`
 		Version  string       `json:"version"`
 	} `json:"xray"`
-	PanelVersion string    `json:"panelVersion"`
-	PanelGuid    string    `json:"panelGuid"`
-	Uptime       uint64    `json:"uptime"`
-	Loads        []float64 `json:"loads"`
-	TcpCount     int       `json:"tcpCount"`
-	UdpCount     int       `json:"udpCount"`
+	VKTurnProxy  VKTurnProxyRuntimeStatus `json:"vkTurnProxy"`
+	PanelVersion string                   `json:"panelVersion"`
+	PanelGuid    string                   `json:"panelGuid"`
+	Uptime       uint64                   `json:"uptime"`
+	Loads        []float64                `json:"loads"`
+	TcpCount     int                      `json:"tcpCount"`
+	UdpCount     int                      `json:"udpCount"`
 	NetIO        struct {
 		Up      uint64 `json:"up"`
 		Down    uint64 `json:"down"`
@@ -592,6 +593,7 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 		status.Xray.ErrorMsg = s.xrayService.GetXrayResult()
 	}
 	status.Xray.Version = s.xrayService.GetXrayVersion()
+	status.VKTurnProxy = VKTurnProxyRuntime().GetStatus()
 	status.PanelVersion = config.GetVersion()
 	if guid, err := s.settingService.GetPanelGuid(); err == nil {
 		status.PanelGuid = guid
