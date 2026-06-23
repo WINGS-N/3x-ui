@@ -752,7 +752,7 @@ const (
 
 func (s *ServerService) GetXrayVersions() ([]string, error) {
 	const (
-		XrayURL    = "https://api.github.com/repos/XTLS/Xray-core/releases"
+		XrayURL    = "https://api.github.com/repos/WINGS-N/Xray-core/releases"
 		bufferSize = 8192
 	)
 
@@ -854,7 +854,7 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 	}
 
 	fileName := fmt.Sprintf("Xray-%s-%s.zip", osName, arch)
-	url := fmt.Sprintf("https://github.com/XTLS/Xray-core/releases/download/%s/%s", version, fileName)
+	url := fmt.Sprintf("https://github.com/WINGS-N/Xray-core/releases/download/%s/%s", version, fileName)
 	client := s.settingService.NewProxiedHTTPClient(60 * time.Second)
 	resp, err := client.Get(url)
 	if err != nil {
