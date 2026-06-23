@@ -145,6 +145,12 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		if inbound.Protocol == model.MTProto {
 			continue
 		}
+		// vk-turn-proxy inbounds are served by the standalone vk-turn-proxy
+		// binary, not by Xray. Emitting them into config.json makes Xray abort
+		// the whole config with "unknown config id: vk-turn-proxy".
+		if inbound.Protocol == model.VKTurnProxy {
+			continue
+		}
 		settings := map[string]any{}
 		json.Unmarshal([]byte(inbound.Settings), &settings)
 
