@@ -298,6 +298,12 @@ func (s *VKTurnProxyService) GetStatus() VKTurnProxyRuntimeStatus {
 		Total:     total,
 		State:     Stop,
 	}
+	// The installed version is recorded as a ".release" sidecar next to the
+	// binary by installBinary; surface it so the panel shows which build is in
+	// use instead of a blank field.
+	if tag, rerr := readReleaseMetadata(vkturnproxy.GetBinaryPath()); rerr == nil {
+		status.Version = strings.TrimPrefix(tag, "v")
+	}
 	if err != nil {
 		status.State = Error
 		status.ErrorMsg = err.Error()
