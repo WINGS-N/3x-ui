@@ -60,6 +60,9 @@ const (
 )
 
 func initModels() error {
+	if err := migrateLegacyApiTokensTable(); err != nil {
+		return fmt.Errorf("migrate legacy api_tokens table: %w", err)
+	}
 	models := []any{
 		&model.User{},
 		&model.Inbound{},
@@ -87,7 +90,7 @@ func initModels() error {
 				log.Printf("Ignoring duplicate column during auto migration for %T: %v", mdl, err)
 				continue
 			}
-			log.Printf("Error auto migrating model: %v", err)
+			log.Printf("Error auto migrating model %T: %v", mdl, err)
 			return err
 		}
 	}
@@ -134,6 +137,31 @@ func dropLegacyForeignKeys() error {
 // flip the fresh-DB detection in runSeeders). Runs right after AutoMigrate,
 // before anything reads or writes Host rows (critical on Postgres, where the
 // column stays boolean-typed until the ALTER below).
+// migrateLegacyApiTokensTable moves aside a pre-v3 api_tokens table so AutoMigrate
+// can create the current ApiToken schema (name/token/enabled) fresh. The legacy
+// 2.x table used a different, SHA-256 "token_hash" auth schema (user_id/token_hash/
+// preview/last_used_at/updated_at) that the current code cannot reuse, and AutoMigrate
+// would otherwise crash trying to ADD the NOT NULL "token" column to it ("Cannot add a
+// NOT NULL column with default value NULL"). The legacy rows are preserved in
+// api_tokens_legacy_v2 as a backup. Idempotent: once api_tokens has the new schema this
+// is a no-op. The rename SQL is portable across SQLite and PostgreSQL.
+func migrateLegacyApiTokensTable() error {
+	if !db.Migrator().HasTable(&model.ApiToken{}) {
+		return nil
+	}
+	// Only act on the legacy schema: it has token_hash and lacks the new token column.
+	if !db.Migrator().HasColumn(&model.ApiToken{}, "token_hash") ||
+		db.Migrator().HasColumn(&model.ApiToken{}, "token") {
+		return nil
+	}
+	const backup = "api_tokens_legacy_v2"
+	if db.Migrator().HasTable(backup) {
+		// A backup from a prior run already exists; drop the incompatible legacy table.
+		return db.Exec("DROP TABLE api_tokens").Error
+	}
+	return db.Exec("ALTER TABLE api_tokens RENAME TO " + backup).Error
+}
+
 func migrateHostVerifyPeerCertByNameColumn() error {
 	if !db.Migrator().HasColumn(&model.Host{}, "verify_peer_cert_by_name") {
 		return nil
