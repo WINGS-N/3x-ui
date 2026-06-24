@@ -25,6 +25,7 @@ const PROTOCOL_LABELS: Record<string, string> = {
   hysteria: 'Hysteria',
   wireguard: 'WireGuard',
   wg: 'WireGuard',
+  wingsv: 'WINGS V',
 };
 
 const PROTOCOL_COLORS: Record<string, string> = {
@@ -35,6 +36,7 @@ const PROTOCOL_COLORS: Record<string, string> = {
   Hysteria: 'magenta',
   Hysteria2: 'magenta',
   WireGuard: 'cyan',
+  'WINGS V': 'orange',
 };
 
 const SECURITY_COLORS: Record<string, string> = {

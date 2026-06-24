@@ -187,6 +187,16 @@ export default function SubPage() {
 
   const androidMenuItems = useMemo(() => [
     {
+      key: 'android-wingsv',
+      label: (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          WINGS V
+          <Tag color="green" style={{ marginInlineEnd: 0 }}>{t('subscription.recommended')}</Tag>
+        </span>
+      ),
+      onClick: () => open('https://github.com/WINGS-N/WINGSV'),
+    },
+    {
       key: 'android-v2box',
       label: 'V2Box',
       onClick: () => open(`v2box://install-sub?url=${encodeURIComponent(subUrl)}&name=${encodeURIComponent(sId)}`),
@@ -200,7 +210,7 @@ export default function SubPage() {
     { key: 'android-v2raytun', label: 'V2RayTun', onClick: () => copy(subUrl) },
     { key: 'android-npvtunnel', label: 'NPV Tunnel', onClick: () => copy(subUrl) },
     { key: 'android-happ', label: 'Happ', onClick: () => open(`happ://add/${subUrl}`) },
-  ], [copy, open]);
+  ], [copy, open, t]);
 
   const iosMenuItems = useMemo(() => [
     { key: 'ios-shadowrocket', label: 'Shadowrocket', onClick: () => open(shadowrocketUrl) },
@@ -417,7 +427,10 @@ export default function SubPage() {
                       {links.map((link, idx) => {
                         const parts = parseLinkParts(link);
                         const fallback = `Link ${idx + 1}`;
-                        const rowTitle = parts?.remark || fallback;
+                        // Links that carry no in-URL remark (e.g. wingsv://, whose name
+                        // lives inside the encoded payload) fall back to the client email
+                        // instead of a generic "Link N".
+                        const rowTitle = parts?.remark || linkEmails[idx] || fallback;
                         const qrLabel = [parts?.remark, linkEmails[idx]].filter(Boolean).join('-') || rowTitle;
                         const canQr = !isPostQuantumLink(link);
                         return (

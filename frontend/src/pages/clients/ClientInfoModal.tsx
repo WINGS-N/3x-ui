@@ -356,7 +356,10 @@ export default function ClientInfoModal({
                 {links.map((link, idx) => {
                   const parts = parseLinkParts(link);
                   const fallback = `${t('pages.clients.link')} ${idx + 1}`;
-                  const rowTitle = (parts && linkMetaText(parts)) || fallback;
+                  // Links without an in-URL remark (e.g. wingsv://, whose name lives
+                  // inside the encoded payload) fall back to the client email rather
+                  // than a generic "Link N".
+                  const rowTitle = (parts && linkMetaText(parts)) || client.email || fallback;
                   const qrRemark = [parts?.remark, client.email].filter(Boolean).join('-') || rowTitle;
                   const canQr = !isPostQuantumLink(link);
                   return (
