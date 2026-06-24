@@ -97,9 +97,6 @@ func initModels() error {
 	if err := migrateHostVerifyPeerCertByNameColumn(); err != nil {
 		return err
 	}
-	if err := migrateVKTurnAcceptClientKeysDefaultOn(); err != nil {
-		return err
-	}
 	if err := dropLegacyForeignKeys(); err != nil {
 		return err
 	}
@@ -168,6 +165,10 @@ func migrateLegacyApiTokensTable() error {
 // migrateVKTurnAcceptClientKeysDefaultOn forces wrapAcceptClientKeys=true on every
 // existing vk-turn-proxy inbound once (the field default flipped to ON). Guarded by
 // HistoryOfSeeders so a later user opt-out is not re-enabled on the next restart.
+// MUST run as a seeder from runSeeders (not as an initModels migration): writing a
+// HistoryOfSeeders row before runSeeders' fresh-DB check (isTableEmpty("history_of_seeders"))
+// would flip a brand-new DB to the non-fresh path and make the deferred seeders
+// (HostsFromExternalProxy etc.) run prematurely on an empty DB.
 func migrateVKTurnAcceptClientKeysDefaultOn() error {
 	const seederName = "VKTurnAcceptClientKeysDefaultOn"
 	var history []string
@@ -423,7 +424,7 @@ func runSeeders(isUsersEmpty bool) error {
 	}
 
 	if empty && isUsersEmpty {
-		seeders := []string{"UserPasswordHash", "ClientsTable", "InboundClientsArrayFix", "InboundClientTgIdFix", "InboundClientSubIdFix", "FreedomFinalRulesReverseFix", "ApiTokensHash", "LegacyProxySettingsCleanup"}
+		seeders := []string{"UserPasswordHash", "ClientsTable", "InboundClientsArrayFix", "InboundClientTgIdFix", "InboundClientSubIdFix", "FreedomFinalRulesReverseFix", "ApiTokensHash", "LegacyProxySettingsCleanup", "VKTurnAcceptClientKeysDefaultOn"}
 		for _, name := range seeders {
 			if err := db.Create(&model.HistoryOfSeeders{SeederName: name}).Error; err != nil {
 				return err
@@ -519,6 +520,11 @@ func runSeeders(isUsersEmpty bool) error {
 	// Self-gated on the "HostsFromExternalProxy" row, so it is safe to call
 	// unconditionally here.
 	if err := seedHostsFromExternalProxy(); err != nil {
+		return err
+	}
+
+	// Self-gated on the "VKTurnAcceptClientKeysDefaultOn" row.
+	if err := migrateVKTurnAcceptClientKeysDefaultOn(); err != nil {
 		return err
 	}
 
