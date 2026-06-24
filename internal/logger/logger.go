@@ -16,9 +16,12 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+// LogFileName is the panel log file name written under the log folder. It is
+// exported so the web service can tail the same file the file backend writes.
+const LogFileName = "3xui.log"
+
 const (
 	maxLogBufferSize = 10240                 // Maximum log entries kept in memory
-	logFileName      = "3xui.log"            // Log file name
 	timeFormat       = "2006/01/02 15:04:05" // Log timestamp format
 
 	// On-disk rotation limits — single file capped, old segments pruned automatically.
@@ -101,7 +104,7 @@ func initFileBackend() logging.Backend {
 		return nil
 	}
 
-	logPath := filepath.Join(logDir, logFileName)
+	logPath := filepath.Join(logDir, LogFileName)
 	fileRotate = &lumberjack.Logger{
 		Filename:   logPath,
 		MaxSize:    maxLogFileMB,

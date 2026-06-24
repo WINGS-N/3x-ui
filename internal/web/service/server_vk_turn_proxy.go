@@ -109,7 +109,7 @@ func (s *ServerService) GetVKTurnProxyLogs(count string, level string) []string 
 		countInt = 20
 	}
 
-	if logs := tailMatchingLogLines(filepath.Join(config.GetLogFolder(), "3xui.log"), countInt, level, "VKTURN["); len(logs) > 0 {
+	if logs := tailMatchingLogLines(filepath.Join(config.GetLogFolder(), logger.LogFileName), countInt, level, "VKTURN["); len(logs) > 0 {
 		return logs
 	}
 
@@ -208,7 +208,7 @@ func panelLogMatchesLevel(line string, maxLevel string) bool {
 
 func panelLogLevelRank(level string) int {
 	switch strings.ToUpper(strings.TrimSpace(level)) {
-	case "ERROR":
+	case "CRITICAL", "CRIT", "ERROR", "ERR":
 		return 1
 	case "WARNING", "WARN":
 		return 2

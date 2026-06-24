@@ -1094,6 +1094,15 @@ func (s *ServerService) GetLogs(count string, level string, syslog string) []str
 		}
 		lines = strings.Split(out.String(), "\n")
 	} else {
+		// Prefer the rotating panel log file: it survives restarts and holds the
+		// full history, so picking a large count returns real lines instead of
+		// only what the in-memory ring buffer happens to hold this run. Fall back
+		// to the in-memory buffer when the file is missing or unreadable.
+		if c > 0 {
+			if fileLines := tailMatchingLogLines(filepath.Join(config.GetLogFolder(), logger.LogFileName), c, level, ""); len(fileLines) > 0 {
+				return fileLines
+			}
+		}
 		lines = logger.GetLogs(c, level)
 	}
 
