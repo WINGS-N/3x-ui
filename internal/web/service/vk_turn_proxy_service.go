@@ -300,8 +300,17 @@ func (s *VKTurnProxyService) GetStatus() VKTurnProxyRuntimeStatus {
 	}
 	// The installed version is recorded as a ".release" sidecar next to the
 	// binary by installBinary; surface it so the panel shows which build is in
-	// use instead of a blank field.
-	if tag, rerr := readReleaseMetadata(vkturnproxy.GetBinaryPath()); rerr == nil {
+	// use instead of a blank field. When the sidecar is missing (e.g. an image
+	// rebuild or volume reset dropped it) fall back to the release tag persisted
+	// in settings so the card still shows a version instead of "manage". The
+	// vk-turn-proxy server binary exposes no -version flag, so there is no exec
+	// fallback to derive it from the binary itself.
+	settingService := &SettingService{}
+	if tag := resolveInstalledReleaseTag(
+		vkturnproxy.GetBinaryPath(),
+		settingService.GetVKTurnProxyReleaseTag,
+		settingService.SetVKTurnProxyReleaseTag,
+	); tag != "" && tag != unknownInstalledRelease {
 		status.Version = strings.TrimPrefix(tag, "v")
 	}
 	if err != nil {
