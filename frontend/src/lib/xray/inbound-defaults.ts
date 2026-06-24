@@ -300,7 +300,7 @@ export function createDefaultVkTurnProxyInboundSettings(): VkTurnProxyInboundSet
     useUdp: false,
     noObfuscation: false,
     wrapMode: 'off',
-    wrapAcceptClientKeys: false,
+    wrapAcceptClientKeys: true,
     clients: [],
   };
 }
