@@ -1590,7 +1590,8 @@ export const SCHEMAS: Record<string, unknown> = {
           "mixed",
           "tunnel",
           "tun",
-          "mtproto"
+          "mtproto",
+          "vk-turn-proxy"
         ],
         "example": "vless",
         "type": "string"

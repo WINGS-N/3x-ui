@@ -1616,7 +1616,8 @@
               "mixed",
               "tunnel",
               "tun",
-              "mtproto"
+              "mtproto",
+              "vk-turn-proxy"
             ],
             "example": "vless",
             "type": "string"
@@ -3171,6 +3172,88 @@
         }
       }
     },
+    "/panel/api/inbounds/{id}/wireguard/allowedIpConflicts": {
+      "get": {
+        "tags": [
+          "Inbounds"
+        ],
+        "summary": "List duplicate allowedIP conflicts (the 10.0.0.X/32 pool) among a wireguard inbound peers so the UI can offer an auto-fix.",
+        "operationId": "get_panel_api_inbounds_id_wireguard_allowedIpConflicts",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "WireGuard inbound ID.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/inbounds/{id}/wireguard/fixAllowedIpConflicts": {
+      "post": {
+        "tags": [
+          "Inbounds"
+        ],
+        "summary": "Reassign each duplicate 10.0.0.X/32 allowedIP in a wireguard inbound to a fresh unique address, re-sync any bound vk-turn-proxy client, and return the peers that were changed.",
+        "operationId": "post_panel_api_inbounds_id_wireguard_fixAllowedIpConflicts",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "WireGuard inbound ID.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/panel/api/inbounds/{id}/vk-turn-proxy/export/{clientId}": {
       "get": {
         "tags": [
@@ -4573,6 +4656,36 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/server/vk-turn-proxy/status": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Return the vk-turn-proxy runtime status (state, running count, installed version).",
+        "operationId": "get_panel_api_server_vk_turn_proxy_status",
         "responses": {
           "200": {
             "description": "Successful response",
