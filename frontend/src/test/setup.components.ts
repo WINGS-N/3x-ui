@@ -48,6 +48,17 @@ if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
 
+// jsdom does not implement Range.getClientRects, which AntD's text measurement
+// (rc-overflow/rc-select) calls during render; without it the render throws and
+// unrelated component tests fail. Return an empty rect list, matching jsdom's
+// no-layout behaviour.
+if (typeof Range !== 'undefined' && typeof Range.prototype.getClientRects !== 'function') {
+  Range.prototype.getClientRects = () =>
+    Object.assign([] as unknown[], { item: () => null }) as unknown as DOMRectList;
+  Range.prototype.getBoundingClientRect = () =>
+    ({ x: 0, y: 0, width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0, toJSON: () => ({}) }) as DOMRect;
+}
+
 if (!i18next.isInitialized) {
   void i18next.use(initReactI18next).init({
     lng: 'en-US',
