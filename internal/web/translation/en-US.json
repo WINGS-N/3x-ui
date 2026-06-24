@@ -1807,7 +1807,10 @@
         "allowedIPs": "Allowed IPs",
         "endpoint": "Endpoint",
         "psk": "PreShared Key",
-        "domainStrategy": "Domain Strategy"
+        "domainStrategy": "Domain Strategy",
+        "fixConflicts": "Fix conflicting",
+        "fixedConflictsTitle": "Fixed allowedIP conflicts",
+        "noConflicts": "No conflicts"
       },
       "tun": {
         "nameDesc": "The name of the TUN interface. Default is 'xray0'",

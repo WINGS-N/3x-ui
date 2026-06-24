@@ -1,14 +1,26 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Divider, Form, Input, InputNumber, Select, Space, Switch } from 'antd';
-import { MinusOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Button, Divider, Form, Input, InputNumber, Modal, Select, Space, Switch } from 'antd';
+import { MinusOutlined, PlusOutlined, ReloadOutlined, ToolOutlined } from '@ant-design/icons';
 
-import { Wireguard } from '@/utils';
+import { HttpUtil, Wireguard } from '@/utils';
 import { useOutboundTags } from '@/api/queries/useOutboundTags';
 
 interface WireguardFieldsProps {
   wgPubKey: string;
   regenInboundWg: () => void;
   regenWgPeerKeypair: (name: number) => void;
+  // Id of the existing inbound being edited, or null when creating a new
+  // one. The conflict fixer needs a persisted inbound to act on.
+  inboundId: number | null;
+}
+
+// FixedConflict mirrors the backend FixedAllowedIPConflict payload.
+interface FixedConflict {
+  publicKey: string;
+  oldIp: string;
+  newIp: string;
+  client: string;
 }
 
 function nextWgPeerAllowedIP(peers: Array<{ allowedIPs?: string[] }> | undefined): string {
@@ -37,10 +49,41 @@ function nextWgPeerAllowedIP(peers: Array<{ allowedIPs?: string[] }> | undefined
   return `${a}.${b}.${c}.${d}/${prefix}`;
 }
 
-export default function WireguardFields({ wgPubKey, regenInboundWg, regenWgPeerKeypair }: WireguardFieldsProps) {
+export default function WireguardFields({ wgPubKey, regenInboundWg, regenWgPeerKeypair, inboundId }: WireguardFieldsProps) {
   const { t } = useTranslation();
   const form = Form.useFormInstance();
   const { data: outboundTags } = useOutboundTags();
+  const [fixing, setFixing] = useState(false);
+
+  const fixConflicts = async () => {
+    if (inboundId == null) return;
+    setFixing(true);
+    try {
+      const msg = await HttpUtil.post<FixedConflict[]>(
+        `/panel/api/inbounds/${inboundId}/wireguard/fixAllowedIpConflicts`,
+      );
+      if (!msg.success) return;
+      const fixed = msg.obj ?? [];
+      Modal.info({
+        title: t('pages.xray.wireguard.fixedConflictsTitle'),
+        content:
+          fixed.length === 0 ? (
+            <span>{t('pages.xray.wireguard.noConflicts')}</span>
+          ) : (
+            <ul style={{ paddingInlineStart: 16, marginBottom: 0 }}>
+              {fixed.map((c) => (
+                <li key={`${c.publicKey}-${c.oldIp}`}>
+                  {(c.client || c.publicKey)}: {c.oldIp} {'->'} {c.newIp}
+                </li>
+              ))}
+            </ul>
+          ),
+      });
+    } finally {
+      setFixing(false);
+    }
+  };
+
   return (
     <>
       <Form.Item label={t('pages.xray.wireguard.secretKey')}>
@@ -95,21 +138,28 @@ export default function WireguardFields({ wgPubKey, regenInboundWg, regenWgPeerK
         {(fields, { add, remove }) => (
           <>
             <Form.Item label={t('pages.inbounds.form.peers')}>
-              <Button
-                size="small"
-                onClick={() => {
-                  const kp = Wireguard.generateKeypair();
-                  const peers = form.getFieldValue(['settings', 'peers']) as Array<{ allowedIPs?: string[] }> | undefined;
-                  add({
-                    privateKey: kp.privateKey,
-                    publicKey: kp.publicKey,
-                    allowedIPs: [nextWgPeerAllowedIP(peers)],
-                    keepAlive: 0,
-                  });
-                }}
-              >
-                <PlusOutlined /> {t('pages.inbounds.form.addPeer')}
-              </Button>
+              <Space wrap>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    const kp = Wireguard.generateKeypair();
+                    const peers = form.getFieldValue(['settings', 'peers']) as Array<{ allowedIPs?: string[] }> | undefined;
+                    add({
+                      privateKey: kp.privateKey,
+                      publicKey: kp.publicKey,
+                      allowedIPs: [nextWgPeerAllowedIP(peers)],
+                      keepAlive: 0,
+                    });
+                  }}
+                >
+                  <PlusOutlined /> {t('pages.inbounds.form.addPeer')}
+                </Button>
+                {inboundId != null && (
+                  <Button size="small" icon={<ToolOutlined />} loading={fixing} onClick={fixConflicts}>
+                    {t('pages.xray.wireguard.fixConflicts')}
+                  </Button>
+                )}
+              </Space>
             </Form.Item>
             {fields.map((field, idx) => (
               <div key={field.key} className="wg-peer">

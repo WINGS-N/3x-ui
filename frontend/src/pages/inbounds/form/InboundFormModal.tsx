@@ -675,7 +675,7 @@ export default function InboundFormModal({
 
   const protocolTab = (
     <>
-      {protocol === Protocols.WIREGUARD && <WireguardFields wgPubKey={wgPubKey} regenInboundWg={regenInboundWg} regenWgPeerKeypair={regenWgPeerKeypair} />}
+      {protocol === Protocols.WIREGUARD && <WireguardFields wgPubKey={wgPubKey} regenInboundWg={regenInboundWg} regenWgPeerKeypair={regenWgPeerKeypair} inboundId={mode === 'edit' && dbInbound ? dbInbound.id : null} />}
 
       {protocol === Protocols.TUN && <TunFields />}
 

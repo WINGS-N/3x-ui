@@ -1699,7 +1699,10 @@
         "allowedIPs": "Разрешенные IP-адреса",
         "endpoint": "Конечная точка",
         "psk": "Общий ключ",
-        "domainStrategy": "Стратегия домена"
+        "domainStrategy": "Стратегия домена",
+        "fixConflicts": "Исправить конфликты",
+        "fixedConflictsTitle": "Исправленные конфликты allowedIP",
+        "noConflicts": "Конфликтов нет"
       },
       "tun": {
         "nameDesc": "Имя интерфейса TUN. Значение по умолчанию - 'xray0'",
