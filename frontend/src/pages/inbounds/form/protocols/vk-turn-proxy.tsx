@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Divider, Form, Input, InputNumber, Select, Space, Switch } from 'antd';
-import { MinusOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Divider, Form, Input, InputNumber, Modal, Select, Space, Switch } from 'antd';
+import { MinusOutlined, PlusOutlined, ToolOutlined } from '@ant-design/icons';
 
-import { RandomUtil } from '@/utils';
+import { HttpUtil, RandomUtil } from '@/utils';
 import { useInboundOptions } from '@/api/queries/useInboundOptions';
 
 // vk-turn-proxy is a standalone relay listener that decrypts client traffic
@@ -14,10 +15,54 @@ import { useInboundOptions } from '@/api/queries/useInboundOptions';
 const FORWARD_TYPES = ['wireguardInbound', 'hysteria2Inbound', 'host'] as const;
 const WRAP_MODES = ['off', 'optional', 'required'] as const;
 
+// FixedConflict mirrors the backend FixedAllowedIPConflict payload, same as the
+// wireguard inbound form. A vk-turn-proxy inbound provisions managed peers on
+// its forward wireguard inbound, so the duplicate-allowedIP conflicts live
+// there; the fixer targets that forward inbound by id.
+interface FixedConflict {
+  publicKey: string;
+  oldIp: string;
+  newIp: string;
+  client: string;
+}
+
 export default function VkTurnProxyFields() {
   const { t } = useTranslation();
   const form = Form.useFormInstance();
   const forwardType = (Form.useWatch(['settings', 'forward', 'type'], form) ?? 'host') as string;
+  const forwardWgInboundId = Form.useWatch(['settings', 'forward', 'wireguardInboundId'], form) as
+    | number
+    | undefined;
+  const [fixing, setFixing] = useState(false);
+
+  const fixConflicts = async () => {
+    if (forwardWgInboundId == null) return;
+    setFixing(true);
+    try {
+      const msg = await HttpUtil.post<FixedConflict[]>(
+        `/panel/api/inbounds/${forwardWgInboundId}/wireguard/fixAllowedIpConflicts`,
+      );
+      if (!msg.success) return;
+      const fixed = msg.obj ?? [];
+      Modal.info({
+        title: t('pages.xray.wireguard.fixedConflictsTitle'),
+        content:
+          fixed.length === 0 ? (
+            <span>{t('pages.xray.wireguard.noConflicts')}</span>
+          ) : (
+            <ul style={{ paddingInlineStart: 16, marginBottom: 0 }}>
+              {fixed.map((c) => (
+                <li key={`${c.publicKey}-${c.oldIp}`}>
+                  {(c.client || c.publicKey)}: {c.oldIp} {'->'} {c.newIp}
+                </li>
+              ))}
+            </ul>
+          ),
+      });
+    } finally {
+      setFixing(false);
+    }
+  };
 
   const { data: inboundOptions } = useInboundOptions();
   const wireguardInbounds = (inboundOptions ?? []).filter((o) => o.protocol === 'wireguard');
@@ -42,19 +87,28 @@ export default function VkTurnProxyFields() {
       </Form.Item>
 
       {forwardType === 'wireguardInbound' && (
-        <Form.Item
-          name={['settings', 'forward', 'wireguardInboundId']}
-          label={t('pages.inbounds.protocols.vkTurnProxy.wireguardInbound')}
-        >
-          {wireguardInbounds.length > 0 ? (
-            <Select
-              allowClear
-              options={wireguardInbounds.map((o) => ({ value: o.id, label: inboundLabel(o) }))}
-            />
-          ) : (
-            <InputNumber min={0} style={{ width: '100%' }} />
+        <>
+          <Form.Item
+            name={['settings', 'forward', 'wireguardInboundId']}
+            label={t('pages.inbounds.protocols.vkTurnProxy.wireguardInbound')}
+          >
+            {wireguardInbounds.length > 0 ? (
+              <Select
+                allowClear
+                options={wireguardInbounds.map((o) => ({ value: o.id, label: inboundLabel(o) }))}
+              />
+            ) : (
+              <InputNumber min={0} style={{ width: '100%' }} />
+            )}
+          </Form.Item>
+          {forwardWgInboundId != null && (
+            <Form.Item label=" " colon={false}>
+              <Button size="small" icon={<ToolOutlined />} loading={fixing} onClick={fixConflicts}>
+                {t('pages.xray.wireguard.fixConflicts')}
+              </Button>
+            </Form.Item>
           )}
-        </Form.Item>
+        </>
       )}
 
       {forwardType === 'hysteria2Inbound' && (
