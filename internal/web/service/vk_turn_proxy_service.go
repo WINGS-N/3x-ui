@@ -209,7 +209,14 @@ func (s *VKTurnProxyService) EnsureRunning() error {
 		return nil
 	}
 
-	desired, err := s.loadDesiredSpecs()
+	running := make(map[int]vkturnproxy.Spec, len(s.processes))
+	for id, proc := range s.processes {
+		if proc.IsRunning() {
+			running[id] = proc.Spec()
+		}
+	}
+
+	desired, err := s.loadDesiredSpecs(running)
 	if err != nil {
 		s.lastError = err.Error()
 		return err
@@ -319,7 +326,7 @@ func (s *VKTurnProxyService) GetStatus() VKTurnProxyRuntimeStatus {
 		return status
 	}
 
-	desired, err := s.loadDesiredSpecs()
+	desired, err := s.loadDesiredSpecs(s.runningSpecsSnapshot())
 	if err != nil {
 		status.Enabled = len(desired)
 		status.State = Error
@@ -425,7 +432,30 @@ func (s *VKTurnProxyService) countInbounds(enabled *bool) (int, error) {
 	return int(count), nil
 }
 
-func (s *VKTurnProxyService) loadDesiredSpecs() (map[int]vkturnproxy.Spec, error) {
+// runningSpecsSnapshot copies the spec of every live relay process under the
+// service mutex, so loadDesiredSpecs can carry a running relay's forward target
+// forward when the live recompute transiently fails.
+func (s *VKTurnProxyService) runningSpecsSnapshot() map[int]vkturnproxy.Spec {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	snapshot := make(map[int]vkturnproxy.Spec, len(s.processes))
+	for id, proc := range s.processes {
+		if proc.IsRunning() {
+			snapshot[id] = proc.Spec()
+		}
+	}
+	return snapshot
+}
+
+// loadDesiredSpecs builds the desired relay spec for every enabled vk-turn-proxy
+// inbound. running holds the specs of the relays that are currently alive; when
+// the forward target of an enabled inbound cannot be resolved right now (e.g. a
+// transient GetInbound failure on the target wireguard/hysteria2 inbound) the
+// running spec is carried forward instead of dropping the inbound. Dropping it
+// would remove the inbound from the desired set and make EnsureRunning stop a
+// relay that is actually serving traffic, which is what made the dashboard flap
+// to "stopped" and forced a needless restart with a recomputed forward port.
+func (s *VKTurnProxyService) loadDesiredSpecs(running map[int]vkturnproxy.Spec) (map[int]vkturnproxy.Spec, error) {
 	db := database.GetDB()
 	var inbounds []*model.Inbound
 	if err := db.Where("protocol = ? AND enable = ?", model.VKTurnProxy, true).Find(&inbounds).Error; err != nil {
@@ -436,12 +466,22 @@ func (s *VKTurnProxyService) loadDesiredSpecs() (map[int]vkturnproxy.Spec, error
 	for _, inbound := range inbounds {
 		settings, err := s.inboundService.getVKTurnProxySettings(inbound.Settings)
 		if err != nil {
+			if carried, ok := running[inbound.Id]; ok {
+				logger.Warningf("keep running vk-turn-proxy inbound %d on settings error: %v", inbound.Id, err)
+				specs[inbound.Id] = carried
+				continue
+			}
 			logger.Warningf("skip vk-turn-proxy inbound %d: %v", inbound.Id, err)
 			continue
 		}
 
 		connect, err := s.inboundService.resolveVKTurnProxyForwardAddress(settings)
 		if err != nil {
+			if carried, ok := running[inbound.Id]; ok {
+				logger.Warningf("keep running vk-turn-proxy inbound %d on forward-resolve error: %v", inbound.Id, err)
+				specs[inbound.Id] = carried
+				continue
+			}
 			logger.Warningf("skip vk-turn-proxy inbound %d: %v", inbound.Id, err)
 			continue
 		}
