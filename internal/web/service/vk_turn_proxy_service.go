@@ -324,14 +324,17 @@ func (s *VKTurnProxyService) GetStatus() VKTurnProxyRuntimeStatus {
 
 	status.ErrorMsg = s.lastError
 	var maxUptime uint64
-	for inboundID, spec := range desired {
+	for inboundID := range desired {
 		proc, ok := s.processes[inboundID]
 		if !ok {
 			continue
 		}
-		if proc.Spec().Key() != spec.Key() {
-			continue
-		}
+		// Count a live process for a desired inbound as running even if its spec
+		// has drifted from the latest desired config (e.g. the forward-target
+		// wireguard/hysteria2 inbound port changed). The relay process is up and
+		// the @every-5s reconcile (EnsureRunning) restarts it with the new spec;
+		// gating the status on an exact Spec.Key() match here made the dashboard
+		// report "stopped" for a relay that is actually running.
 		if proc.IsRunning() {
 			status.Running++
 			if uptime := proc.GetUptime(); uptime > maxUptime {
