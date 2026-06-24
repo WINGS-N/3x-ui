@@ -286,6 +286,71 @@ func (s *InboundService) BuildVKTurnProxyClientTraffics(wireGuardPeerTraffics []
 	return clientTrafficMapToSlice(clientTrafficMap), nil
 }
 
+// BuildVKTurnProxyInboundTraffics turns the per-client vk-turn-proxy traffic
+// deltas (already derived from the forwarded wireguard peer stats) into
+// per-inbound xray.Traffic rows so addInboundTraffic bumps each vk-turn-proxy
+// inbound's up/down total. The relay runs outside xray's stats API, so its
+// inbound tag never appears in GetXrayTraffic and the inbound total otherwise
+// stays 0. Each vk-turn-proxy inbound forwards into a wireguard inbound whose
+// traffic xray DOES track per peer; summing this inbound's own client deltas is
+// exactly the relay traffic attributable to it. This only writes the
+// vk-turn-proxy inbound's own row (a distinct tag) and never the wireguard
+// inbound's, so the wireguard inbound's accounting is untouched and nothing is
+// double counted. Approximation: control-plane/overhead bytes the relay moves
+// that never reach a managed peer are not counted, since the relay does not
+// report them.
+func (s *InboundService) BuildVKTurnProxyInboundTraffics(clientTraffics []*xray.ClientTraffic) ([]*xray.Traffic, error) {
+	if len(clientTraffics) == 0 {
+		return nil, nil
+	}
+
+	upByInbound := make(map[int]int64)
+	downByInbound := make(map[int]int64)
+	for _, ct := range clientTraffics {
+		if ct == nil || (ct.Up == 0 && ct.Down == 0) {
+			continue
+		}
+		upByInbound[ct.InboundId] += ct.Up
+		downByInbound[ct.InboundId] += ct.Down
+	}
+	if len(upByInbound) == 0 && len(downByInbound) == 0 {
+		return nil, nil
+	}
+
+	inboundIDs := make([]int, 0, len(upByInbound))
+	for id := range upByInbound {
+		inboundIDs = append(inboundIDs, id)
+	}
+	for id := range downByInbound {
+		if _, ok := upByInbound[id]; !ok {
+			inboundIDs = append(inboundIDs, id)
+		}
+	}
+
+	db := database.GetDB()
+	var inbounds []*model.Inbound
+	if err := db.Select("id", "tag").
+		Where("id IN ? AND protocol = ?", inboundIDs, model.VKTurnProxy).
+		Find(&inbounds).Error; err != nil {
+		return nil, err
+	}
+
+	traffics := make([]*xray.Traffic, 0, len(inbounds))
+	for _, inbound := range inbounds {
+		tag := strings.TrimSpace(inbound.Tag)
+		if tag == "" {
+			continue
+		}
+		traffics = append(traffics, &xray.Traffic{
+			IsInbound: true,
+			Tag:       tag,
+			Up:        upByInbound[inbound.Id],
+			Down:      downByInbound[inbound.Id],
+		})
+	}
+	return traffics, nil
+}
+
 func (s *InboundService) MigrationBackfillVKTurnProxyClientTraffics() {
 	db := database.GetDB()
 	var inbounds []*model.Inbound

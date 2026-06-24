@@ -43,6 +43,14 @@ func (j *XrayTrafficJob) Run() {
 			logger.Warning("build vk-turn-proxy client traffic failed:", vkErr)
 		} else if len(vkClientTraffics) > 0 {
 			clientTraffics = append(clientTraffics, vkClientTraffics...)
+			// The relay process is outside xray's stats API, so its inbound tag
+			// never reports traffic. Mirror the per-client deltas into each
+			// vk-turn-proxy inbound's up/down so the inbound total is non-zero.
+			if vkInboundTraffics, vkErr := j.inboundService.BuildVKTurnProxyInboundTraffics(vkClientTraffics); vkErr != nil {
+				logger.Warning("build vk-turn-proxy inbound traffic failed:", vkErr)
+			} else if len(vkInboundTraffics) > 0 {
+				traffics = append(traffics, vkInboundTraffics...)
+			}
 		}
 	}
 	needRestart0, clientsDisabled, err := j.inboundService.AddTraffic(traffics, clientTraffics)
