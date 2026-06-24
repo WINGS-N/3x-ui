@@ -97,6 +97,9 @@ func initModels() error {
 	if err := migrateHostVerifyPeerCertByNameColumn(); err != nil {
 		return err
 	}
+	if err := migrateVKTurnAcceptClientKeysDefaultOn(); err != nil {
+		return err
+	}
 	if err := dropLegacyForeignKeys(); err != nil {
 		return err
 	}
@@ -160,6 +163,30 @@ func migrateLegacyApiTokensTable() error {
 		return db.Exec("DROP TABLE api_tokens").Error
 	}
 	return db.Exec("ALTER TABLE api_tokens RENAME TO " + backup).Error
+}
+
+// migrateVKTurnAcceptClientKeysDefaultOn forces wrapAcceptClientKeys=true on every
+// existing vk-turn-proxy inbound once (the field default flipped to ON). Guarded by
+// HistoryOfSeeders so a later user opt-out is not re-enabled on the next restart.
+func migrateVKTurnAcceptClientKeysDefaultOn() error {
+	const seederName = "VKTurnAcceptClientKeysDefaultOn"
+	var history []string
+	if err := db.Model(&model.HistoryOfSeeders{}).Pluck("seeder_name", &history).Error; err != nil {
+		return err
+	}
+	if slices.Contains(history, seederName) {
+		return nil
+	}
+	var sql string
+	if IsPostgres() {
+		sql = `UPDATE inbounds SET settings = jsonb_set(settings::jsonb, '{wrapAcceptClientKeys}', 'true'::jsonb)::text WHERE protocol = ?`
+	} else {
+		sql = `UPDATE inbounds SET settings = json_set(settings, '$.wrapAcceptClientKeys', json('true')) WHERE protocol = ?`
+	}
+	if err := db.Exec(sql, model.VKTurnProxy).Error; err != nil {
+		return err
+	}
+	return db.Create(&model.HistoryOfSeeders{SeederName: seederName}).Error
 }
 
 func migrateHostVerifyPeerCertByNameColumn() error {
