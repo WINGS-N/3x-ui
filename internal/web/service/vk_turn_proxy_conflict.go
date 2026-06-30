@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
@@ -54,6 +55,15 @@ func (s *InboundService) WireguardAllowedIPConflicts(inboundID int) ([]string, e
 			seen[allowedIP] = i + 1
 		}
 	}
+
+	// Also surface vk-turn-proxy client snapshots that drifted from the
+	// authoritative wireguard peer of the same key. Left unrepaired, the next
+	// vk-turn save re-upserts the stale address and reintroduces a duplicate.
+	drift, err := s.vkTurnProxyClientPeerDrift(inboundID)
+	if err != nil {
+		return nil, err
+	}
+	conflicts = append(conflicts, drift...)
 	return conflicts, nil
 }
 
@@ -137,41 +147,48 @@ func (s *InboundService) FixWireguardAllowedIPConflicts(inboundID int) ([]FixedA
 		}
 	}
 
-	if len(reassignments) == 0 {
-		return []FixedAllowedIPConflict{}, nil
-	}
-
-	if _, err := s.mutateWireguardPeers(inboundID, func(current []wireguardPeer) ([]wireguardPeer, error) {
-		for _, r := range reassignments {
-			index := s.findWireguardPeerIndexByPublicKey(current, r.publicKey)
-			if index < 0 {
-				continue
-			}
-			for j, addr := range current[index].AllowedIPs {
-				if strings.TrimSpace(addr) == r.oldIP {
-					current[index].AllowedIPs[j] = r.newIP
-					break
+	fixed := make([]FixedAllowedIPConflict, 0, len(reassignments))
+	if len(reassignments) > 0 {
+		if _, err := s.mutateWireguardPeers(inboundID, func(current []wireguardPeer) ([]wireguardPeer, error) {
+			for _, r := range reassignments {
+				index := s.findWireguardPeerIndexByPublicKey(current, r.publicKey)
+				if index < 0 {
+					continue
+				}
+				for j, addr := range current[index].AllowedIPs {
+					if strings.TrimSpace(addr) == r.oldIP {
+						current[index].AllowedIPs[j] = r.newIP
+						break
+					}
 				}
 			}
-		}
-		return current, nil
-	}); err != nil {
-		return nil, err
-	}
-
-	fixed := make([]FixedAllowedIPConflict, 0, len(reassignments))
-	for _, r := range reassignments {
-		client, err := s.syncVKTurnProxyClientAllowedIP(inboundID, r.publicKey, r.oldIP, r.newIP)
-		if err != nil {
+			return current, nil
+		}); err != nil {
 			return nil, err
 		}
-		fixed = append(fixed, FixedAllowedIPConflict{
-			PublicKey: r.publicKey,
-			OldIP:     r.oldIP,
-			NewIP:     r.newIP,
-			Client:    client,
-		})
+
+		for _, r := range reassignments {
+			client, err := s.syncVKTurnProxyClientAllowedIP(inboundID, r.publicKey, r.oldIP, r.newIP)
+			if err != nil {
+				return nil, err
+			}
+			fixed = append(fixed, FixedAllowedIPConflict{
+				PublicKey: r.publicKey,
+				OldIP:     r.oldIP,
+				NewIP:     r.newIP,
+				Client:    client,
+			})
+		}
 	}
+
+	// Always reconcile drifted vk-turn client snapshots, even when the wg peer
+	// list had no internal duplicates - that drift is exactly what re-triggers
+	// the "duplicate allowedIP" error on the next vk-turn save.
+	reconciled, err := s.reconcileVKTurnProxyClientPeerSnapshots(inboundID)
+	if err != nil {
+		return nil, err
+	}
+	fixed = append(fixed, reconciled...)
 	return fixed, nil
 }
 
@@ -237,4 +254,128 @@ func (s *InboundService) syncVKTurnProxyClientAllowedIP(wgInboundID int, publicK
 		return email, nil
 	}
 	return "", nil
+}
+
+// wireguardPeerAllowedIPsByPublicKey returns a public-key -> AllowedIPs map for
+// the given wireguard inbound's peers (the authoritative live addresses).
+func (s *InboundService) wireguardPeerAllowedIPsByPublicKey(wgInboundID int) (map[string][]string, error) {
+	inbound, err := s.GetInbound(wgInboundID)
+	if err != nil {
+		return nil, err
+	}
+	if inbound.Protocol != model.WireGuard {
+		return nil, common.NewError("inbound is not wireguard")
+	}
+	_, peers, err := s.getWireguardSettings(inbound.Settings)
+	if err != nil {
+		return nil, err
+	}
+	byKey := make(map[string][]string, len(peers))
+	for _, peer := range peers {
+		byKey[strings.TrimSpace(peer.PublicKey)] = peer.AllowedIPs
+	}
+	return byKey, nil
+}
+
+// vkTurnProxyClientPeerDrift reports vk-turn-proxy clients (forwarding into
+// wgInboundID) whose stored peer snapshot AllowedIPs disagree with the
+// authoritative wireguard peer of the same public key. This is the drift that
+// WireguardAllowedIPConflicts' peer-only dedup never caught.
+func (s *InboundService) vkTurnProxyClientPeerDrift(wgInboundID int) ([]string, error) {
+	wgByKey, err := s.wireguardPeerAllowedIPsByPublicKey(wgInboundID)
+	if err != nil {
+		return nil, err
+	}
+	db := database.GetDB()
+	var inbounds []*model.Inbound
+	if err := db.Where("protocol = ?", model.VKTurnProxy).Find(&inbounds).Error; err != nil {
+		return nil, err
+	}
+	conflicts := make([]string, 0)
+	for _, inbound := range inbounds {
+		settings, err := s.getVKTurnProxySettings(inbound.Settings)
+		if err != nil {
+			continue
+		}
+		if settings.Forward.Type != VKTurnProxyForwardWireGuardInbound || settings.Forward.WireGuardInboundID != wgInboundID {
+			continue
+		}
+		for i := range settings.Clients {
+			client := &settings.Clients[i]
+			if client.Peer == nil {
+				continue
+			}
+			key := resolveVKTurnProxyClientPublicKey(client)
+			wgIPs, ok := wgByKey[key]
+			if !ok || slices.Equal(client.Peer.AllowedIPs, wgIPs) {
+				continue
+			}
+			conflicts = append(conflicts, fmt.Sprintf(
+				"vk-turn client %s peer snapshot allowedIP %s drifted from wireguard peer %s",
+				client.Email,
+				strings.Join(client.Peer.AllowedIPs, ","),
+				strings.Join(wgIPs, ","),
+			))
+		}
+	}
+	return conflicts, nil
+}
+
+// reconcileVKTurnProxyClientPeerSnapshots aligns every vk-turn-proxy client's
+// stored peer snapshot with the authoritative wireguard inbound peer of the
+// same public key, persisting the affected vk-turn inbounds. After this the
+// next vk-turn save re-upserts an address identical to the live one, so it no
+// longer clobbers the wireguard peer or trips validateWireguardPeers.
+func (s *InboundService) reconcileVKTurnProxyClientPeerSnapshots(wgInboundID int) ([]FixedAllowedIPConflict, error) {
+	wgByKey, err := s.wireguardPeerAllowedIPsByPublicKey(wgInboundID)
+	if err != nil {
+		return nil, err
+	}
+	db := database.GetDB()
+	var inbounds []*model.Inbound
+	if err := db.Where("protocol = ?", model.VKTurnProxy).Find(&inbounds).Error; err != nil {
+		return nil, err
+	}
+	fixed := make([]FixedAllowedIPConflict, 0)
+	for _, inbound := range inbounds {
+		settings, err := s.getVKTurnProxySettings(inbound.Settings)
+		if err != nil {
+			continue
+		}
+		if settings.Forward.Type != VKTurnProxyForwardWireGuardInbound || settings.Forward.WireGuardInboundID != wgInboundID {
+			continue
+		}
+		changed := false
+		for i := range settings.Clients {
+			client := &settings.Clients[i]
+			if client.Peer == nil {
+				continue
+			}
+			key := resolveVKTurnProxyClientPublicKey(client)
+			wgIPs, ok := wgByKey[key]
+			if !ok || slices.Equal(client.Peer.AllowedIPs, wgIPs) {
+				continue
+			}
+			old := strings.Join(client.Peer.AllowedIPs, ",")
+			client.Peer.AllowedIPs = append([]string(nil), wgIPs...)
+			changed = true
+			fixed = append(fixed, FixedAllowedIPConflict{
+				PublicKey: key,
+				OldIP:     old,
+				NewIP:     strings.Join(wgIPs, ","),
+				Client:    client.Email,
+			})
+		}
+		if changed {
+			raw, err := s.marshalVKTurnProxySettings(settings)
+			if err != nil {
+				return nil, err
+			}
+			inbound.Settings = raw
+			if err := db.Save(inbound).Error; err != nil {
+				return nil, err
+			}
+		}
+	}
+	return fixed, nil
 }

@@ -140,6 +140,106 @@ func TestFixWireguardAllowedIPConflicts_ReassignsDuplicateAndSyncsClient(t *test
 	}
 }
 
+// The real-world bug: WG peers are internally unique (peer-only dedup sees
+// nothing), but a vk-turn client's stored snapshot drifted from its wireguard
+// peer (same key, different IP). On the next vk-turn save that stale snapshot
+// would re-upsert and clobber the wg peer into a duplicate. The fix must
+// surface and reconcile that drift.
+func TestFixWireguardAllowedIPConflicts_ReconcilesDriftedClientSnapshot(t *testing.T) {
+	setupConflictDB(t)
+	db := database.GetDB()
+
+	peers := []wireguardPeer{
+		{PrivateKey: "k1", PublicKey: "pub-1", AllowedIPs: []string{"10.0.0.10/32"}},
+		{PrivateKey: "k2", PublicKey: "pub-2", AllowedIPs: []string{"10.0.0.9/32"}},
+	}
+	wg := &model.Inbound{
+		Tag:      "wg-drift",
+		Enable:   true,
+		Listen:   "0.0.0.0",
+		Port:     51822,
+		Protocol: model.WireGuard,
+		Settings: wgInboundSettingsJSON(t, peers),
+	}
+	if err := db.Create(wg).Error; err != nil {
+		t.Fatalf("seed wg inbound: %v", err)
+	}
+
+	// Client bound to pub-1 but still snapshotting .9 (pub-1 actually lives at
+	// .10; .9 is held by pub-2).
+	vkSettings := &VKTurnProxySettings{
+		Forward: VKTurnProxyForward{Type: VKTurnProxyForwardWireGuardInbound, WireGuardInboundID: wg.Id},
+		Link:    "vk://example",
+		Clients: []VKTurnProxyClient{
+			{
+				ID:            "client-1",
+				Email:         "drift@example.com",
+				Enable:        true,
+				PeerManaged:   true,
+				PeerPublicKey: "pub-1",
+				Peer: &VKTurnProxyClientPeer{
+					PrivateKey: "k1",
+					PublicKey:  "pub-1",
+					AllowedIPs: []string{"10.0.0.9/32"},
+				},
+			},
+		},
+	}
+	svc := &InboundService{}
+	rawVK, err := svc.marshalVKTurnProxySettings(vkSettings)
+	if err != nil {
+		t.Fatalf("marshal vk settings: %v", err)
+	}
+	vk := &model.Inbound{
+		Tag:      "vk-drift",
+		Enable:   true,
+		Listen:   "0.0.0.0",
+		Port:     7001,
+		Protocol: model.VKTurnProxy,
+		Settings: rawVK,
+	}
+	if err := db.Create(vk).Error; err != nil {
+		t.Fatalf("seed vk inbound: %v", err)
+	}
+
+	// The drift is now reported even though the wg peer list has no duplicates.
+	conflicts, err := svc.WireguardAllowedIPConflicts(wg.Id)
+	if err != nil {
+		t.Fatalf("WireguardAllowedIPConflicts: %v", err)
+	}
+	if len(conflicts) != 1 {
+		t.Fatalf("expected the drift to be reported, got %v", conflicts)
+	}
+
+	fixed, err := svc.FixWireguardAllowedIPConflicts(wg.Id)
+	if err != nil {
+		t.Fatalf("FixWireguardAllowedIPConflicts: %v", err)
+	}
+	if len(fixed) != 1 || fixed[0].Client != "drift@example.com" || fixed[0].NewIP != "10.0.0.10/32" {
+		t.Fatalf("expected client snapshot reconciled to 10.0.0.10/32, got %+v", fixed)
+	}
+
+	conflicts, err = svc.WireguardAllowedIPConflicts(wg.Id)
+	if err != nil {
+		t.Fatalf("WireguardAllowedIPConflicts after fix: %v", err)
+	}
+	if len(conflicts) != 0 {
+		t.Fatalf("expected no remaining conflicts, got %v", conflicts)
+	}
+
+	vkReloaded, err := svc.GetInbound(vk.Id)
+	if err != nil {
+		t.Fatalf("reload vk: %v", err)
+	}
+	vkParsed, err := svc.getVKTurnProxySettings(vkReloaded.Settings)
+	if err != nil {
+		t.Fatalf("parse reloaded vk: %v", err)
+	}
+	if got := vkParsed.Clients[0].Peer.AllowedIPs; len(got) != 1 || got[0] != "10.0.0.10/32" {
+		t.Fatalf("client snapshot not reconciled, got %v", got)
+	}
+}
+
 func TestFixWireguardAllowedIPConflicts_NoConflictsReturnsEmpty(t *testing.T) {
 	setupConflictDB(t)
 	db := database.GetDB()
