@@ -820,16 +820,18 @@ func (s *ServerService) GetXrayVersions() ([]string, error) {
 			continue
 		}
 
-		major, err1 := strconv.Atoi(tagParts[0])
-		minor, err2 := strconv.Atoi(tagParts[1])
-		patch, err3 := strconv.Atoi(tagParts[2])
+		// WINGS-N/Xray-core tags carry a -wv pre-release suffix (e.g. 26.6.22-wv),
+		// so strip any suffix on the patch before the numeric parse. Every release
+		// in the WINGS-N fork is a panel-compatible build, so list all well-formed
+		// ones rather than gating on an upstream (XTLS) minimum version.
+		_, err1 := strconv.Atoi(tagParts[0])
+		_, err2 := strconv.Atoi(tagParts[1])
+		_, err3 := strconv.Atoi(strings.SplitN(tagParts[2], "-", 2)[0])
 		if err1 != nil || err2 != nil || err3 != nil {
 			continue
 		}
 
-		if major > 26 || (major == 26 && minor > 6) || (major == 26 && minor == 6 && patch >= 27) {
-			versions = append(versions, release.TagName)
-		}
+		versions = append(versions, release.TagName)
 	}
 	return versions, nil
 }
