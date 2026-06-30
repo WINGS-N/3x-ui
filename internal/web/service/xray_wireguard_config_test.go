@@ -152,3 +152,30 @@ func TestGetXrayConfigWireGuardNoClientsEmitsEmptyPeers(t *testing.T) {
 		t.Fatalf("expected empty peers, got %v", peers)
 	}
 }
+
+// This fork keeps WireGuard peers inline in settings.peers (vk-turn-proxy mirrors
+// into them) with no client rows. GetXrayConfig must pass those through, not
+// clobber them into an empty list (which makes xray-core fail with "empty peers").
+func TestGetXrayConfigWireGuardInlinePeersPreserved(t *testing.T) {
+	setupSettingTestDB(t)
+	db := database.GetDB()
+	in := &model.Inbound{
+		Tag:      "wg-inline",
+		Enable:   true,
+		Port:     51823,
+		Protocol: model.WireGuard,
+		Settings: `{"secretKey":"` + wgTestSecretKey() +
+			`","mtu":1420,"peers":[{"publicKey":"pub-inline","allowedIPs":["10.0.0.9/32"]}]}`,
+	}
+	if err := db.Create(in).Error; err != nil {
+		t.Fatalf("create wg inbound: %v", err)
+	}
+
+	peers := wgPeerList(t, wgInboundEmittedSettings(t, "wg-inline"))
+	if len(peers) != 1 {
+		t.Fatalf("inline peer must be preserved, got %d: %v", len(peers), peers)
+	}
+	if peers[0]["publicKey"] != "pub-inline" {
+		t.Errorf("inline peer not preserved: %v", peers[0])
+	}
+}

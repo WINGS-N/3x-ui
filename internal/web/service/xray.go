@@ -240,12 +240,26 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 
 		var mutated bool
 		if inbound.Protocol == model.WireGuard {
-			delete(settings, "clients")
-			if wgPeers == nil {
-				wgPeers = []any{}
+			// This fork keeps WireGuard peers INLINE in settings.peers (vk-turn-proxy
+			// mirrors into them) with no client rows, whereas upstream (>=v3.4) models
+			// them as client rows and projects them back here. Preserve a populated
+			// inline peers list as-is so it is not clobbered into an empty list (which
+			// makes xray-core fail to start with "empty peers"); otherwise fall back
+			// to the upstream client->peer projection.
+			inlinePeers, _ := settings["peers"].([]any)
+			if len(wgPeers) == 0 && len(inlinePeers) > 0 {
+				if _, hadClients := settings["clients"]; hadClients {
+					delete(settings, "clients")
+					mutated = true
+				}
+			} else {
+				delete(settings, "clients")
+				if wgPeers == nil {
+					wgPeers = []any{}
+				}
+				settings["peers"] = wgPeers
+				mutated = true
 			}
-			settings["peers"] = wgPeers
-			mutated = true
 		} else {
 			_, hadClients := settings["clients"]
 			mutated = hadClients || len(finalClients) > 0
