@@ -91,7 +91,7 @@ export default function WireguardFields({ wgPubKey, regenInboundWg, regenWgPeerK
           <Form.Item name={['settings', 'secretKey']} noStyle>
             <Input style={{ width: 'calc(100% - 32px)' }} />
           </Form.Item>
-          <Button icon={<ReloadOutlined />} onClick={regenInboundWg} />
+          <Button aria-label={t('regenerate')} icon={<ReloadOutlined />} onClick={regenInboundWg} />
         </Space.Compact>
       </Form.Item>
       <Form.Item label={t('pages.xray.wireguard.publicKey')}>
@@ -100,15 +100,15 @@ export default function WireguardFields({ wgPubKey, regenInboundWg, regenWgPeerK
       <Form.Item name={['settings', 'mtu']} label="MTU">
         <InputNumber />
       </Form.Item>
+      <Form.Item name={['settings', 'dns']} label={t('pages.inbounds.info.dns')}>
+        <Input placeholder="1.1.1.1, 1.0.0.1" />
+      </Form.Item>
       <Form.Item
         name={['settings', 'noKernelTun']}
         label={t('pages.inbounds.info.noKernelTun')}
         valuePropName="checked"
       >
         <Switch />
-      </Form.Item>
-      <Form.Item name={['settings', 'workers']} label='Workers'>
-        <InputNumber min={1} />
       </Form.Item>
       <Form.Item name={['settings', 'domainStrategy']} label={t('pages.xray.wireguard.domainStrategy')}>
         <Select

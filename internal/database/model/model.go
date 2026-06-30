@@ -151,12 +151,16 @@ type HistoryOfSeeders struct {
 	SeederName string `json:"seederName"`
 }
 
+// ApiTokenUnixMillisecondsThreshold separates legacy millisecond timestamps
+// from the seconds-based API token timestamp contract.
+const ApiTokenUnixMillisecondsThreshold int64 = 100_000_000_000
+
 type ApiToken struct {
 	Id        int    `json:"id" gorm:"primaryKey;autoIncrement"`
 	Name      string `json:"name" gorm:"uniqueIndex;not null"`
 	Token     string `json:"token" gorm:"not null"` // SHA-256 hash; the plaintext is shown only once at creation
 	Enabled   bool   `json:"enabled" gorm:"default:true"`
-	CreatedAt int64  `json:"createdAt" gorm:"autoCreateTime:milli"`
+	CreatedAt int64  `json:"createdAt" gorm:"autoCreateTime"`
 }
 
 // MarshalJSON emits settings, streamSettings, and sniffing as nested JSON
@@ -590,46 +594,56 @@ type ClientReverse struct {
 
 // Client represents a client configuration for Xray inbounds with traffic limits and settings.
 type Client struct {
-	ID         string         `json:"id,omitempty"`                 // Unique client identifier
-	Security   string         `json:"security"`                     // Security method (e.g., "auto", "aes-128-gcm")
-	Password   string         `json:"password,omitempty"`           // Client password
-	Flow       string         `json:"flow,omitempty"`               // Flow control (XTLS)
-	Reverse    *ClientReverse `json:"reverse,omitempty"`            // VLESS simple reverse proxy settings
-	Auth       string         `json:"auth,omitempty"`               // Auth password (Hysteria)
-	Email      string         `json:"email"`                        // Client email identifier
-	LimitIP    int            `json:"limitIp"`                      // IP limit for this client
-	TotalGB    int64          `json:"totalGB" form:"totalGB"`       // Total traffic limit in GB
-	ExpiryTime int64          `json:"expiryTime" form:"expiryTime"` // Expiration timestamp
-	Enable     bool           `json:"enable" form:"enable"`         // Whether the client is enabled
-	TgID       int64          `json:"tgId" form:"tgId"`             // Telegram user ID for notifications
-	SubID      string         `json:"subId" form:"subId"`           // Subscription identifier
-	Group      string         `json:"group,omitempty" form:"group"` // Logical grouping label
-	Comment    string         `json:"comment" form:"comment"`       // Client comment
-	Reset      int            `json:"reset" form:"reset"`           // Reset period in days
-	CreatedAt  int64          `json:"created_at,omitempty"`         // Creation timestamp
-	UpdatedAt  int64          `json:"updated_at,omitempty"`         // Last update timestamp
+	ID           string         `json:"id,omitempty"`       // Unique client identifier
+	Security     string         `json:"security"`           // Security method (e.g., "auto", "aes-128-gcm")
+	Password     string         `json:"password,omitempty"` // Client password
+	Flow         string         `json:"flow,omitempty"`     // Flow control (XTLS)
+	Reverse      *ClientReverse `json:"reverse,omitempty"`  // VLESS simple reverse proxy settings
+	Auth         string         `json:"auth,omitempty"`     // Auth password (Hysteria)
+	PrivateKey   string         `json:"privateKey,omitempty"`
+	PublicKey    string         `json:"publicKey,omitempty"`
+	AllowedIPs   []string       `json:"allowedIPs,omitempty"`
+	PreSharedKey string         `json:"preSharedKey,omitempty"`
+	KeepAlive    int            `json:"keepAlive,omitempty"`
+	Email        string         `json:"email"`                        // Client email identifier
+	LimitIP      int            `json:"limitIp"`                      // IP limit for this client
+	TotalGB      int64          `json:"totalGB" form:"totalGB"`       // Total traffic limit in GB
+	ExpiryTime   int64          `json:"expiryTime" form:"expiryTime"` // Expiration timestamp
+	Enable       bool           `json:"enable" form:"enable"`         // Whether the client is enabled
+	TgID         int64          `json:"tgId" form:"tgId"`             // Telegram user ID for notifications
+	SubID        string         `json:"subId" form:"subId"`           // Subscription identifier
+	Group        string         `json:"group,omitempty" form:"group"` // Logical grouping label
+	Comment      string         `json:"comment" form:"comment"`       // Client comment
+	Reset        int            `json:"reset" form:"reset"`           // Reset period in days
+	CreatedAt    int64          `json:"created_at,omitempty"`         // Creation timestamp
+	UpdatedAt    int64          `json:"updated_at,omitempty"`         // Last update timestamp
 }
 
 type ClientRecord struct {
-	Id         int    `json:"id" gorm:"primaryKey;autoIncrement"`
-	Email      string `json:"email" gorm:"uniqueIndex;not null"`
-	SubID      string `json:"subId" gorm:"index;column:sub_id"`
-	UUID       string `json:"uuid" gorm:"column:uuid"`
-	Password   string `json:"password"`
-	Auth       string `json:"auth"`
-	Flow       string `json:"flow"`
-	Security   string `json:"security"`
-	Reverse    string `json:"reverse" gorm:"column:reverse"`
-	LimitIP    int    `json:"limitIp" gorm:"column:limit_ip"`
-	TotalGB    int64  `json:"totalGB" gorm:"column:total_gb"`
-	ExpiryTime int64  `json:"expiryTime" gorm:"column:expiry_time"`
-	Enable     bool   `json:"enable" gorm:"default:true"`
-	TgID       int64  `json:"tgId" gorm:"column:tg_id"`
-	Group      string `json:"group" gorm:"column:group_name;default:'';index:idx_client_record_group"`
-	Comment    string `json:"comment"`
-	Reset      int    `json:"reset" gorm:"default:0"`
-	CreatedAt  int64  `json:"createdAt" gorm:"autoCreateTime:milli"`
-	UpdatedAt  int64  `json:"updatedAt" gorm:"autoUpdateTime:milli"`
+	Id           int    `json:"id" gorm:"primaryKey;autoIncrement"`
+	Email        string `json:"email" gorm:"uniqueIndex;not null"`
+	SubID        string `json:"subId" gorm:"index;column:sub_id"`
+	UUID         string `json:"uuid" gorm:"column:uuid"`
+	Password     string `json:"password"`
+	Auth         string `json:"auth"`
+	Flow         string `json:"flow"`
+	Security     string `json:"security"`
+	Reverse      string `json:"reverse" gorm:"column:reverse"`
+	PrivateKey   string `json:"privateKey" gorm:"column:wg_private_key"`
+	PublicKey    string `json:"publicKey" gorm:"column:wg_public_key"`
+	AllowedIPs   string `json:"allowedIPs" gorm:"column:wg_allowed_ips"`
+	PreSharedKey string `json:"preSharedKey" gorm:"column:wg_pre_shared_key"`
+	KeepAlive    int    `json:"keepAlive" gorm:"column:wg_keep_alive;default:0"`
+	LimitIP      int    `json:"limitIp" gorm:"column:limit_ip"`
+	TotalGB      int64  `json:"totalGB" gorm:"column:total_gb"`
+	ExpiryTime   int64  `json:"expiryTime" gorm:"column:expiry_time"`
+	Enable       bool   `json:"enable" gorm:"default:true"`
+	TgID         int64  `json:"tgId" gorm:"column:tg_id"`
+	Group        string `json:"group" gorm:"column:group_name;default:'';index:idx_client_record_group"`
+	Comment      string `json:"comment"`
+	Reset        int    `json:"reset" gorm:"default:0"`
+	CreatedAt    int64  `json:"createdAt" gorm:"autoCreateTime:milli"`
+	UpdatedAt    int64  `json:"updatedAt" gorm:"autoUpdateTime:milli"`
 }
 
 func (ClientRecord) TableName() string { return "clients" }
@@ -637,6 +651,8 @@ func (ClientRecord) TableName() string { return "clients" }
 type ClientGroup struct {
 	Id        int    `json:"id" gorm:"primaryKey;autoIncrement"`
 	Name      string `json:"name" gorm:"uniqueIndex;not null"`
+	ResetUp   int64  `json:"resetUp" gorm:"column:reset_up;default:0"`
+	ResetDown int64  `json:"resetDown" gorm:"column:reset_down;default:0"`
 	CreatedAt int64  `json:"createdAt" gorm:"autoCreateTime:milli"`
 	UpdatedAt int64  `json:"updatedAt" gorm:"autoUpdateTime:milli"`
 }
@@ -758,9 +774,9 @@ type Host struct {
 	// merged into this host's JSON-subscription stream. Empty = no override.
 	FinalMask string `json:"finalMask" form:"finalMask" gorm:"type:text;column:final_mask"`
 
-	// VlessRoute is a free-form port/range routing spec (e.g. "53,443,1000-2000");
-	// stored verbatim, format-validated on the frontend.
-	VlessRoute string `json:"vlessRoute" form:"vlessRoute" gorm:"column:vless_route"`
+	// Single VLESS route value (0-65535) baked into the subscription UUID's 3rd
+	// group (bytes 6-7), which xray reads via net.PortFromBytes(id[6:8]). Empty = none.
+	VlessRoute string `json:"vlessRoute" form:"vlessRoute" gorm:"column:vless_route" example:"443"`
 
 	ExcludeFromSubTypes []string `json:"excludeFromSubTypes" form:"excludeFromSubTypes" gorm:"serializer:json;column:exclude_from_sub_types"`
 
@@ -795,6 +811,12 @@ func (c *Client) ToRecord() *ClientRecord {
 		Reset:      c.Reset,
 		CreatedAt:  c.CreatedAt,
 		UpdatedAt:  c.UpdatedAt,
+
+		PrivateKey:   c.PrivateKey,
+		PublicKey:    c.PublicKey,
+		AllowedIPs:   strings.Join(c.AllowedIPs, ","),
+		PreSharedKey: c.PreSharedKey,
+		KeepAlive:    c.KeepAlive,
 	}
 	if c.Reverse != nil {
 		if b, err := json.Marshal(c.Reverse); err == nil {
@@ -802,6 +824,23 @@ func (c *Client) ToRecord() *ClientRecord {
 		}
 	}
 	return rec
+}
+
+func splitWireguardAllowedIPs(csv string) []string {
+	if csv == "" {
+		return nil
+	}
+	parts := strings.Split(csv, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 func (r *ClientRecord) ToClient() *Client {
@@ -823,6 +862,12 @@ func (r *ClientRecord) ToClient() *Client {
 		Reset:      r.Reset,
 		CreatedAt:  r.CreatedAt,
 		UpdatedAt:  r.UpdatedAt,
+
+		PrivateKey:   r.PrivateKey,
+		PublicKey:    r.PublicKey,
+		AllowedIPs:   splitWireguardAllowedIPs(r.AllowedIPs),
+		PreSharedKey: r.PreSharedKey,
+		KeepAlive:    r.KeepAlive,
 	}
 	if r.Reverse != "" {
 		var rev ClientReverse
@@ -954,6 +999,36 @@ func MergeClientRecord(existing *ClientRecord, incoming *ClientRecord) []ClientM
 		if incomingNewer || existing.Reverse == "" {
 			keep("reverse", existing.Reverse, incoming.Reverse, incoming.Reverse)
 			existing.Reverse = incoming.Reverse
+		}
+	}
+	if existing.PrivateKey != incoming.PrivateKey && incoming.PrivateKey != "" {
+		if incomingNewer || existing.PrivateKey == "" {
+			existing.PrivateKey = incoming.PrivateKey
+			keepSecret("privateKey")
+		}
+	}
+	if existing.PublicKey != incoming.PublicKey && incoming.PublicKey != "" {
+		if incomingNewer || existing.PublicKey == "" {
+			existing.PublicKey = incoming.PublicKey
+			keepSecret("publicKey")
+		}
+	}
+	if existing.PreSharedKey != incoming.PreSharedKey && incoming.PreSharedKey != "" {
+		if incomingNewer || existing.PreSharedKey == "" {
+			existing.PreSharedKey = incoming.PreSharedKey
+			keepSecret("preSharedKey")
+		}
+	}
+	if existing.AllowedIPs != incoming.AllowedIPs && incoming.AllowedIPs != "" {
+		if incomingNewer || existing.AllowedIPs == "" {
+			keep("allowedIPs", existing.AllowedIPs, incoming.AllowedIPs, incoming.AllowedIPs)
+			existing.AllowedIPs = incoming.AllowedIPs
+		}
+	}
+	if existing.KeepAlive != incoming.KeepAlive && incoming.KeepAlive != 0 {
+		if incomingNewer || existing.KeepAlive == 0 {
+			keep("keepAlive", existing.KeepAlive, incoming.KeepAlive, incoming.KeepAlive)
+			existing.KeepAlive = incoming.KeepAlive
 		}
 	}
 	if existing.Comment != incoming.Comment && incoming.Comment != "" {

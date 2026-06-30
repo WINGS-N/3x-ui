@@ -58,6 +58,9 @@ export const SCHEMAS: Record<string, unknown> = {
       "ldapInboundTags": {
         "type": "string"
       },
+      "ldapInsecureSkipVerify": {
+        "type": "boolean"
+      },
       "ldapInvertFlag": {
         "type": "boolean"
       },
@@ -205,6 +208,14 @@ export const SCHEMAS: Record<string, unknown> = {
       "subHideSettings": {
         "description": "Hide server settings in happ subscription (Only for Happ)",
         "type": "boolean"
+      },
+      "subIncyEnableRouting": {
+        "description": "Enable routing injection for the Incy client",
+        "type": "boolean"
+      },
+      "subIncyRoutingRules": {
+        "description": "Incy routing deep-link injected into the subscription body (Only for Incy)",
+        "type": "string"
       },
       "subJsonEnable": {
         "description": "Enable JSON subscription endpoint",
@@ -395,6 +406,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "ldapFlagField",
       "ldapHost",
       "ldapInboundTags",
+      "ldapInsecureSkipVerify",
       "ldapInvertFlag",
       "ldapPassword",
       "ldapPort",
@@ -431,6 +443,8 @@ export const SCHEMAS: Record<string, unknown> = {
       "subEnableRouting",
       "subEncrypt",
       "subHideSettings",
+      "subIncyEnableRouting",
+      "subIncyRoutingRules",
       "subJsonEnable",
       "subJsonFinalMask",
       "subJsonMux",
@@ -552,6 +566,9 @@ export const SCHEMAS: Record<string, unknown> = {
       },
       "ldapInboundTags": {
         "type": "string"
+      },
+      "ldapInsecureSkipVerify": {
+        "type": "boolean"
       },
       "ldapInvertFlag": {
         "type": "boolean"
@@ -700,6 +717,14 @@ export const SCHEMAS: Record<string, unknown> = {
       "subHideSettings": {
         "description": "Hide server settings in happ subscription (Only for Happ)",
         "type": "boolean"
+      },
+      "subIncyEnableRouting": {
+        "description": "Enable routing injection for the Incy client",
+        "type": "boolean"
+      },
+      "subIncyRoutingRules": {
+        "description": "Incy routing deep-link injected into the subscription body (Only for Incy)",
+        "type": "string"
       },
       "subJsonEnable": {
         "description": "Enable JSON subscription endpoint",
@@ -897,6 +922,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "ldapFlagField",
       "ldapHost",
       "ldapInboundTags",
+      "ldapInsecureSkipVerify",
       "ldapInvertFlag",
       "ldapPassword",
       "ldapPort",
@@ -933,6 +959,8 @@ export const SCHEMAS: Record<string, unknown> = {
       "subEnableRouting",
       "subEncrypt",
       "subHideSettings",
+      "subIncyEnableRouting",
+      "subIncyRoutingRules",
       "subJsonEnable",
       "subJsonFinalMask",
       "subJsonMux",
@@ -1038,6 +1066,12 @@ export const SCHEMAS: Record<string, unknown> = {
   "Client": {
     "description": "Client represents a client configuration for Xray inbounds with traffic limits and settings.",
     "properties": {
+      "allowedIPs": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
       "auth": {
         "description": "Auth password (Hysteria)",
         "type": "string"
@@ -1074,12 +1108,24 @@ export const SCHEMAS: Record<string, unknown> = {
         "description": "Unique client identifier",
         "type": "string"
       },
+      "keepAlive": {
+        "type": "integer"
+      },
       "limitIp": {
         "description": "IP limit for this client",
         "type": "integer"
       },
       "password": {
         "description": "Client password",
+        "type": "string"
+      },
+      "preSharedKey": {
+        "type": "string"
+      },
+      "privateKey": {
+        "type": "string"
+      },
+      "publicKey": {
         "type": "string"
       },
       "reset": {
@@ -1155,6 +1201,9 @@ export const SCHEMAS: Record<string, unknown> = {
   },
   "ClientRecord": {
     "properties": {
+      "allowedIPs": {
+        "type": "string"
+      },
       "auth": {
         "type": "string"
       },
@@ -1182,10 +1231,22 @@ export const SCHEMAS: Record<string, unknown> = {
       "id": {
         "type": "integer"
       },
+      "keepAlive": {
+        "type": "integer"
+      },
       "limitIp": {
         "type": "integer"
       },
       "password": {
+        "type": "string"
+      },
+      "preSharedKey": {
+        "type": "string"
+      },
+      "privateKey": {
+        "type": "string"
+      },
+      "publicKey": {
         "type": "string"
       },
       "reset": {
@@ -1212,6 +1273,7 @@ export const SCHEMAS: Record<string, unknown> = {
       }
     },
     "required": [
+      "allowedIPs",
       "auth",
       "comment",
       "createdAt",
@@ -1221,8 +1283,12 @@ export const SCHEMAS: Record<string, unknown> = {
       "flow",
       "group",
       "id",
+      "keepAlive",
       "limitIp",
       "password",
+      "preSharedKey",
+      "privateKey",
+      "publicKey",
       "reset",
       "reverse",
       "security",
@@ -1479,7 +1545,8 @@ export const SCHEMAS: Record<string, unknown> = {
         "type": "string"
       },
       "vlessRoute": {
-        "description": "VlessRoute is a free-form port/range routing spec (e.g. \"53,443,1000-2000\");\nstored verbatim, format-validated on the frontend.",
+        "description": "Single VLESS route value (0-65535) baked into the subscription UUID's 3rd\ngroup (bytes 6-7), which xray reads via net.PortFromBytes(id[6:8]). Empty = none.",
+        "example": "443",
         "type": "string"
       }
     },
@@ -1763,6 +1830,15 @@ export const SCHEMAS: Record<string, unknown> = {
       "tlsFlowCapable": {
         "example": true,
         "type": "boolean"
+      },
+      "wgDns": {
+        "type": "string"
+      },
+      "wgMtu": {
+        "type": "integer"
+      },
+      "wgPublicKey": {
+        "type": "string"
       }
     },
     "required": [
@@ -2098,6 +2174,104 @@ export const SCHEMAS: Record<string, unknown> = {
       "xrayError",
       "xrayState",
       "xrayVersion"
+    ],
+    "type": "object"
+  },
+  "RealityScanResult": {
+    "properties": {
+      "alpn": {
+        "example": "h2",
+        "type": "string"
+      },
+      "certIssuer": {
+        "example": "Google Trust Services",
+        "type": "string"
+      },
+      "certSubject": {
+        "example": "cloudflare.com",
+        "type": "string"
+      },
+      "certValid": {
+        "example": true,
+        "type": "boolean"
+      },
+      "curveID": {
+        "example": "X25519",
+        "type": "string"
+      },
+      "feasible": {
+        "example": true,
+        "type": "boolean"
+      },
+      "h2": {
+        "example": true,
+        "type": "boolean"
+      },
+      "host": {
+        "example": "www.cloudflare.com",
+        "type": "string"
+      },
+      "ip": {
+        "example": "104.16.124.96",
+        "type": "string"
+      },
+      "latencyMs": {
+        "example": 180,
+        "type": "integer"
+      },
+      "notAfter": {
+        "example": "2026-08-01T00:00:00Z",
+        "type": "string"
+      },
+      "port": {
+        "example": 443,
+        "type": "integer"
+      },
+      "reason": {
+        "type": "string"
+      },
+      "serverNames": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "target": {
+        "example": "www.cloudflare.com:443",
+        "type": "string"
+      },
+      "tls13": {
+        "example": true,
+        "type": "boolean"
+      },
+      "tlsVersion": {
+        "example": "1.3",
+        "type": "string"
+      },
+      "x25519": {
+        "example": true,
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "alpn",
+      "certIssuer",
+      "certSubject",
+      "certValid",
+      "curveID",
+      "feasible",
+      "h2",
+      "host",
+      "ip",
+      "latencyMs",
+      "notAfter",
+      "port",
+      "reason",
+      "serverNames",
+      "target",
+      "tls13",
+      "tlsVersion",
+      "x25519"
     ],
     "type": "object"
   },

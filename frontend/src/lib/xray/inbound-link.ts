@@ -64,8 +64,10 @@ function buildXhttpExtra(xhttp: XHttpStreamSettings | undefined): Record<string,
 
   const stringFields = [
     'uplinkHTTPMethod',
-    'sessionPlacement',
-    'sessionKey',
+    'sessionIDPlacement',
+    'sessionIDKey',
+    'sessionIDTable',
+    'sessionIDLength',
     'seqPlacement',
     'seqKey',
     'uplinkDataPlacement',
@@ -324,6 +326,18 @@ export interface GenVlessLinkInput {
   externalProxy?: ExternalProxyEntry | null;
 }
 
+// Mirror of the Go applyVlessRoute: bake a single 0-65535 value into the UUID's
+// 3rd group (bytes 6-7), which xray reads as the vless route. Empty/invalid/non-
+// UUID input is returned unchanged.
+export function applyVlessRoute(id: string, route: string | undefined): string {
+  const r = (route ?? '').trim();
+  if (r === '' || !/^\d{1,5}$/.test(r)) return id;
+  const n = Number(r);
+  if (n > 65535) return id;
+  if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id)) return id;
+  return id.slice(0, 14) + n.toString(16).padStart(4, '0') + id.slice(18);
+}
+
 // VLESS share link: vless://<uuid>@<host>:<port>?<query>#<remark>. The
 // query carries network type, encryption, network-specific knobs, and
 // security-specific knobs (TLS fingerprint/alpn/sni or Reality
@@ -435,7 +449,7 @@ export function genVlessLink(input: GenVlessLinkInput): string {
     params.set('flow', flow);
   }
 
-  const url = new URL(`vless://${clientId}@${formatUrlHost(address)}:${port}`);
+  const url = new URL(`vless://${applyVlessRoute(clientId, externalProxy?.vlessRoute)}@${formatUrlHost(address)}:${port}`);
   for (const [key, value] of params) url.searchParams.set(key, value);
   url.hash = encodeURIComponent(remark);
   return url.toString();
@@ -826,7 +840,7 @@ export function genWireguardConfig(input: GenWireguardLinkInput): string {
   let txt = `[Interface]\n`;
   txt += `PrivateKey = ${peer.privateKey ?? ''}\n`;
   txt += `Address = ${peer.allowedIPs[0] ?? ''}\n`;
-  txt += `DNS = 1.1.1.1, 1.0.0.1\n`;
+  txt += `DNS = ${settings.dns || '1.1.1.1, 1.0.0.1'}\n`;
   if (typeof settings.mtu === 'number' && settings.mtu > 0) {
     txt += `MTU = ${settings.mtu}\n`;
   }
@@ -842,6 +856,66 @@ export function genWireguardConfig(input: GenWireguardLinkInput): string {
     txt += `\nPersistentKeepalive = ${peer.keepAlive}\n`;
   }
   return txt;
+}
+
+export function wireguardConfigFromLink(link: string, fallbackRemark = ''): string {
+  let url: URL;
+  try {
+    url = new URL(link);
+  } catch {
+    return '';
+  }
+  const scheme = url.protocol.replace(/:$/, '');
+  if (scheme !== 'wireguard' && scheme !== 'wg') return '';
+
+  const params = url.searchParams;
+  const pick = (...keys: string[]): string => {
+    for (const k of keys) {
+      const v = params.get(k);
+      if (v) return v;
+    }
+    return '';
+  };
+
+  let privateKey: string;
+  try {
+    privateKey = decodeURIComponent(url.username);
+  } catch {
+    privateKey = url.username;
+  }
+  const host = url.hostname;
+  const endpoint = host ? (url.port ? `${host}:${url.port}` : host) : '';
+  const address = pick('address', 'ip') || '10.0.0.2/32';
+  const publicKey = pick('publickey', 'publicKey', 'public_key', 'peerPublicKey');
+  const dns = pick('dns') || '1.1.1.1, 1.0.0.1';
+  const mtu = pick('mtu');
+  const psk = pick('presharedkey', 'preshared_key', 'pre-shared-key', 'psk');
+  const keepAlive = pick('keepalive', 'persistentkeepalive', 'persistent_keepalive');
+  const allowedIPs = pick('allowedips', 'allowed_ips') || '0.0.0.0/0, ::/0';
+
+  let remark = fallbackRemark;
+  try {
+    const decoded = decodeURIComponent(url.hash.replace(/^#/, ''));
+    if (decoded) remark = decoded;
+  } catch {
+    const raw = url.hash.replace(/^#/, '');
+    if (raw) remark = raw;
+  }
+
+  const lines = [
+    '[Interface]',
+    `PrivateKey = ${privateKey}`,
+    `Address = ${address}`,
+    `DNS = ${dns}`,
+  ];
+  if (mtu && Number(mtu) > 0) lines.push(`MTU = ${mtu}`);
+  lines.push('');
+  if (remark) lines.push(`# ${remark}`);
+  lines.push('[Peer]', `PublicKey = ${publicKey}`);
+  if (psk) lines.push(`PresharedKey = ${psk}`);
+  lines.push(`AllowedIPs = ${allowedIPs}`, `Endpoint = ${endpoint}`);
+  if (keepAlive && Number(keepAlive) > 0) lines.push(`PersistentKeepalive = ${keepAlive}`);
+  return lines.join('\n');
 }
 
 export type { WireguardInboundPeer };
@@ -1124,14 +1198,30 @@ export interface GenWireguardFanoutInput {
   fallbackHostname: string;
 }
 
+// WireGuard is multi-client: each client is one accepted peer. The canonical
+// store is settings.clients; legacy single-config inbounds (pre-migration) are
+// still rendered from settings.peers. Both carry the privateKey/allowedIPs/
+// preSharedKey/keepAlive the link and .conf need, so they project to the same
+// peer shape and reuse genWireguardLink/genWireguardConfig unchanged.
+function wgRenderPeers(settings: WireguardInboundSettings): WireguardInboundPeer[] {
+  const clients = settings.clients ?? [];
+  if (clients.length > 0) {
+    return clients.map((c) => ({ ...c, publicKey: c.publicKey ?? '' }));
+  }
+  return settings.peers;
+}
+
 export function genWireguardLinks(input: GenWireguardFanoutInput): string {
   const { inbound, remark = '', hostOverride = '', fallbackHostname } = input;
   if (inbound.protocol !== 'wireguard') return '';
   const addr = resolveAddr(inbound, hostOverride, fallbackHostname);
   const sep = '-';
-  return inbound.settings.peers
+  const baseSettings = inbound.settings as WireguardInboundSettings;
+  const peers = wgRenderPeers(baseSettings);
+  const settings: WireguardInboundSettings = { ...baseSettings, peers };
+  return peers
     .map((p, i) => genWireguardLink({
-      settings: inbound.settings as WireguardInboundSettings,
+      settings,
       address: addr,
       port: inbound.port,
       remark: `${remark}${sep}${i + 1}${wgPeerCommentSuffix(p)}`,
@@ -1145,9 +1235,12 @@ export function genWireguardConfigs(input: GenWireguardFanoutInput): string {
   if (inbound.protocol !== 'wireguard') return '';
   const addr = resolveAddr(inbound, hostOverride, fallbackHostname);
   const sep = '-';
-  return inbound.settings.peers
+  const baseSettings = inbound.settings as WireguardInboundSettings;
+  const peers = wgRenderPeers(baseSettings);
+  const settings: WireguardInboundSettings = { ...baseSettings, peers };
+  return peers
     .map((p, i) => genWireguardConfig({
-      settings: inbound.settings as WireguardInboundSettings,
+      settings,
       address: addr,
       port: inbound.port,
       remark: `${remark}${sep}${i + 1}${wgPeerCommentSuffix(p)}`,

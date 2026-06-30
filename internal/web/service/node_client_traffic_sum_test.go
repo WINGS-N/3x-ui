@@ -5,11 +5,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"gorm.io/gorm"
+
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/runtime"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
-	"gorm.io/gorm"
 )
 
 func initTrafficTestDB(t *testing.T) *gorm.DB {
@@ -118,6 +119,32 @@ func TestSingleNode_MirrorsCorrectly(t *testing.T) {
 	// Second sync: delta (700-500=200 / 800-600=200) accrues normally.
 	syncNode(t, svc, 1, "n1-in", xray.ClientTraffic{Email: email, Up: 700, Down: 800, Enable: true})
 	assertUpDown(t, readTraffic(t, db, email), 200, 200, "second sync — delta accrues")
+}
+
+func TestNodeAdd_ImportsClientHistoryWithNewInbound(t *testing.T) {
+	db := initTrafficTestDB(t)
+	svc := &InboundService{}
+
+	const email = "newnode-client"
+	const histUp, histDown int64 = 6_000_000_000, 200_000_000_000
+
+	syncNode(t, svc, 1, "fresh-in", xray.ClientTraffic{Email: email, Up: histUp, Down: histDown, Enable: true})
+	assertUpDown(t, readTraffic(t, db, email), histUp, histDown, "node-add: client history imported with its brand-new inbound")
+
+	syncNode(t, svc, 1, "fresh-in", xray.ClientTraffic{Email: email, Up: histUp + 1024, Down: histDown + 2048, Enable: true})
+	assertUpDown(t, readTraffic(t, db, email), histUp+1024, histDown+2048, "post-import delta accrues, no double count")
+}
+
+func TestNodeAdd_TombstonedClientNotResurrected(t *testing.T) {
+	db := initTrafficTestDB(t)
+	svc := &InboundService{}
+
+	const email = "deleted-ghost"
+	const stale int64 = 50_000_000_000
+
+	tombstoneClientEmail(email)
+	syncNode(t, svc, 1, "fresh-in", xray.ClientTraffic{Email: email, Up: stale, Down: stale, Enable: true})
+	assertUpDown(t, readTraffic(t, db, email), 0, 0, "tombstoned client must not resurrect via node-add seed")
 }
 
 func TestUpgrade_PreExistingRow_NoDoubleCount(t *testing.T) {

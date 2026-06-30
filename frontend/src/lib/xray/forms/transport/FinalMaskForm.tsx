@@ -1,9 +1,12 @@
+import { useEffect, useRef } from 'react';
 import { AutoComplete, Button, Divider, Form, Input, InputNumber, Select, Space, Switch } from 'antd';
 import { DeleteOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import type { FormInstance } from 'antd/es/form';
 import type { NamePath } from 'antd/es/form/interface';
 
 import { RandomUtil } from '@/utils';
+import { activateOnKey } from '@/utils/a11y';
 import { OutboundProtocols, UTLS_FINGERPRINT } from '@/schemas/primitives';
 
 const UTLS_FINGERPRINT_OPTIONS = Object.values(UTLS_FINGERPRINT).map((value) => ({ value, label: value }));
@@ -68,7 +71,9 @@ function asPath(name: NamePath): (string | number)[] {
 function defaultTcpMaskSettings(type: string): Record<string, unknown> {
   switch (type) {
     case 'fragment':
-      return { packets: '1-3', length: '100-200', delay: '', maxSplit: '' };
+      // `lengths`/`delays` are per-segment range arrays (xray-core #6334);
+      // a single length entry reproduces the legacy single-range behavior.
+      return { packets: '1-3', lengths: ['100-200'], delays: [], maxSplit: '' };
     case 'sudoku':
       return {
         password: '', ascii: '', customTable: '', customTables: [],
@@ -79,6 +84,32 @@ function defaultTcpMaskSettings(type: string): Record<string, unknown> {
     default:
       return {};
   }
+}
+
+// xray-core #6334 replaced a fragment mask's single `length`/`delay` ranges
+// with `lengths`/`delays` arrays (the singular keys remain in core only as a
+// fallback). Lift any legacy singular value into a one-element array so the
+// list UI shows it, and drop the singular key so we never emit both.
+function migrateFragmentSettings(settings: Record<string, unknown>): { next: Record<string, unknown>; changed: boolean } {
+  const out: Record<string, unknown> = { ...settings };
+  let changed = false;
+  if (!Array.isArray(out.lengths) && typeof out.length === 'string' && out.length.trim() !== '') {
+    out.lengths = [out.length];
+    changed = true;
+  }
+  if ('length' in out) {
+    delete out.length;
+    changed = true;
+  }
+  if (!Array.isArray(out.delays) && typeof out.delay === 'string' && out.delay.trim() !== '') {
+    out.delays = [out.delay];
+    changed = true;
+  }
+  if ('delay' in out) {
+    delete out.delay;
+    changed = true;
+  }
+  return { next: out, changed };
 }
 
 function defaultUdpMaskSettings(type: string): Record<string, unknown> {
@@ -137,6 +168,29 @@ function defaultUdpHop(): Record<string, unknown> {
 
 export default function FinalMaskForm({ name, network, protocol, form, showAll = false }: FinalMaskFormProps) {
   const base = asPath(name);
+
+  // Migrate legacy single-range fragment masks to the per-segment arrays once
+  // on mount so configs saved before #6334 render in the list UI.
+  const migratedRef = useRef(false);
+  useEffect(() => {
+    if (migratedRef.current) return;
+    migratedRef.current = true;
+    const tcp = form.getFieldValue([...base, 'tcp']);
+    if (!Array.isArray(tcp)) return;
+    let anyChanged = false;
+    const next = tcp.map((mask) => {
+      if (!mask || typeof mask !== 'object') return mask;
+      const m = mask as Record<string, unknown>;
+      if (m.type !== 'fragment' || !m.settings || typeof m.settings !== 'object') return mask;
+      const { next: migrated, changed } = migrateFragmentSettings(m.settings as Record<string, unknown>);
+      if (!changed) return mask;
+      anyChanged = true;
+      return { ...m, settings: migrated };
+    });
+    if (anyChanged) form.setFieldValue([...base, 'tcp'], next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const isHysteria = protocol === OutboundProtocols.Hysteria || protocol === 'hysteria';
   // Wireguard carries no user-selectable transport (always a UDP listener/
   // dialer), so only the UDP mask section applies — TCP masks would never
@@ -172,6 +226,7 @@ export default function FinalMaskForm({ name, network, protocol, form, showAll =
 }
 
 function TcpMasksList({ base, form }: { base: (string | number)[]; form: FormInstance }) {
+  const { t } = useTranslation();
   return (
     <Form.List name={[...base, 'tcp']}>
       {(fields, { add, remove }) => (
@@ -181,6 +236,7 @@ function TcpMasksList({ base, form }: { base: (string | number)[]; form: FormIns
               type="primary"
               size="small"
               icon={<PlusOutlined />}
+              aria-label={t('add')}
               onClick={() => add({ type: 'fragment', settings: defaultTcpMaskSettings('fragment') })}
             />
           </Form.Item>
@@ -213,12 +269,20 @@ function TcpMaskItem({
   // type change). All Form.Item `name=` use RELATIVE paths within the
   // outer Form.List context.
   const absolutePath = [...listPath, fieldName];
+  const { t } = useTranslation();
 
   return (
     <div>
       <Divider style={{ margin: 0 }}>
         TCP Mask {displayIndex}
-        <DeleteOutlined className="danger-icon" onClick={onRemove} />
+        <DeleteOutlined
+          className="danger-icon"
+          role="button"
+          tabIndex={0}
+          aria-label={t('remove')}
+          onClick={onRemove}
+          onKeyDown={activateOnKey(onRemove)}
+        />
       </Divider>
 
       <Form.Item label="Type" name={[fieldName, 'type']}>
@@ -261,16 +325,19 @@ function TcpMaskItem({
                     placeholder="tlshello or n-m, e.g. 1-3"
                   />
                 </Form.Item>
-                <Form.Item
-                  label="Length"
-                  name={[fieldName, 'settings', 'length']}
-                  rules={[{ validator: validateFragmentLength }]}
-                >
-                  <Input placeholder="e.g. 100-200" />
-                </Form.Item>
-                <Form.Item label="Delay" name={[fieldName, 'settings', 'delay']}>
-                  <Input />
-                </Form.Item>
+                <FragmentRangeList
+                  listName={[fieldName, 'settings', 'lengths']}
+                  label="Lengths"
+                  placeholder="e.g. 100-200"
+                  minItems={1}
+                  validator={validateFragmentLength}
+                />
+                <FragmentRangeList
+                  listName={[fieldName, 'settings', 'delays']}
+                  label="Delays"
+                  placeholder="e.g. 10-20 or 0"
+                  validator={validateFragmentDelayEntry}
+                />
                 <Form.Item label="Max Split" name={[fieldName, 'settings', 'maxSplit']}>
                   <Input />
                 </Form.Item>
@@ -321,9 +388,6 @@ function validateFragmentPackets(_rule: unknown, value: unknown): Promise<void> 
   return Promise.reject(new Error('Use "tlshello" or a packet range like 1-3'));
 }
 
-// Walks a deep object path safely. Used inside shouldUpdate which gets
-// the whole form values blob; we need to compare a deep field across
-// prev/curr without crashing on missing intermediates.
 function validateFragmentLength(_rule: unknown, value: unknown): Promise<void> {
   const str = typeof value === 'string' ? value.trim() : String(value ?? '').trim();
   if (str.length === 0) {
@@ -334,6 +398,71 @@ function validateFragmentLength(_rule: unknown, value: unknown): Promise<void> {
     return Promise.reject(new Error('Length minimum must be greater than 0 (e.g. 100-200)'));
   }
   return Promise.resolve();
+}
+
+// A delay segment is a millisecond value or range; 0 is allowed (no delay),
+// but an empty row would serialize as "" and break xray's Int32Range parse,
+// so require a value and let the user remove the row instead.
+function validateFragmentDelayEntry(_rule: unknown, value: unknown): Promise<void> {
+  const str = typeof value === 'string' ? value.trim() : String(value ?? '').trim();
+  if (str.length === 0) {
+    return Promise.reject(new Error("Delay is required — remove the row if you don't want a delay"));
+  }
+  if (!/^\d+(?:-\d+)?$/.test(str)) {
+    return Promise.reject(new Error('Use a delay in ms, e.g. 10 or 10-20'));
+  }
+  return Promise.resolve();
+}
+
+// Per-segment range list for a fragment mask's `lengths`/`delays` (xray-core
+// #6334): an editable list of dash-range strings. xray applies entry N to
+// fragment segment N, clamping to the last entry. `minItems` keeps at least
+// one length row so the config never collapses to an empty (rejected) list.
+function FragmentRangeList({
+  listName, label, placeholder, validator, minItems = 0,
+}: {
+  listName: (string | number)[];
+  label: string;
+  placeholder: string;
+  validator?: (rule: unknown, value: unknown) => Promise<void>;
+  minItems?: number;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Form.List name={listName}>
+      {(fields, { add, remove }) => (
+        <>
+          <Form.Item label={label}>
+            <Button type="primary" size="small" icon={<PlusOutlined />} aria-label={t('add')} onClick={() => add('')} />
+          </Form.Item>
+          {fields.map((field, idx) => (
+            <Form.Item
+              key={field.key}
+              label={`#${idx + 1}`}
+              name={field.name}
+              rules={validator ? [{ validator }] : undefined}
+            >
+              <Input
+                placeholder={placeholder}
+                suffix={fields.length > minItems
+                  ? (
+                    <DeleteOutlined
+                      className="danger-icon"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={t('remove')}
+                      onClick={() => remove(field.name)}
+                      onKeyDown={activateOnKey(() => remove(field.name))}
+                    />
+                  )
+                  : null}
+              />
+            </Form.Item>
+          ))}
+        </>
+      )}
+    </Form.List>
+  );
 }
 
 // randRange bytes must sit in 0-255 — xray rejects the whole config with
@@ -368,6 +497,7 @@ function HeaderCustomGroups({
   form: FormInstance;
   absoluteSettingsPath: (string | number)[];
 }) {
+  const { t } = useTranslation();
   return (
     <>
       {(['clients', 'servers'] as const).map((groupKey) => (
@@ -379,6 +509,7 @@ function HeaderCustomGroups({
                   type="primary"
                   size="small"
                   icon={<PlusOutlined />}
+                  aria-label={t('add')}
                   onClick={() => addGroup([defaultClientServerItem()])}
                 />
               </Form.Item>
@@ -386,7 +517,14 @@ function HeaderCustomGroups({
                 <div key={group.key}>
                   <Divider style={{ margin: 0 }}>
                     {groupKey === 'clients' ? 'Clients' : 'Servers'} Group {gi + 1}
-                    <DeleteOutlined className="danger-icon" onClick={() => removeGroup(group.name)} />
+                    <DeleteOutlined
+                      className="danger-icon"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={t('remove')}
+                      onClick={() => removeGroup(group.name)}
+                      onKeyDown={activateOnKey(() => removeGroup(group.name))}
+                    />
                   </Divider>
                   <Form.List name={[group.name]}>
                     {(items, { add: addItem, remove: removeItem }) => (
@@ -395,6 +533,7 @@ function HeaderCustomGroups({
                           <Button
                             size="small"
                             icon={<PlusOutlined />}
+                            aria-label={t('add')}
                             onClick={() => addItem(defaultClientServerItem())}
                           />
                         </Form.Item>
@@ -424,6 +563,7 @@ function HeaderCustomGroups({
 function UdpMasksList({
   base, form, isHysteria, isWireguard, network,
 }: { base: (string | number)[]; form: FormInstance; isHysteria: boolean; isWireguard: boolean; network: string }) {
+  const { t } = useTranslation();
   return (
     <Form.List name={[...base, 'udp']}>
       {(fields, { add, remove }) => (
@@ -433,6 +573,7 @@ function UdpMasksList({
               type="primary"
               size="small"
               icon={<PlusOutlined />}
+              aria-label={t('add')}
               onClick={() => {
                 const def = isHysteria || isWireguard ? 'salamander' : 'mkcp-legacy';
                 add({ type: def, settings: defaultUdpMaskSettings(def) });
@@ -471,6 +612,7 @@ function UdpMaskItem({
   onRemove: () => void;
 }) {
   const absolutePath = [...listPath, fieldName];
+  const { t } = useTranslation();
 
   const onTypeChange = (v: string) => {
     form.setFieldValue([...absolutePath, 'settings'], defaultUdpMaskSettings(v));
@@ -498,7 +640,14 @@ function UdpMaskItem({
     <div>
       <Divider style={{ margin: 0 }}>
         UDP Mask {displayIndex}
-        <DeleteOutlined className="danger-icon" onClick={onRemove} />
+        <DeleteOutlined
+          className="danger-icon"
+          role="button"
+          tabIndex={0}
+          aria-label={t('remove')}
+          onClick={onRemove}
+          onKeyDown={activateOnKey(onRemove)}
+        />
       </Divider>
 
       <Form.Item label="Type" name={[fieldName, 'type']}>
@@ -628,6 +777,7 @@ function SalamanderUdpMaskSettings({
   form: FormInstance;
   absolutePath: (string | number)[];
 }) {
+  const { t } = useTranslation();
   const packetSizePath = [...absolutePath, 'settings', 'packetSize'];
   const packetSize = Form.useWatch(packetSizePath, { form, preserve: true });
   const mode = typeof packetSize === 'string' && packetSize.trim() !== '' ? 'gecko' : 'salamander';
@@ -669,6 +819,7 @@ function SalamanderUdpMaskSettings({
           </Form.Item>
           <Button
             icon={<ReloadOutlined />}
+            aria-label={t('regenerate')}
             onClick={() => form.setFieldValue(
               [...absolutePath, 'settings', 'password'],
               RandomUtil.randomLowerAndNum(16),
@@ -703,7 +854,7 @@ function GeckoPacketSizeInput({
   return (
     <Space.Compact block>
       <InputNumber
-        addonBefore="Min"
+        prefix="Min"
         min={GECKO_MIN_PACKET_SIZE}
         max={GECKO_MAX_PACKET_SIZE}
         precision={0}
@@ -713,7 +864,7 @@ function GeckoPacketSizeInput({
         style={{ width: '50%' }}
       />
       <InputNumber
-        addonBefore="Max"
+        prefix="Max"
         min={GECKO_MIN_PACKET_SIZE}
         max={GECKO_MAX_PACKET_SIZE}
         precision={0}
@@ -733,6 +884,7 @@ function UdpHeaderCustom({
   form: FormInstance;
   absoluteSettingsPath: (string | number)[];
 }) {
+  const { t } = useTranslation();
   return (
     <>
       {(['client', 'server'] as const).map((groupKey) => (
@@ -744,6 +896,7 @@ function UdpHeaderCustom({
                   type="primary"
                   size="small"
                   icon={<PlusOutlined />}
+                  aria-label={t('add')}
                   onClick={() => add(defaultUdpClientServerItem())}
                 />
               </Form.Item>
@@ -751,7 +904,14 @@ function UdpHeaderCustom({
                 <div key={item.key}>
                   <Divider style={{ margin: 0 }}>
                     {groupKey === 'client' ? 'Client' : 'Server'} {ci + 1}
-                    <DeleteOutlined className="danger-icon" onClick={() => remove(item.name)} />
+                    <DeleteOutlined
+                      className="danger-icon"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={t('remove')}
+                      onClick={() => remove(item.name)}
+                      onKeyDown={activateOnKey(() => remove(item.name))}
+                    />
                   </Divider>
                   <ItemEditor
                     fieldName={item.name}
@@ -776,6 +936,7 @@ function NoiseItems({
   form: FormInstance;
   absoluteSettingsPath: (string | number)[];
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <Form.Item label="Reset" name={[udpFieldName, 'settings', 'reset']}>
@@ -789,6 +950,7 @@ function NoiseItems({
                 type="primary"
                 size="small"
                 icon={<PlusOutlined />}
+                aria-label={t('add')}
                 onClick={() => add(defaultNoiseItem())}
               />
             </Form.Item>
@@ -796,7 +958,14 @@ function NoiseItems({
               <div key={item.key}>
                 <Divider style={{ margin: 0 }}>
                   Noise {ni + 1}
-                  <DeleteOutlined className="danger-icon" onClick={() => remove(item.name)} />
+                  <DeleteOutlined
+                    className="danger-icon"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={t('remove')}
+                    onClick={() => remove(item.name)}
+                    onKeyDown={activateOnKey(() => remove(item.name))}
+                  />
                 </Divider>
                 <ItemEditor
                   fieldName={item.name}
@@ -823,6 +992,7 @@ function ItemEditor({
   delayMode?: 'number' | 'string';
   onRemove?: () => void;
 }) {
+  const { t } = useTranslation();
   const onTypeChange = (v: string) => {
     if (v === 'base64') {
       form.setFieldValue([...absoluteItemPath, 'packet'], RandomUtil.randomBase64());
@@ -898,6 +1068,7 @@ function ItemEditor({
                   </Form.Item>
                   <Button
                     icon={<ReloadOutlined />}
+                    aria-label={t('regenerate')}
                     onClick={() => form.setFieldValue([...absoluteItemPath, 'packet'], RandomUtil.randomBase64())}
                   />
                 </Space.Compact>

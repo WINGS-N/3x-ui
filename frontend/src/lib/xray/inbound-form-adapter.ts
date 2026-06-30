@@ -7,6 +7,7 @@ import {
   VkTurnProxyClientSchema,
   VlessClientSchema,
   VmessClientSchema,
+  WireguardClientSchema,
 } from '@/schemas/protocols/inbound';
 import type { StreamSettings } from '@/schemas/api/inbound';
 import type { Sniffing } from '@/schemas/primitives';
@@ -236,6 +237,7 @@ function clientSchemaForProtocol(protocol: string): z.ZodType | null {
     case 'shadowsocks': return ShadowsocksClientSchema;
     case 'hysteria': return HysteriaClientSchema;
     case 'vk-turn-proxy': return VkTurnProxyClientSchema;
+    case 'wireguard': return WireguardClientSchema;
     default: return null;
   }
 }

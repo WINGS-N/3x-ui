@@ -22,7 +22,7 @@ import {
 import { DeleteOutlined, EyeOutlined, PlusOutlined, ReloadOutlined, RetweetOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { HttpUtil, RandomUtil } from '@/utils';
+import { HttpUtil, RandomUtil, Wireguard } from '@/utils';
 import { formatInboundLabel } from '@/lib/inbounds/label';
 import { normalizeClientIps, type ClientIpInfo } from '@/lib/clients/ip-log';
 import { DateTimePicker, SelectAllClearButtons } from '@/components/form';
@@ -113,6 +113,10 @@ interface FormState {
   enable: boolean;
   inboundIds: number[];
   externalLinks: ExternalLinkRow[];
+  wgPrivateKey: string;
+  wgPublicKey: string;
+  wgPreSharedKey: string;
+  wgAllowedIPs: string;
 }
 
 function emptyForm(): FormState {
@@ -137,6 +141,10 @@ function emptyForm(): FormState {
     enable: true,
     inboundIds: [],
     externalLinks: [],
+    wgPrivateKey: '',
+    wgPublicKey: '',
+    wgPreSharedKey: '',
+    wgAllowedIPs: '',
   };
 }
 
@@ -237,6 +245,10 @@ export default function ClientFormModal({
         enable: !!client.enable,
         inboundIds: Array.isArray(attachedIds) ? [...attachedIds] : [],
         externalLinks: toExternalLinkRows(attachedExternalLinks),
+        wgPrivateKey: client.privateKey || '',
+        wgPublicKey: client.publicKey || '',
+        wgPreSharedKey: client.preSharedKey || '',
+        wgAllowedIPs: client.allowedIPs || '',
       };
       if (et < 0) {
         next.delayedStart = true;
@@ -250,6 +262,7 @@ export default function ClientFormModal({
       setForm(next);
       void loadIps();
     } else {
+      const wgKeypair = Wireguard.generateKeypair();
       setForm({
         ...emptyForm(),
         email: RandomUtil.randomLowerAndNum(10),
@@ -257,6 +270,8 @@ export default function ClientFormModal({
         subId: RandomUtil.randomLowerAndNum(16),
         password: RandomUtil.randomLowerAndNum(16),
         auth: RandomUtil.randomLowerAndNum(16),
+        wgPrivateKey: wgKeypair.privateKey,
+        wgPublicKey: wgKeypair.publicKey,
       });
     }
 
@@ -283,6 +298,14 @@ export default function ClientFormModal({
     const ids = new Set<number>();
     for (const row of inbounds || []) {
       if (row && row.protocol === 'vmess') ids.add(row.id);
+    }
+    return ids;
+  }, [inbounds]);
+
+  const wireguardIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const row of inbounds || []) {
+      if (row && row.protocol === 'wireguard') ids.add(row.id);
     }
     return ids;
   }, [inbounds]);
@@ -316,6 +339,16 @@ export default function ClientFormModal({
     () => (form.inboundIds || []).some((id) => vmessIds.has(id)),
     [form.inboundIds, vmessIds],
   );
+
+  const showWireguard = useMemo(
+    () => (form.inboundIds || []).some((id) => wireguardIds.has(id)),
+    [form.inboundIds, wireguardIds],
+  );
+
+  function regenerateWireguardKeys() {
+    const kp = Wireguard.generateKeypair();
+    setForm((prev) => ({ ...prev, wgPrivateKey: kp.privateKey, wgPublicKey: kp.publicKey }));
+  }
 
   useEffect(() => {
     if (!showFlow && form.flow) {
@@ -453,6 +486,14 @@ export default function ClientFormModal({
       clientPayload.reverse = { tag: reverseTag };
     }
 
+    if (showWireguard) {
+      clientPayload.privateKey = form.wgPrivateKey;
+      clientPayload.publicKey = form.wgPublicKey;
+      if (form.wgPreSharedKey) {
+        clientPayload.preSharedKey = form.wgPreSharedKey;
+      }
+    }
+
     const externalLinks: ExternalLinkInput[] = form.externalLinks
       .map((r) => ({ kind: r.kind, value: r.value.trim(), remark: '' }))
       .filter((r) => r.value !== '');
@@ -541,7 +582,7 @@ export default function ClientFormModal({
                               onChange={(e) => update('email', e.target.value)}
                             />
                             {!isEdit && (
-                              <Button icon={<ReloadOutlined />} onClick={() => update('email', RandomUtil.randomLowerAndNum(12))} />
+                              <Button aria-label={t('regenerate')} icon={<ReloadOutlined />} onClick={() => update('email', RandomUtil.randomLowerAndNum(12))} />
                             )}
                           </Space.Compact>
                         </Form.Item>
@@ -562,7 +603,7 @@ export default function ClientFormModal({
                                   onChange={(v) => update('limitIp', Number(v) || 0)} />
                                 {isEdit && (
                                   <Tooltip title={t('pages.clients.ipLog')}>
-                                    <Button icon={<EyeOutlined />} loading={ipsLoading} onClick={openIpsModal}>
+                                    <Button aria-label={t('pages.clients.ipLog')} icon={<EyeOutlined />} loading={ipsLoading} onClick={openIpsModal}>
                                       {clientIps.length > 0 ? clientIps.length : ''}
                                     </Button>
                                   </Tooltip>
@@ -676,7 +717,7 @@ export default function ClientFormModal({
                     </Form.Item>
 
                     <Form.Item>
-                      <Switch checked={form.enable} onChange={(v) => update('enable', v)} />
+                      <Switch aria-label={t('enable')} checked={form.enable} onChange={(v) => update('enable', v)} />
                       <span style={{ marginLeft: 8 }}>{t('enable')}</span>
                     </Form.Item>
                   </>
@@ -690,28 +731,28 @@ export default function ClientFormModal({
                     <Form.Item label={t('pages.clients.uuid')}>
                       <Space.Compact style={{ display: 'flex' }}>
                         <Input value={form.uuid} style={{ flex: 1 }} onChange={(e) => update('uuid', e.target.value)} />
-                        <Button icon={<ReloadOutlined />} onClick={() => update('uuid', RandomUtil.randomUUID())} />
+                        <Button aria-label={t('regenerate')} icon={<ReloadOutlined />} onClick={() => update('uuid', RandomUtil.randomUUID())} />
                       </Space.Compact>
                     </Form.Item>
 
                     <Form.Item label={t('pages.clients.password')}>
                       <Space.Compact style={{ display: 'flex' }}>
                         <Input value={form.password} style={{ flex: 1 }} onChange={(e) => update('password', e.target.value)} />
-                        <Button icon={<ReloadOutlined />} onClick={regeneratePassword} />
+                        <Button aria-label={t('regenerate')} icon={<ReloadOutlined />} onClick={regeneratePassword} />
                       </Space.Compact>
                     </Form.Item>
 
                     <Form.Item label={t('pages.clients.subId')}>
                       <Space.Compact style={{ display: 'flex' }}>
                         <Input value={form.subId} style={{ flex: 1 }} onChange={(e) => update('subId', e.target.value)} />
-                        <Button icon={<ReloadOutlined />} onClick={() => update('subId', RandomUtil.randomLowerAndNum(16))} />
+                        <Button aria-label={t('regenerate')} icon={<ReloadOutlined />} onClick={() => update('subId', RandomUtil.randomLowerAndNum(16))} />
                       </Space.Compact>
                     </Form.Item>
 
                     <Form.Item label={t('pages.clients.hysteriaAuth')}>
                       <Space.Compact style={{ display: 'flex' }}>
                         <Input value={form.auth} style={{ flex: 1 }} onChange={(e) => update('auth', e.target.value)} />
-                        <Button icon={<ReloadOutlined />} onClick={() => update('auth', RandomUtil.randomLowerAndNum(16))} />
+                        <Button aria-label={t('regenerate')} icon={<ReloadOutlined />} onClick={() => update('auth', RandomUtil.randomLowerAndNum(16))} />
                       </Space.Compact>
                     </Form.Item>
 
@@ -736,6 +777,38 @@ export default function ClientFormModal({
                         />
                       </Form.Item>
                     )}
+                    {showWireguard && (
+                      <>
+                        <Form.Item label={t('pages.clients.wireguardPrivateKey')}>
+                          <Space.Compact style={{ display: 'flex' }}>
+                            <Input
+                              value={form.wgPrivateKey}
+                              style={{ flex: 1 }}
+                              onChange={(e) => {
+                                const priv = e.target.value;
+                                update('wgPrivateKey', priv);
+                                update('wgPublicKey', priv ? Wireguard.generateKeypair(priv).publicKey : '');
+                              }}
+                            />
+                            <Button aria-label={t('regenerate')} icon={<ReloadOutlined />} onClick={regenerateWireguardKeys} />
+                          </Space.Compact>
+                        </Form.Item>
+                        <Form.Item label={t('pages.clients.wireguardPublicKey')}>
+                          <Input value={form.wgPublicKey} disabled />
+                        </Form.Item>
+                        <Form.Item label={t('pages.clients.wireguardPreSharedKey')}>
+                          <Input
+                            value={form.wgPreSharedKey}
+                            onChange={(e) => update('wgPreSharedKey', e.target.value)}
+                          />
+                        </Form.Item>
+                        {isEdit && form.wgAllowedIPs && (
+                          <Form.Item label={t('pages.clients.wireguardAllowedIPs')}>
+                            <Input value={form.wgAllowedIPs} disabled />
+                          </Form.Item>
+                        )}
+                      </>
+                    )}
                   </>
                 ),
               },
@@ -758,11 +831,12 @@ export default function ClientFormModal({
                         <div key={row.key} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                           <Input
                             value={row.value}
+                            aria-label="vless:// · vmess:// · trojan:// · ss:// · hysteria2:// · wireguard://"
                             onChange={(e) => updateExternalLinkRow(row.key, e.target.value)}
                             placeholder="vless:// · vmess:// · trojan:// · ss:// · hysteria2:// · wireguard://"
                           />
                           <Tooltip title={t('delete')}>
-                            <Button danger icon={<DeleteOutlined />} onClick={() => removeExternalLinkRow(row.key)} />
+                            <Button aria-label={t('delete')} danger icon={<DeleteOutlined />} onClick={() => removeExternalLinkRow(row.key)} />
                           </Tooltip>
                         </div>
                       ))}
@@ -778,11 +852,12 @@ export default function ClientFormModal({
                         <div key={row.key} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                           <Input
                             value={row.value}
+                            aria-label="https://provider.example/sub/…"
                             onChange={(e) => updateExternalLinkRow(row.key, e.target.value)}
                             placeholder="https://provider.example/sub/…"
                           />
                           <Tooltip title={t('delete')}>
-                            <Button danger icon={<DeleteOutlined />} onClick={() => removeExternalLinkRow(row.key)} />
+                            <Button aria-label={t('delete')} danger icon={<DeleteOutlined />} onClick={() => removeExternalLinkRow(row.key)} />
                           </Tooltip>
                         </div>
                       ))}

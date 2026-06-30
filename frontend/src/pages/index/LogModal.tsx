@@ -4,6 +4,7 @@ import { Button, Checkbox, Form, Modal, Select, Space } from 'antd';
 import { DownloadOutlined, SyncOutlined } from '@ant-design/icons';
 
 import { HttpUtil, FileManager, PromiseUtil } from '@/utils';
+import { activateOnKey } from '@/utils/a11y';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { parseLogLine } from './logParse';
 import './LogModal.css';
@@ -13,12 +14,15 @@ interface LogModalProps {
   onClose: () => void;
 }
 
+const AUTO_UPDATE_INTERVAL = 5000;
+
 export default function LogModal({ open, onClose }: LogModalProps) {
   const { t } = useTranslation();
   const { isMobile } = useMediaQuery();
   const [rows, setRows] = useState('20');
   const [level, setLevel] = useState('info');
   const [syslog, setSyslog] = useState(false);
+  const [autoUpdate, setAutoUpdate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const openRef = useRef(open);
@@ -39,6 +43,11 @@ export default function LogModal({ open, onClose }: LogModalProps) {
     }
   }, [rows, level, syslog]);
 
+  const refreshRef = useRef(refresh);
+  useEffect(() => {
+    refreshRef.current = refresh;
+  }, [refresh]);
+
   useEffect(() => {
     openRef.current = open;
     if (open) refresh();
@@ -47,6 +56,12 @@ export default function LogModal({ open, onClose }: LogModalProps) {
   useEffect(() => {
     if (openRef.current) refresh();
   }, [rows, level, syslog, refresh]);
+
+  useEffect(() => {
+    if (!open || !autoUpdate) return;
+    const id = setInterval(() => refreshRef.current(), AUTO_UPDATE_INTERVAL);
+    return () => clearInterval(id);
+  }, [open, autoUpdate]);
 
   const parsedLogs = useMemo(() => logs.map(parseLogLine), [logs]);
 
@@ -57,7 +72,7 @@ export default function LogModal({ open, onClose }: LogModalProps) {
   const titleNode = (
     <>
       {t('pages.index.logs')}
-      <SyncOutlined spin={loading} className="reload-icon" onClick={refresh} />
+      <SyncOutlined spin={loading} className="reload-icon" role="button" tabIndex={0} aria-label={t('refresh')} onClick={refresh} onKeyDown={activateOnKey(refresh)} />
     </>
   );
 
@@ -80,11 +95,11 @@ export default function LogModal({ open, onClose }: LogModalProps) {
               style={{ width: 70 }}
               onChange={setRows}
               options={[
-                { value: '10', label: '10' },
                 { value: '20', label: '20' },
                 { value: '50', label: '50' },
                 { value: '100', label: '100' },
                 { value: '500', label: '500' },
+                { value: '1000', label: '1000' },
               ]}
             />
             <Select
@@ -106,9 +121,12 @@ export default function LogModal({ open, onClose }: LogModalProps) {
           <Checkbox checked={syslog} onChange={(e) => setSyslog(e.target.checked)}>
             SysLog
           </Checkbox>
+          <Checkbox checked={autoUpdate} onChange={(e) => setAutoUpdate(e.target.checked)}>
+            {t('pages.index.autoUpdate')}
+          </Checkbox>
         </Form.Item>
         <Form.Item className="download-item">
-          <Button type="primary" onClick={download} icon={<DownloadOutlined />} />
+          <Button type="primary" onClick={download} icon={<DownloadOutlined />} aria-label={t('download')} />
         </Form.Item>
       </Form>
 
@@ -147,7 +165,7 @@ export default function LogModal({ open, onClose }: LogModalProps) {
               {log.levelText && <span className={`log-level ${log.levelClass}`}>{log.levelText}</span>}
               {(log.body || log.service) && (
                 <>
-                  <span> - </span>
+                  {(log.stamp || log.levelText) && <span> - </span>}
                   {log.service && <b>{log.service}</b>}
                   {log.service && log.body ? ' ' : ''}
                   <span>{log.body}</span>

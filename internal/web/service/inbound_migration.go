@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -93,12 +94,12 @@ func (s *InboundService) MigrationRequirements() {
 	// Fix inbounds based problems
 	var inbounds []*model.Inbound
 	err = tx.Model(model.Inbound{}).Where("protocol IN (?)", []string{"vmess", "vless", "trojan", "shadowsocks", "hysteria"}).Find(&inbounds).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return
 	}
 	for inbound_index := range inbounds {
 		settings := map[string]any{}
-		json.Unmarshal([]byte(inbounds[inbound_index].Settings), &settings)
+		_ = json.Unmarshal([]byte(inbounds[inbound_index].Settings), &settings)
 		if raw, exists := settings["clients"]; exists && raw == nil {
 			settings["clients"] = []any{}
 		}
@@ -117,7 +118,7 @@ func (s *InboundService) MigrationRequirements() {
 
 				// Convert string tgId to int64
 				if _, ok := c["tgId"]; ok {
-					var tgId any = c["tgId"]
+					tgId := c["tgId"]
 					if tgIdStr, ok2 := tgId.(string); ok2 {
 						tgIdInt64, err := strconv.ParseInt(strings.ReplaceAll(tgIdStr, " ", ""), 10, 64)
 						if err == nil {
@@ -170,7 +171,7 @@ func (s *InboundService) MigrationRequirements() {
 				var count int64
 				tx.Model(xray.ClientTraffic{}).Where("email = ?", modelClient.Email).Count(&count)
 				if count == 0 {
-					s.AddClientStat(tx, inbounds[inbound_index].Id, &modelClient)
+					_ = s.AddClientStat(tx, inbounds[inbound_index].Id, &modelClient)
 				}
 			}
 		}
@@ -212,7 +213,7 @@ func (s *InboundService) MigrationRequirements() {
 	for _, ep := range externalProxy {
 		var reverses any
 		var stream map[string]any
-		json.Unmarshal([]byte(ep.StreamSettings), &stream)
+		_ = json.Unmarshal([]byte(ep.StreamSettings), &stream)
 		if tlsSettings, ok := stream["tlsSettings"].(map[string]any); ok {
 			if settings, ok := tlsSettings["settings"].(map[string]any); ok {
 				if domains, ok := settings["domains"].([]any); ok {
@@ -253,4 +254,45 @@ func (s *InboundService) MigrationRequirements() {
 func (s *InboundService) MigrateDB() {
 	s.MigrationRequirements()
 	s.MigrationRemoveOrphanedTraffics()
+	s.MigrationRestoreVisionFlow()
+}
+
+// MigrationRestoreVisionFlow repairs VLESS inbounds whose clients lost their
+// XTLS Vision flow because the inbound was not flow-eligible when the client was
+// written (e.g. an XHTTP inbound whose vlessenc encryption was enabled only
+// later). For each now-eligible inbound it restores flow=xtls-rprx-vision on
+// clients whose intended flow (their flow_override on a sibling inbound) is
+// Vision. Idempotent: once a client carries the flow it is skipped, so this is a
+// no-op on healthy installs and on subsequent boots.
+func (s *InboundService) MigrationRestoreVisionFlow() {
+	db := database.GetDB()
+	var inbounds []*model.Inbound
+	if err := db.Model(&model.Inbound{}).
+		Where("protocol = ?", model.VLESS).
+		Find(&inbounds).Error; err != nil {
+		logger.Warning("MigrationRestoreVisionFlow: load inbounds failed:", err)
+		return
+	}
+	for _, ib := range inbounds {
+		restored, changed := s.restoreVisionFlowForEligibleInbound(nil, ib.Settings, ib.StreamSettings, ib.Protocol)
+		if !changed {
+			continue
+		}
+		clients, err := s.GetClients(&model.Inbound{Settings: restored})
+		if err != nil {
+			logger.Warning("MigrationRestoreVisionFlow: parse clients for inbound", ib.Id, "failed:", err)
+			continue
+		}
+		err = db.Transaction(func(tx *gorm.DB) error {
+			if e := tx.Model(&model.Inbound{}).Where("id = ?", ib.Id).Update("settings", restored).Error; e != nil {
+				return e
+			}
+			return s.clientService.SyncInbound(tx, ib.Id, clients)
+		})
+		if err != nil {
+			logger.Warning("MigrationRestoreVisionFlow: update inbound", ib.Id, "failed:", err)
+			continue
+		}
+		logger.Info("MigrationRestoreVisionFlow: restored XTLS Vision flow on inbound", ib.Id)
+	}
 }

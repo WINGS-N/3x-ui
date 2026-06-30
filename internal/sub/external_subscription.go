@@ -1,6 +1,7 @@
 package sub
 
 import (
+	"context"
 	"encoding/base64"
 	"io"
 	"net/http"
@@ -64,7 +65,7 @@ func fetchSubscriptionLinks(rawURL string) []string {
 }
 
 func doFetchSubscriptionLinks(rawURL string) ([]string, error) {
-	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, rawURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -78,14 +79,20 @@ func doFetchSubscriptionLinks(rawURL string) ([]string, error) {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, errBadStatus
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, subscriptionMaxBytes))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, subscriptionMaxBytes+1))
 	if err != nil {
 		return nil, err
+	}
+	if len(body) > subscriptionMaxBytes {
+		return nil, errSubscriptionBodyTooLarge
 	}
 	return decodeSubscriptionBody(body), nil
 }
 
-var errBadStatus = &subError{"non-2xx subscription response"}
+var (
+	errBadStatus                = &subError{"non-2xx subscription response"}
+	errSubscriptionBodyTooLarge = &subError{"subscription response body exceeds size limit"}
+)
 
 type subError struct{ msg string }
 

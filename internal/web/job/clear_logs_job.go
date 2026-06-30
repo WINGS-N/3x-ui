@@ -20,11 +20,11 @@ func NewClearLogsJob() *ClearLogsJob {
 // ensureFileExists creates the necessary directories and file if they don't exist
 func ensureFileExists(path string) error {
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o644)
 	if err != nil {
 		return err
 	}
@@ -34,8 +34,8 @@ func ensureFileExists(path string) error {
 
 // Here Run is an interface method of the Job interface
 func (j *ClearLogsJob) Run() {
-	logFiles := []string{xray.GetIPLimitLogPath(), xray.GetIPLimitBannedLogPath(), xray.GetAccessPersistentLogPath()}
-	logFilesPrev := []string{xray.GetIPLimitBannedPrevLogPath(), xray.GetAccessPersistentPrevLogPath()}
+	logFiles := []string{xray.GetIPLimitLogPath(), xray.GetIPLimitBannedLogPath()}
+	logFilesPrev := []string{xray.GetIPLimitBannedPrevLogPath()}
 
 	// Ensure all log files and their paths exist
 	for _, path := range append(logFiles, logFilesPrev...) {
@@ -48,13 +48,13 @@ func (j *ClearLogsJob) Run() {
 	for i := range len(logFiles) {
 		if i > 0 {
 			// Copy to previous logs
-			logFilePrev, err := os.OpenFile(logFilesPrev[i-1], os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+			logFilePrev, err := os.OpenFile(logFilesPrev[i-1], os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 			if err != nil {
 				logger.Warning("Failed to open previous log file for writing:", logFilesPrev[i-1], "-", err)
 				continue
 			}
 
-			logFile, err := os.OpenFile(logFiles[i], os.O_RDONLY, 0644)
+			logFile, err := os.OpenFile(logFiles[i], os.O_RDONLY, 0o644)
 			if err != nil {
 				logger.Warning("Failed to open current log file for reading:", logFiles[i], "-", err)
 				logFilePrev.Close()
@@ -74,5 +74,21 @@ func (j *ClearLogsJob) Run() {
 		if err != nil {
 			logger.Warning("Failed to truncate log file:", logFiles[i], "-", err)
 		}
+	}
+
+	wipeAccessLog()
+}
+
+// wipeAccessLog truncates the user-configured Xray access log so it can't grow
+// unbounded. The IP-limit job no longer reads or rotates it, so this daily wipe
+// is the only thing that caps it. A disabled ("none") or unset access log is
+// left alone, and a missing file is fine — there's nothing to wipe.
+func wipeAccessLog() {
+	accessLogPath, err := xray.GetAccessLogPath()
+	if err != nil || accessLogPath == "none" || accessLogPath == "" {
+		return
+	}
+	if err := os.Truncate(accessLogPath, 0); err != nil && !os.IsNotExist(err) {
+		logger.Warning("Failed to truncate access log:", accessLogPath, "-", err)
 	}
 }

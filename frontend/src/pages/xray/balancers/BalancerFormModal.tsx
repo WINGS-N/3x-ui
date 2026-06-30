@@ -68,10 +68,14 @@ export default function BalancerFormModal({
 }: BalancerFormModalProps) {
   const { t } = useTranslation();
   const [state, setState] = useState<FormState>(() => initialState(balancer));
+  const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const isEdit = balancer != null;
 
-  const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+  const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setTouched((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
     setState((prev) => ({ ...prev, [key]: value }));
+  };
 
   const parsed = useMemo(
     () => BalancerFormSchema.safeParse(state),
@@ -89,8 +93,17 @@ export default function BalancerFormModal({
     return map;
   }, [parsed, t]);
 
+  const showTagIssue = submitAttempted || !!touched.tag;
+  const showSelectorIssue = submitAttempted || !!touched.selector;
+  const tagError = showTagIssue ? issues.tag : '';
+  const selectorError = showSelectorIssue ? issues.selector : '';
+  const showDuplicate = showTagIssue && duplicateTag;
+
   function submit() {
-    if (!parsed.success || duplicateTag) return;
+    if (!parsed.success || duplicateTag) {
+      setSubmitAttempted(true);
+      return;
+    }
     const values = { ...parsed.data };
     if (values.strategy !== 'leastLoad') delete values.settings;
     onConfirm(values);
@@ -128,7 +141,6 @@ export default function BalancerFormModal({
       title={title}
       okText={okText}
       cancelText={t('close')}
-      okButtonProps={{ disabled: !parsed.success || duplicateTag }}
       mask={{ closable: false }}
       onOk={submit}
       onCancel={onClose}
@@ -137,8 +149,8 @@ export default function BalancerFormModal({
         <Form.Item
           label={t('pages.xray.balancer.tag')}
           required
-          validateStatus={issues.tag ? 'error' : duplicateTag ? 'warning' : ''}
-          help={issues.tag || (duplicateTag ? t('pages.xray.balancer.tagDuplicate') : '')}
+          validateStatus={tagError ? 'error' : showDuplicate ? 'warning' : ''}
+          help={tagError || (showDuplicate ? t('pages.xray.balancer.tagDuplicate') : '')}
           hasFeedback
         >
           <Input
@@ -157,8 +169,8 @@ export default function BalancerFormModal({
         <Form.Item
           label={t('pages.xray.balancer.selector')}
           required
-          validateStatus={issues.selector ? 'error' : ''}
-          help={issues.selector || ''}
+          validateStatus={selectorError ? 'error' : ''}
+          help={selectorError || ''}
           hasFeedback
         >
           <Select
@@ -212,16 +224,18 @@ export default function BalancerFormModal({
                 size="small"
                 type="primary"
                 icon={<PlusOutlined />}
+                aria-label={t('add')}
                 onClick={() => updateBaselines([...baselines, ''])}
               />
               {baselines.map((b, idx) => (
                 <Space.Compact key={idx} block style={{ marginTop: 4 }}>
                   <Input
                     value={b}
+                    aria-label={t('pages.xray.balancer.baselines')}
                     placeholder="e.g. 1s"
                     onChange={(e) => updateBaselines(baselines.map((x, i) => (i === idx ? e.target.value : x)))}
                   />
-                  <InputAddon onClick={() => updateBaselines(baselines.filter((_, i) => i !== idx))}>
+                  <InputAddon ariaLabel={t('remove')} onClick={() => updateBaselines(baselines.filter((_, i) => i !== idx))}>
                     <MinusOutlined />
                   </InputAddon>
                 </Space.Compact>
@@ -232,28 +246,32 @@ export default function BalancerFormModal({
                 size="small"
                 type="primary"
                 icon={<PlusOutlined />}
+                aria-label={t('add')}
                 onClick={() => updateCosts([...costs, { regexp: false, match: '', value: 1 }])}
               />
               {costs.map((c, idx) => (
                 <Space.Compact key={idx} block style={{ marginTop: 4 }}>
                   <Switch
                     checked={c.regexp}
+                    aria-label={t('pages.xray.balancer.costRegexp')}
                     checkedChildren="re"
                     unCheckedChildren="lit"
                     onChange={(v) => updateCosts(costs.map((x, i) => (i === idx ? { ...x, regexp: v } : x)))}
                   />
                   <Input
                     value={c.match}
+                    aria-label={t('pages.xray.balancer.costMatch')}
                     placeholder="tag pattern"
                     onChange={(e) => updateCosts(costs.map((x, i) => (i === idx ? { ...x, match: e.target.value } : x)))}
                   />
                   <InputNumber
                     value={c.value}
+                    aria-label={t('pages.xray.balancer.costValue')}
                     placeholder="weight"
                     style={{ width: 100 }}
                     onChange={(v) => updateCosts(costs.map((x, i) => (i === idx ? { ...x, value: typeof v === 'number' ? v : 0 } : x)))}
                   />
-                  <InputAddon onClick={() => updateCosts(costs.filter((_, i) => i !== idx))}>
+                  <InputAddon ariaLabel={t('remove')} onClick={() => updateCosts(costs.filter((_, i) => i !== idx))}>
                     <MinusOutlined />
                   </InputAddon>
                 </Space.Compact>

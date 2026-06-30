@@ -27,6 +27,7 @@ import {
 } from 'antd';
 import type { ColumnsType, TableProps } from 'antd/es/table';
 import {
+  CheckCircleOutlined,
   ClockCircleOutlined,
   DeleteOutlined,
   DisconnectOutlined,
@@ -42,12 +43,14 @@ import {
   RetweetOutlined,
   SearchOutlined,
   SortAscendingOutlined,
+  StopOutlined,
   TagsOutlined,
   TeamOutlined,
   UploadOutlined,
   UsergroupAddOutlined,
   UsergroupDeleteOutlined,
 } from '@ant-design/icons';
+import { activateOnKey } from '@/utils/a11y';
 
 import { useTheme } from '@/hooks/useTheme';
 import { formatInboundLabel } from '@/lib/inbounds/label';
@@ -204,7 +207,7 @@ export default function ClientsPage() {
     setQuery,
     inbounds, onlines, loading, transitioning, fetched, fetchError, subSettings,
     tgBotEnable, expireDiff, trafficDiff, pageSize,
-    create, update, remove, bulkDelete, bulkAdjust, bulkAddToGroup, bulkRemoveFromGroup, attach, setExternalLinks, bulkAttach, detach, bulkDetach,
+    create, update, remove, bulkDelete, bulkAdjust, bulkEnable, bulkDisable, bulkAddToGroup, bulkRemoveFromGroup, attach, setExternalLinks, bulkAttach, detach, bulkDetach,
     resetTraffic, resetAllTraffics, delDepleted, delOrphans, exportClients, importClients, setEnable,
     applyTrafficEvent, applyClientStatsEvent,
     refresh,
@@ -641,6 +644,35 @@ export default function ClientsPage() {
     });
   }
 
+  function onBulkSetEnable(enable: boolean) {
+    const emails = [...selectedRowKeys];
+    if (emails.length === 0) return;
+    modal.confirm({
+      title: t(enable ? 'pages.clients.bulkEnableConfirmTitle' : 'pages.clients.bulkDisableConfirmTitle', { count: emails.length }),
+      content: t(enable ? 'pages.clients.bulkEnableConfirmContent' : 'pages.clients.bulkDisableConfirmContent'),
+      okText: t('confirm'),
+      okType: enable ? 'primary' : 'danger',
+      cancelText: t('cancel'),
+      onOk: async () => {
+        const msg = enable ? await bulkEnable(emails) : await bulkDisable(emails);
+        setSelectedRowKeys([]);
+        const changed = msg?.obj?.changed ?? 0;
+        const skipped = msg?.obj?.skipped ?? [];
+        const failed = skipped.length;
+        const firstError = skipped[0]?.reason ?? msg?.msg ?? '';
+        const okKey = enable ? 'pages.clients.toasts.bulkEnabled' : 'pages.clients.toasts.bulkDisabled';
+        const mixedKey = enable ? 'pages.clients.toasts.bulkEnabledMixed' : 'pages.clients.toasts.bulkDisabledMixed';
+        if (failed === 0 && msg?.success) {
+          messageApi.success(t(okKey, { count: changed }));
+        } else {
+          messageApi.warning(firstError
+            ? `${t(mixedKey, { ok: changed, failed })} — ${firstError}`
+            : t(mixedKey, { ok: changed, failed }));
+        }
+      },
+    });
+  }
+
   function onBulkDelete() {
     const emails = [...selectedRowKeys];
     if (emails.length === 0) return;
@@ -685,16 +717,18 @@ export default function ClientsPage() {
     }
     const updateMsg = await update(meta.email, payload);
     if (!updateMsg?.success) return updateMsg;
+    const rawEmail = (payload as { email?: unknown }).email;
+    const emailKey = typeof rawEmail === 'string' && rawEmail.trim() ? rawEmail.trim() : meta.email;
     if (Array.isArray(meta.attach) && meta.attach.length > 0) {
-      const r = await attach(meta.email, meta.attach);
+      const r = await attach(emailKey, meta.attach);
       if (!r?.success) return r;
     }
     if (Array.isArray(meta.detach) && meta.detach.length > 0) {
-      const r = await detach(meta.email, meta.detach);
+      const r = await detach(emailKey, meta.detach);
       if (!r?.success) return r;
     }
     // Always replace the client's external links (an empty set clears them).
-    const r = await setExternalLinks(meta.email, meta.externalLinks);
+    const r = await setExternalLinks(emailKey, meta.externalLinks);
     if (!r?.success) return r;
     return updateMsg;
   }, [create, update, attach, detach, setExternalLinks]);
@@ -719,19 +753,19 @@ export default function ClientsPage() {
       render: (_v, record) => (
         <Space size={4}>
           <Tooltip title={t('pages.clients.qrCode')}>
-            <Button size="small" type="text" style={{ fontSize: 16 }} icon={<QrcodeOutlined />} onClick={() => onShowQr(record)} />
+            <Button size="small" type="text" style={{ fontSize: 16 }} icon={<QrcodeOutlined />} aria-label={t('pages.clients.qrCode')} onClick={() => onShowQr(record)} />
           </Tooltip>
           <Tooltip title={t('pages.clients.clientInfo')}>
-            <Button size="small" type="text" style={{ fontSize: 16 }} icon={<InfoCircleOutlined />} onClick={() => onShowInfo(record)} />
+            <Button size="small" type="text" style={{ fontSize: 16 }} icon={<InfoCircleOutlined />} aria-label={t('pages.clients.clientInfo')} onClick={() => onShowInfo(record)} />
           </Tooltip>
           <Tooltip title={t('pages.inbounds.resetTraffic')}>
-            <Button size="small" type="text" style={{ fontSize: 16 }} icon={<RetweetOutlined />} onClick={() => onResetTraffic(record)} />
+            <Button size="small" type="text" style={{ fontSize: 16 }} icon={<RetweetOutlined />} aria-label={t('pages.inbounds.resetTraffic')} onClick={() => onResetTraffic(record)} />
           </Tooltip>
           <Tooltip title={t('edit')}>
-            <Button size="small" type="text" style={{ fontSize: 16 }} icon={<EditOutlined />} onClick={() => onEdit(record)} />
+            <Button size="small" type="text" style={{ fontSize: 16 }} icon={<EditOutlined />} aria-label={t('edit')} onClick={() => onEdit(record)} />
           </Tooltip>
           <Tooltip title={t('delete')}>
-            <Button size="small" type="text" danger style={{ fontSize: 16 }} icon={<DeleteOutlined />} onClick={() => onDelete(record)} />
+            <Button size="small" type="text" danger style={{ fontSize: 16 }} icon={<DeleteOutlined />} aria-label={t('delete')} onClick={() => onDelete(record)} />
           </Tooltip>
         </Space>
       ),
@@ -1006,32 +1040,18 @@ export default function ClientsPage() {
                       title={
                         <div className="card-toolbar">
                           {selectedRowKeys.length === 0 ? (
-                            <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+                            <Button type="primary" icon={<PlusOutlined />} onClick={onAdd} aria-label={t('pages.clients.addClients')}>
                               {!isMobile && t('pages.clients.addClients')}
                             </Button>
                           ) : (
-                            <>
-                              <Tag
-                                color="blue"
-                                closable
-                                onClose={() => setSelectedRowKeys([])}
-                                style={{ marginInlineEnd: 0, padding: '4px 8px', fontSize: 13 }}
-                              >
-                                {t('pages.clients.selectedCount', { count: selectedRowKeys.length })}
-                              </Tag>
-                              <Button icon={<UsergroupAddOutlined />} onClick={() => setBulkAttachOpen(true)}>
-                                {!isMobile && t('pages.clients.attach')}
-                              </Button>
-                              <Button danger icon={<UsergroupDeleteOutlined />} onClick={() => setBulkDetachOpen(true)}>
-                                {!isMobile && t('pages.clients.detach')}
-                              </Button>
-                              <Button icon={<TagsOutlined />} onClick={() => setBulkGroupOpen(true)}>
-                                {!isMobile && t('pages.clients.addToGroup')}
-                              </Button>
-                              <Button danger icon={<UngroupIcon />} onClick={onBulkUngroup}>
-                                {!isMobile && t('pages.clients.ungroup')}
-                              </Button>
-                            </>
+                            <Tag
+                              color="blue"
+                              closable
+                              onClose={() => setSelectedRowKeys([])}
+                              style={{ marginInlineEnd: 0, padding: '4px 8px', fontSize: 13 }}
+                            >
+                              {t('pages.clients.selectedCount', { count: selectedRowKeys.length })}
+                            </Tag>
                           )}
                           <Dropdown
                             trigger={['click']}
@@ -1039,6 +1059,46 @@ export default function ClientsPage() {
                             menu={{
                               items: selectedRowKeys.length > 0
                                 ? [
+                                  {
+                                    key: 'attach',
+                                    icon: <UsergroupAddOutlined />,
+                                    label: t('pages.clients.attach'),
+                                    onClick: () => setBulkAttachOpen(true),
+                                  },
+                                  {
+                                    key: 'detach',
+                                    icon: <UsergroupDeleteOutlined />,
+                                    label: t('pages.clients.detach'),
+                                    danger: true,
+                                    onClick: () => setBulkDetachOpen(true),
+                                  },
+                                  {
+                                    key: 'addToGroup',
+                                    icon: <TagsOutlined />,
+                                    label: t('pages.clients.addToGroup'),
+                                    onClick: () => setBulkGroupOpen(true),
+                                  },
+                                  {
+                                    key: 'ungroup',
+                                    icon: <UngroupIcon />,
+                                    label: t('pages.clients.ungroup'),
+                                    danger: true,
+                                    onClick: onBulkUngroup,
+                                  },
+                                  { type: 'divider' as const },
+                                  {
+                                    key: 'enable',
+                                    icon: <CheckCircleOutlined />,
+                                    label: t('pages.clients.enable'),
+                                    onClick: () => onBulkSetEnable(true),
+                                  },
+                                  {
+                                    key: 'disable',
+                                    icon: <StopOutlined />,
+                                    label: t('pages.clients.disable'),
+                                    danger: true,
+                                    onClick: () => onBulkSetEnable(false),
+                                  },
                                   {
                                     key: 'adjust',
                                     icon: <ClockCircleOutlined />,
@@ -1095,7 +1155,7 @@ export default function ClientsPage() {
                                 ],
                             }}
                           >
-                            <Button icon={<MoreOutlined />}>
+                            <Button icon={<MoreOutlined />} aria-label={t('more')}>
                               {!isMobile && t('more')}
                             </Button>
                           </Dropdown>
@@ -1105,6 +1165,7 @@ export default function ClientsPage() {
                               icon={<DeleteOutlined />}
                               onClick={onBulkDelete}
                               style={{ marginInlineStart: 'auto' }}
+                              aria-label={t('delete')}
                             >
                               {!isMobile && t('delete')}
                             </Button>
@@ -1121,6 +1182,7 @@ export default function ClientsPage() {
                           prefix={<SearchOutlined />}
                           size={isMobile ? 'small' : 'middle'}
                           style={{ maxWidth: 320 }}
+                          aria-label={t('search')}
                         />
                         <Badge count={activeCount} size="small" offset={[-4, 4]}>
                           <Button
@@ -1128,12 +1190,14 @@ export default function ClientsPage() {
                             size={isMobile ? 'small' : 'middle'}
                             onClick={() => setFilterDrawerOpen(true)}
                             type={activeCount > 0 ? 'primary' : 'default'}
+                            aria-label={t('filter')}
                           >
                             {!isMobile && t('filter')}
                           </Button>
                         </Badge>
                         <Select
                           value={sortValueFor(sortColumn, sortOrder)}
+                          aria-label={t('sort')}
                           size={isMobile ? 'small' : 'middle'}
                           suffixIcon={<SortAscendingOutlined />}
                           style={{ minWidth: isMobile ? 130 : 200 }}
@@ -1306,9 +1370,16 @@ export default function ClientsPage() {
                                     <span className="tag-name">{row.email}</span>
                                     {bucket === 'depleted' && <Tag color="red" className="status-tag">{t('depleted')}</Tag>}
                                     {bucket === 'expiring' && <Tag color="orange" className="status-tag">{t('depletingSoon')}</Tag>}
-                                    <div className="card-actions" onClick={(e) => e.stopPropagation()}>
+                                    <div className="card-actions">
                                       <Tooltip title={t('pages.clients.clientInfo')}>
-                                        <InfoCircleOutlined className="row-action-trigger" onClick={() => onShowInfo(row)} />
+                                        <InfoCircleOutlined
+                                          className="row-action-trigger"
+                                          role="button"
+                                          tabIndex={0}
+                                          aria-label={t('pages.clients.clientInfo')}
+                                          onClick={() => onShowInfo(row)}
+                                          onKeyDown={activateOnKey(() => onShowInfo(row))}
+                                        />
                                       </Tooltip>
                                       <Switch
                                         checked={!!row.enable}
@@ -1345,7 +1416,7 @@ export default function ClientsPage() {
                                           ],
                                         }}
                                       >
-                                        <MoreOutlined className="row-action-trigger" />
+                                        <Button type="text" size="small" className="row-action-trigger" icon={<MoreOutlined />} aria-label={t('more')} />
                                       </Dropdown>
                                     </div>
                                   </div>
@@ -1400,6 +1471,7 @@ export default function ClientsPage() {
           <ClientQrModal
             open={qrOpen}
             client={qrClient}
+            inboundsById={inboundsById}
             subSettings={subSettings}
             onOpenChange={setQrOpen}
           />
@@ -1418,8 +1490,8 @@ export default function ClientsPage() {
             open={bulkAdjustOpen}
             count={selectedRowKeys.length}
             onOpenChange={setBulkAdjustOpen}
-            onSubmit={async (addDays, addBytes) => {
-              const msg = await bulkAdjust([...selectedRowKeys], addDays, addBytes);
+            onSubmit={async (addDays, addBytes, flow) => {
+              const msg = await bulkAdjust([...selectedRowKeys], addDays, addBytes, flow);
               if (msg?.success) {
                 setSelectedRowKeys([]);
                 return msg.obj ?? { adjusted: 0 };

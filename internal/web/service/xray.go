@@ -103,7 +103,7 @@ func (s *XrayService) GetXrayVersion() string {
 	if tag, err := readReleaseMetadata(xray.GetBinaryPath()); err == nil && tag != "" {
 		return strings.TrimPrefix(tag, "v")
 	}
-	return p.GetVersion()
+	return p.GetXrayVersion()
 }
 
 // RemoveIndex removes an element at the specified index from a slice.
@@ -128,6 +128,10 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	xrayConfig.API = ensureAPIServices(xrayConfig.API)
 	xrayConfig.Policy = ensureStatsPolicy(xrayConfig.Policy)
 	xrayConfig.RouterConfig = stripDisabledRules(xrayConfig.RouterConfig)
+	// Template outbounds authored before the xray-core #6258 XHTTP rename may
+	// still carry sessionPlacement/sessionKey; lift them too (same reason as
+	// the per-inbound lift below).
+	xrayConfig.OutboundConfigs = liftOutboundsXhttpSessionIDKeys(xrayConfig.OutboundConfigs)
 
 	_, _, _ = s.inboundService.AddTraffic(nil, nil)
 
@@ -152,7 +156,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			continue
 		}
 		settings := map[string]any{}
-		json.Unmarshal([]byte(inbound.Settings), &settings)
+		_ = json.Unmarshal([]byte(inbound.Settings), &settings)
 
 		dbClients, listErr := s.inboundService.clientService.ListForInbound(nil, inbound.Id)
 		if listErr != nil {
@@ -166,6 +170,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		}
 
 		var finalClients []any
+		var wgPeers []any
 		for i := range dbClients {
 			c := dbClients[i]
 			if enable, exists := enableMap[c.Email]; exists && !enable {
@@ -213,14 +218,40 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				if c.Auth != "" {
 					entry["auth"] = c.Auth
 				}
+			case model.WireGuard:
+				peer := map[string]any{"email": c.Email, "level": 0}
+				if c.PublicKey != "" {
+					peer["publicKey"] = c.PublicKey
+				}
+				if len(c.AllowedIPs) > 0 {
+					peer["allowedIPs"] = c.AllowedIPs
+				}
+				if c.PreSharedKey != "" {
+					peer["preSharedKey"] = c.PreSharedKey
+				}
+				if c.KeepAlive > 0 {
+					peer["keepAlive"] = c.KeepAlive
+				}
+				wgPeers = append(wgPeers, peer)
+				continue
 			}
 			finalClients = append(finalClients, entry)
 		}
 
-		_, hadClients := settings["clients"]
-		mutated := hadClients || len(finalClients) > 0
-		if mutated {
-			settings["clients"] = finalClients
+		var mutated bool
+		if inbound.Protocol == model.WireGuard {
+			delete(settings, "clients")
+			if wgPeers == nil {
+				wgPeers = []any{}
+			}
+			settings["peers"] = wgPeers
+			mutated = true
+		} else {
+			_, hadClients := settings["clients"]
+			mutated = hadClients || len(finalClients) > 0
+			if mutated {
+				settings["clients"] = finalClients
+			}
 		}
 
 		if inboundCanHostFallbacks(inbound) {
@@ -249,7 +280,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		if len(inbound.StreamSettings) > 0 {
 			// Unmarshal stream JSON
 			var stream map[string]any
-			json.Unmarshal([]byte(inbound.StreamSettings), &stream)
+			_ = json.Unmarshal([]byte(inbound.StreamSettings), &stream)
 
 			// Remove the "settings" field under "tlsSettings" and "realitySettings"
 			tlsSettings, ok1 := stream["tlsSettings"].(map[string]any)
@@ -263,6 +294,12 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			}
 
 			delete(stream, "externalProxy")
+
+			// xray-core v26.6.22 (#6258) renamed the XHTTP session keys and
+			// kept no fallback. Lift legacy sessionPlacement/sessionKey onto the
+			// new names here so inbounds stored before the rename keep working
+			// without the admin re-saving them.
+			liftXhttpSessionIDKeys(stream)
 
 			newStream, err := json.MarshalIndent(stream, "", "  ")
 			if err != nil {
@@ -646,7 +683,7 @@ func mergeSubscriptionOutbounds(cfg *xray.Config, prepend, appendList []any) {
 			return
 		}
 	}
-	merged := make([]any, 0, len(prepend)+len(templateOutbounds)+len(appendList))
+	var merged []any
 	merged = append(merged, prepend...)
 	merged = append(merged, templateOutbounds...)
 	merged = append(merged, appendList...)
@@ -990,7 +1027,7 @@ func (s *XrayService) RestartXray(isForce bool) error {
 			logger.Info("Xray config changes applied through the core API, no restart needed")
 			return nil
 		}
-		p.Stop()
+		_ = p.Stop()
 	}
 
 	p = xray.NewProcess(xrayConfig)
@@ -1147,4 +1184,61 @@ func (s *XrayService) IsNeedRestartAndSetFalse() bool {
 // DidXrayCrash checks if Xray crashed by verifying it's not running and wasn't manually stopped.
 func (s *XrayService) DidXrayCrash() bool {
 	return !s.IsXrayRunning() && !isManuallyStopped.Load()
+}
+
+// liftXhttpSessionIDKeys renames the legacy XHTTP session keys
+// (sessionPlacement/sessionKey) to the v26.6.22 #6258 names
+// (sessionIDPlacement/sessionIDKey) inside a streamSettings map. xray-core kept
+// no fallback for the old names, so a config stored before the rename would be
+// silently ignored by the engine. Returns true if it changed anything.
+func liftXhttpSessionIDKeys(stream map[string]any) bool {
+	xhttp, ok := stream["xhttpSettings"].(map[string]any)
+	if !ok {
+		return false
+	}
+	changed := false
+	for legacy, renamed := range map[string]string{
+		"sessionPlacement": "sessionIDPlacement",
+		"sessionKey":       "sessionIDKey",
+	} {
+		v, has := xhttp[legacy]
+		if !has {
+			continue
+		}
+		if _, exists := xhttp[renamed]; !exists {
+			xhttp[renamed] = v
+		}
+		delete(xhttp, legacy)
+		changed = true
+	}
+	return changed
+}
+
+// liftOutboundsXhttpSessionIDKeys applies liftXhttpSessionIDKeys to every
+// outbound's streamSettings in the raw outbounds array. The original bytes are
+// returned untouched when nothing needs lifting, so an unchanged config never
+// looks modified to the hot-reload diff.
+func liftOutboundsXhttpSessionIDKeys(raw json_util.RawMessage) json_util.RawMessage {
+	if len(raw) == 0 {
+		return raw
+	}
+	var outbounds []map[string]any
+	if err := json.Unmarshal(raw, &outbounds); err != nil {
+		return raw
+	}
+	changed := false
+	for _, ob := range outbounds {
+		if stream, ok := ob["streamSettings"].(map[string]any); ok {
+			if liftXhttpSessionIDKeys(stream) {
+				changed = true
+			}
+		}
+	}
+	if !changed {
+		return raw
+	}
+	if rewritten, err := json.Marshal(outbounds); err == nil {
+		return rewritten
+	}
+	return raw
 }

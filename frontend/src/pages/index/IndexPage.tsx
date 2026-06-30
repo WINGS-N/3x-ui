@@ -34,9 +34,12 @@ import {
   DatabaseOutlined,
   ForkOutlined,
   CopyOutlined,
+  TelegramFilled,
 } from '@ant-design/icons';
 
 import { HttpUtil, SizeFormatter, TimeFormatter, ClipboardManager, FileManager } from '@/utils';
+import { formatPanelVersion } from '@/lib/panel-version';
+import { activateOnKey } from '@/utils/a11y';
 import { useTheme } from '@/hooks/useTheme';
 import { useStatusQuery } from '@/api/queries/useStatusQuery';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -68,6 +71,7 @@ export default function IndexPage() {
   useEffect(() => { setMessageInstance(messageApi); }, [messageApi]);
 
   const [accessLogEnable, setAccessLogEnable] = useState(false);
+  const [devChannelEnable, setDevChannelEnable] = useState(false);
   const [panelUpdateInfo, setPanelUpdateInfo] = useState<PanelUpdateInfo>({
     currentVersion: '',
     latestVersion: '',
@@ -92,8 +96,13 @@ export default function IndexPage() {
   const [loadingTip, setLoadingTip] = useState(t('loading'));
 
   useEffect(() => {
-    HttpUtil.post<{ accessLogEnable?: boolean }>('/panel/api/setting/defaultSettings').then((msg) => {
-      if (msg?.success && msg.obj) setAccessLogEnable(!!msg.obj.accessLogEnable);
+    HttpUtil.post<{ accessLogEnable?: boolean; devChannelEnable?: boolean }>(
+      '/panel/api/setting/defaultSettings',
+    ).then((msg) => {
+      if (msg?.success && msg.obj) {
+        setAccessLogEnable(!!msg.obj.accessLogEnable);
+        setDevChannelEnable(!!msg.obj.devChannelEnable);
+      }
     });
     HttpUtil.get<PanelUpdateInfo>('/panel/api/server/getPanelUpdateInfo').then((msg) => {
       if (msg?.success && msg.obj) setPanelUpdateInfo(msg.obj);
@@ -101,7 +110,7 @@ export default function IndexPage() {
   }, []);
 
   const displayVersion = useMemo(
-    () => panelUpdateInfo.currentVersion || window.X_UI_CUR_VER || '?',
+    () => window.X_UI_CUR_VER || panelUpdateInfo.currentVersion || '?',
     [panelUpdateInfo.currentVersion],
   );
 
@@ -134,11 +143,15 @@ export default function IndexPage() {
   }, [refresh]);
 
   function openPanelVersion() {
-    if (panelUpdateInfo.updateAvailable) {
-      setPanelUpdateOpen(true);
-    } else {
-      window.open('https://github.com/MHSanaei/3x-ui/releases', '_blank', 'noopener,noreferrer');
-    }
+    setPanelUpdateOpen(true);
+  }
+
+  async function handleChannelChange(dev: boolean) {
+    const res = await HttpUtil.post('/panel/api/server/setUpdateChannel', { dev });
+    if (!res?.success) return;
+    setDevChannelEnable(dev);
+    const msg = await HttpUtil.get<PanelUpdateInfo>('/panel/api/server/getPanelUpdateInfo');
+    if (msg?.success && msg.obj) setPanelUpdateInfo(msg.obj);
   }
 
   function openTelegram() {
@@ -226,15 +239,15 @@ export default function IndexPage() {
                       title={t('menu.link')}
                       hoverable
                       actions={[
-                        <Space className="action" key="logs" onClick={() => setLogsOpen(true)}>
+                        <Space className="action" key="logs" role="button" tabIndex={0} aria-label={t('pages.index.logs')} onClick={() => setLogsOpen(true)} onKeyDown={activateOnKey(() => setLogsOpen(true))}>
                           <BarsOutlined />
                           {!isMobile && <span>{t('pages.index.logs')}</span>}
                         </Space>,
-                        <Space className="action" key="config" onClick={openConfig}>
+                        <Space className="action" key="config" role="button" tabIndex={0} aria-label={t('pages.index.config')} onClick={openConfig} onKeyDown={activateOnKey(openConfig)}>
                           <ControlOutlined />
                           {!isMobile && <span>{t('pages.index.config')}</span>}
                         </Space>,
-                        <Space className="action" key="backup" onClick={() => setBackupOpen(true)}>
+                        <Space className="action" key="backup" role="button" tabIndex={0} aria-label={t('pages.index.backupTitle')} onClick={() => setBackupOpen(true)} onKeyDown={activateOnKey(() => setBackupOpen(true))}>
                           <CloudServerOutlined />
                           {!isMobile && <span>{t('pages.index.backupTitle')}</span>}
                         </Space>,
@@ -250,38 +263,33 @@ export default function IndexPage() {
                           {isMobile && displayVersion && (
                             <Tag color={panelUpdateInfo.updateAvailable ? 'orange' : 'green'}>
                               {panelUpdateInfo.updateAvailable
-                                ? `v${panelUpdateInfo.latestVersion}`
-                                : `v${displayVersion}`}
+                                ? formatPanelVersion(panelUpdateInfo.latestVersion)
+                                : formatPanelVersion(displayVersion)}
                             </Tag>
                           )}
                         </Space>
                       }
                       hoverable
                       actions={[
-                        <Space className="action" key="tg" onClick={openTelegram}>
-                          <svg
-                            viewBox="0 0 24 24"
-                            width="14"
-                            height="14"
-                            fill="currentColor"
-                            className="tg-icon"
-                            aria-hidden="true"
-                          >
-                            <path d="M21.93 4.34a1.5 1.5 0 0 0-2.05-1.6L2.97 9.6c-.92.36-.91 1.66.02 1.99l4.32 1.53 1.7 5.23a1 1 0 0 0 1.68.36l2.43-2.43 4.36 3.21a1.5 1.5 0 0 0 2.36-.91l3.09-13.86a1.5 1.5 0 0 0 0-.38ZM9.97 14.66l-.55 3.36-1.36-4.2 9.8-7.05-7.89 7.89Z" />
-                          </svg>
+                        <Space className="action" key="tg" role="button" tabIndex={0} aria-label="@XrayUI" onClick={openTelegram} onKeyDown={activateOnKey(openTelegram)}>
+                          <TelegramFilled className="tg-icon" aria-hidden="true" />
                           {!isMobile && <span>@XrayUI</span>}
                         </Space>,
                         <Space
                           key="panel-version"
                           className={`action ${panelUpdateInfo.updateAvailable ? 'action-update' : ''}`}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={t('pages.index.updatePanel')}
                           onClick={openPanelVersion}
+                          onKeyDown={activateOnKey(openPanelVersion)}
                         >
                           <CloudDownloadOutlined />
                           {!isMobile && (
                             <span>
                               {panelUpdateInfo.updateAvailable
-                                ? `${t('update')} ${panelUpdateInfo.latestVersion}`
-                                : `v${displayVersion}`}
+                                ? `${t('update')} ${formatPanelVersion(panelUpdateInfo.latestVersion)}`
+                                : formatPanelVersion(displayVersion)}
                             </span>
                           )}
                         </Space>,
@@ -297,7 +305,11 @@ export default function IndexPage() {
                         <Space
                           className="action"
                           key="sys-history"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={t('pages.index.systemHistoryTitle')}
                           onClick={() => setSysHistoryOpen(true)}
+                          onKeyDown={activateOnKey(() => setSysHistoryOpen(true))}
                         >
                           <AreaChartOutlined />
                           {!isMobile && <span>{t('pages.index.systemHistoryTitle')}</span>}
@@ -305,7 +317,11 @@ export default function IndexPage() {
                         <Space
                           className="action"
                           key="xray-metrics"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={t('pages.index.xrayMetricsTitle')}
                           onClick={() => setXrayMetricsOpen(true)}
+                          onKeyDown={activateOnKey(() => setXrayMetricsOpen(true))}
                         >
                           <AreaChartOutlined />
                           {!isMobile && <span>{t('pages.index.xrayMetricsTitle')}</span>}
@@ -412,12 +428,20 @@ export default function IndexPage() {
                           {showIp ? (
                             <EyeOutlined
                               className="ip-toggle-icon"
+                              role="button"
+                              tabIndex={0}
+                              aria-label={t('pages.index.toggleIpVisibility')}
                               onClick={() => setShowIp(false)}
+                              onKeyDown={activateOnKey(() => setShowIp(false))}
                             />
                           ) : (
                             <EyeInvisibleOutlined
                               className="ip-toggle-icon"
+                              role="button"
+                              tabIndex={0}
+                              aria-label={t('pages.index.toggleIpVisibility')}
                               onClick={() => setShowIp(true)}
+                              onKeyDown={activateOnKey(() => setShowIp(true))}
                             />
                           )}
                         </Tooltip>
@@ -472,6 +496,8 @@ export default function IndexPage() {
           <PanelUpdateModal
             open={panelUpdateOpen}
             info={panelUpdateInfo}
+            devChannelEnable={devChannelEnable}
+            onChannelChange={handleChannelChange}
             onClose={() => setPanelUpdateOpen(false)}
             onBusy={setBusy}
           />

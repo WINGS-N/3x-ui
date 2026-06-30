@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +18,24 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/link"
 )
+
+// maxOutboundSubscriptionBytes caps a single outbound subscription response.
+// It is larger than the 2 MiB user-facing subscription cap because an outbound
+// subscription may aggregate many upstream outbounds into one document.
+const maxOutboundSubscriptionBytes int64 = 8 << 20
+
+var errOutboundSubscriptionBodyTooLarge = errors.New("outbound subscription response body exceeds size limit")
+
+func readBoundedOutboundSubscriptionBody(r io.Reader) ([]byte, error) {
+	body, err := io.ReadAll(io.LimitReader(r, maxOutboundSubscriptionBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(body)) > maxOutboundSubscriptionBytes {
+		return nil, fmt.Errorf("%w (limit: %d bytes)", errOutboundSubscriptionBodyTooLarge, maxOutboundSubscriptionBytes)
+	}
+	return body, nil
+}
 
 // OutboundSubscriptionService manages remote outbound subscriptions.
 type OutboundSubscriptionService struct {
@@ -262,7 +281,7 @@ func (s *OutboundSubscriptionService) fetchAndStore(sub *model.OutboundSubscript
 		return rejectPrivateHost(ctx, req.URL.Hostname())
 	}
 
-	req, err := http.NewRequest("GET", sub.Url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, sub.Url, nil)
 	if err != nil {
 		s.recordError(sub, err)
 		return nil, err
@@ -276,12 +295,12 @@ func (s *OutboundSubscriptionService) fetchAndStore(sub *model.OutboundSubscript
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		err := fmt.Errorf("http %d", resp.StatusCode)
 		s.recordError(sub, err)
 		return nil, err
 	}
-	body, err := io.ReadAll(resp.Body)
+	body, err := readBoundedOutboundSubscriptionBody(resp.Body)
 	if err != nil {
 		s.recordError(sub, err)
 		return nil, err

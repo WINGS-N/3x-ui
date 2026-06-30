@@ -82,7 +82,6 @@ export function isInboundMultiUser(record: { protocol: string; settings: unknown
 }
 
 export function showQrCodeMenu(dbInbound: DBInboundRecord): boolean {
-  if (dbInbound.isWireguard) return true;
   if (dbInbound.isSS) {
     return !isSSMultiUser({ protocol: 'shadowsocks', settings: readSettings(dbInbound.settings) });
   }

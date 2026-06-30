@@ -77,6 +77,8 @@ type AllSetting struct {
 	SubAnnounce                 string `json:"subAnnounce" form:"subAnnounce"`                                 // Subscription announce
 	SubEnableRouting            bool   `json:"subEnableRouting" form:"subEnableRouting"`                       // Enable routing for subscription
 	SubRoutingRules             string `json:"subRoutingRules" form:"subRoutingRules"`                         // Subscription global routing rules (Only for Happ)
+	SubIncyEnableRouting        bool   `json:"subIncyEnableRouting" form:"subIncyEnableRouting"`               // Enable routing injection for the Incy client
+	SubIncyRoutingRules         string `json:"subIncyRoutingRules" form:"subIncyRoutingRules"`                 // Incy routing deep-link injected into the subscription body (Only for Incy)
 	SubListen                   string `json:"subListen" form:"subListen"`                                     // Subscription server listen IP
 	SubPort                     int    `json:"subPort" form:"subPort" validate:"gte=1,lte=65535"`              // Subscription server port
 	SubPath                     string `json:"subPath" form:"subPath"`                                         // Base path for subscription URLs
@@ -103,17 +105,18 @@ type AllSetting struct {
 	SubHideSettings             bool   `json:"subHideSettings" form:"subHideSettings"`   // Hide server settings in happ subscription (Only for Happ)
 
 	// LDAP settings
-	LdapEnable     bool   `json:"ldapEnable" form:"ldapEnable"`
-	LdapHost       string `json:"ldapHost" form:"ldapHost"`
-	LdapPort       int    `json:"ldapPort" form:"ldapPort" validate:"gte=0,lte=65535"`
-	LdapUseTLS     bool   `json:"ldapUseTLS" form:"ldapUseTLS"`
-	LdapBindDN     string `json:"ldapBindDN" form:"ldapBindDN"`
-	LdapPassword   string `json:"ldapPassword" form:"ldapPassword"`
-	LdapBaseDN     string `json:"ldapBaseDN" form:"ldapBaseDN"`
-	LdapUserFilter string `json:"ldapUserFilter" form:"ldapUserFilter"`
-	LdapUserAttr   string `json:"ldapUserAttr" form:"ldapUserAttr"` // e.g., mail or uid
-	LdapVlessField string `json:"ldapVlessField" form:"ldapVlessField"`
-	LdapSyncCron   string `json:"ldapSyncCron" form:"ldapSyncCron"`
+	LdapEnable             bool   `json:"ldapEnable" form:"ldapEnable"`
+	LdapHost               string `json:"ldapHost" form:"ldapHost"`
+	LdapPort               int    `json:"ldapPort" form:"ldapPort" validate:"gte=0,lte=65535"`
+	LdapUseTLS             bool   `json:"ldapUseTLS" form:"ldapUseTLS"`
+	LdapInsecureSkipVerify bool   `json:"ldapInsecureSkipVerify" form:"ldapInsecureSkipVerify"`
+	LdapBindDN             string `json:"ldapBindDN" form:"ldapBindDN"`
+	LdapPassword           string `json:"ldapPassword" form:"ldapPassword"`
+	LdapBaseDN             string `json:"ldapBaseDN" form:"ldapBaseDN"`
+	LdapUserFilter         string `json:"ldapUserFilter" form:"ldapUserFilter"`
+	LdapUserAttr           string `json:"ldapUserAttr" form:"ldapUserAttr"` // e.g., mail or uid
+	LdapVlessField         string `json:"ldapVlessField" form:"ldapVlessField"`
+	LdapSyncCron           string `json:"ldapSyncCron" form:"ldapSyncCron"`
 	// Generic flag configuration
 	LdapFlagField         string `json:"ldapFlagField" form:"ldapFlagField"`
 	LdapTruthyValues      string `json:"ldapTruthyValues" form:"ldapTruthyValues"`

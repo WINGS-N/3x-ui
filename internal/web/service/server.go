@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
@@ -118,7 +119,10 @@ type Status struct {
 
 // Release represents information about a software release from GitHub.
 type Release struct {
-	TagName string `json:"tag_name"` // The tag name of the release
+	TagName         string `json:"tag_name"`         // The tag name of the release
+	Body            string `json:"body"`             // The release notes; the dev channel reads its commit from here
+	TargetCommitish string `json:"target_commitish"` // The branch/commit the tag points at
+	Prerelease      bool   `json:"prerelease"`       // Whether this is a pre-release
 }
 
 // ServerService provides business logic for server monitoring and management.
@@ -164,15 +168,15 @@ const xrayVersionsCacheTTL = 15 * time.Minute
 // callers from triggering arbitrary aggregation work and keeps the
 // frontend's bucket selector self-documenting.
 var allowedHistoryBuckets = map[int]bool{
-	2:    true, // Real-time view
-	30:   true, // 30s intervals
-	60:   true, // 1m intervals
-	120:  true, // 2m intervals
-	180:  true, // 3m intervals
-	300:  true, // 5m intervals
-	720:  true, // 12m intervals
-	1440: true, // 24m intervals
-	2880: true, // 48m intervals
+	2:     true, // 2m
+	30:    true, // 30m
+	60:    true, // 1h
+	180:   true, // 3h
+	360:   true, // 6h
+	720:   true, // 12h
+	1440:  true, // 24h
+	2880:  true, // 2d
+	10080: true, // 7d
 }
 
 // IsAllowedHistoryBucket reports whether a bucket-seconds value is in the
@@ -231,7 +235,7 @@ func (s *ServerService) isFail2banInstalled() bool {
 		return s.fail2banInstalled
 	}
 
-	err := exec.Command("fail2ban-client", "-h").Run()
+	err := exec.CommandContext(context.Background(), "fail2ban-client", "-h").Run()
 	s.fail2banInstalled = err == nil
 	s.fail2banCheckedAt = time.Now()
 	return s.fail2banInstalled
@@ -349,7 +353,11 @@ func getPublicIP(url string) string {
 		Timeout: 3 * time.Second,
 	}
 
-	resp, err := client.Get(url)
+	req, reqErr := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if reqErr != nil {
+		return "N/A"
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "N/A"
 	}
@@ -374,6 +382,53 @@ func getPublicIP(url string) string {
 	}
 
 	return ipString
+}
+
+var publicIPv4Services = []string{
+	"https://api4.ipify.org",
+	"https://ipv4.icanhazip.com",
+	"https://v4.api.ipinfo.io/ip",
+	"https://ipv4.myexternalip.com/raw",
+	"https://4.ident.me",
+	"https://check-host.net/ip",
+}
+
+var publicIPv6Services = []string{
+	"https://api6.ipify.org",
+	"https://ipv6.icanhazip.com",
+	"https://v6.api.ipinfo.io/ip",
+	"https://ipv6.myexternalip.com/raw",
+	"https://6.ident.me",
+}
+
+// resolvePublicIPs caches the public IPv4/IPv6 addresses on first use. Guarded
+// by s.mu because the bot's ServerService may call it from sendBackup while a
+// status report runs concurrently.
+func (s *ServerService) resolvePublicIPs() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.cachedIPv4 == "" {
+		for _, ip4Service := range publicIPv4Services {
+			s.cachedIPv4 = getPublicIP(ip4Service)
+			if s.cachedIPv4 != "N/A" {
+				break
+			}
+		}
+	}
+
+	if s.cachedIPv6 == "" && !s.noIPv6 {
+		for _, ip6Service := range publicIPv6Services {
+			s.cachedIPv6 = getPublicIP(ip6Service)
+			if s.cachedIPv6 != "N/A" {
+				break
+			}
+		}
+	}
+
+	if s.cachedIPv6 == "N/A" {
+		s.noIPv6 = true
+	}
 }
 
 func (s *ServerService) GetStatus(lastStatus *Status) *Status {
@@ -537,45 +592,7 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 		logger.Warning("get udp connections failed:", err)
 	}
 
-	// IP fetching with caching
-	showIp4ServiceLists := []string{
-		"https://api4.ipify.org",
-		"https://ipv4.icanhazip.com",
-		"https://v4.api.ipinfo.io/ip",
-		"https://ipv4.myexternalip.com/raw",
-		"https://4.ident.me",
-		"https://check-host.net/ip",
-	}
-	showIp6ServiceLists := []string{
-		"https://api6.ipify.org",
-		"https://ipv6.icanhazip.com",
-		"https://v6.api.ipinfo.io/ip",
-		"https://ipv6.myexternalip.com/raw",
-		"https://6.ident.me",
-	}
-
-	if s.cachedIPv4 == "" {
-		for _, ip4Service := range showIp4ServiceLists {
-			s.cachedIPv4 = getPublicIP(ip4Service)
-			if s.cachedIPv4 != "N/A" {
-				break
-			}
-		}
-	}
-
-	if s.cachedIPv6 == "" && !s.noIPv6 {
-		for _, ip6Service := range showIp6ServiceLists {
-			s.cachedIPv6 = getPublicIP(ip6Service)
-			if s.cachedIPv6 != "N/A" {
-				break
-			}
-		}
-	}
-
-	if s.cachedIPv6 == "N/A" {
-		s.noIPv6 = true
-	}
-
+	s.resolvePublicIPs()
 	status.PublicIP.IPv4 = s.cachedIPv4
 	status.PublicIP.IPv6 = s.cachedIPv6
 
@@ -594,15 +611,19 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 	}
 	status.Xray.Version = s.xrayService.GetXrayVersion()
 	status.VKTurnProxy = VKTurnProxyRuntime().GetStatus()
-	status.PanelVersion = config.GetVersion()
+	status.PanelVersion = config.GetPanelVersion()
 	if guid, err := s.settingService.GetPanelGuid(); err == nil {
 		status.PanelGuid = guid
 	}
 
 	// Application stats
-	var rtm runtime.MemStats
-	runtime.ReadMemStats(&rtm)
-	status.AppStats.Mem = rtm.Sys
+	if rss := sys.SelfRSS(); rss > 0 {
+		status.AppStats.Mem = rss
+	} else {
+		var rtm runtime.MemStats
+		runtime.ReadMemStats(&rtm)
+		status.AppStats.Mem = rtm.Sys
+	}
 	status.AppStats.Threads = uint32(runtime.NumGoroutine())
 	if p != nil && p.IsRunning() {
 		status.AppStats.Uptime = p.GetUptime()
@@ -758,7 +779,11 @@ func (s *ServerService) GetXrayVersions() ([]string, error) {
 		bufferSize = 8192
 	)
 
-	resp, err := s.settingService.NewProxiedHTTPClient(10 * time.Second).Get(XrayURL)
+	req, reqErr := http.NewRequestWithContext(context.Background(), http.MethodGet, XrayURL, nil)
+	if reqErr != nil {
+		return nil, reqErr
+	}
+	resp, err := s.settingService.NewProxiedHTTPClient(10 * time.Second).Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -802,7 +827,7 @@ func (s *ServerService) GetXrayVersions() ([]string, error) {
 			continue
 		}
 
-		if major > 26 || (major == 26 && minor > 4) || (major == 26 && minor == 4 && patch >= 25) {
+		if major > 26 || (major == 26 && minor > 6) || (major == 26 && minor == 6 && patch >= 27) {
 			versions = append(versions, release.TagName)
 		}
 	}
@@ -858,7 +883,11 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 	fileName := fmt.Sprintf("Xray-%s-%s.zip", osName, arch)
 	url := fmt.Sprintf("https://github.com/WINGS-N/Xray-core/releases/download/%s/%s", version, fileName)
 	client := s.settingService.NewProxiedHTTPClient(60 * time.Second)
-	resp, err := client.Get(url)
+	req, reqErr := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if reqErr != nil {
+		return "", reqErr
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -920,7 +949,11 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 // fetchXrayDigestSHA256 downloads the .dgst sidecar XTLS publishes next to each
 // release asset and returns the SHA2-256 hex digest it lists.
 func (s *ServerService) fetchXrayDigestSHA256(client *http.Client, dgstURL string) (string, error) {
-	resp, err := client.Get(dgstURL)
+	req, reqErr := http.NewRequestWithContext(context.Background(), http.MethodGet, dgstURL, nil)
+	if reqErr != nil {
+		return "", fmt.Errorf("download xray checksum: %w", reqErr)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("download xray checksum: %w", err)
 	}
@@ -938,7 +971,7 @@ func (s *ServerService) fetchXrayDigestSHA256(client *http.Client, dgstURL strin
 // parseXrayDigestSHA256 extracts the lowercase SHA2-256 hex from an XTLS .dgst
 // file, whose lines are "ALGO= <hex>" (the relevant one being "SHA2-256= ...").
 func parseXrayDigestSHA256(dgst []byte) (string, error) {
-	for _, line := range strings.Split(string(dgst), "\n") {
+	for line := range strings.SplitSeq(string(dgst), "\n") {
 		rest, ok := strings.CutPrefix(strings.TrimSpace(line), "SHA2-256=")
 		if !ok {
 			continue
@@ -995,7 +1028,7 @@ func (s *ServerService) UpdateXray(version string) error {
 			return err
 		}
 		defer zipFile.Close()
-		if err := os.MkdirAll(filepath.Dir(fileName), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(fileName), 0o755); err != nil {
 			return err
 		}
 		tmpFile, err := os.CreateTemp(filepath.Dir(fileName), ".xray-*")
@@ -1017,7 +1050,7 @@ func (s *ServerService) UpdateXray(version string) error {
 		if n > maxXrayBinaryBytes {
 			return fmt.Errorf("xray binary exceeds %d bytes", maxXrayBinaryBytes)
 		}
-		if err := tmpFile.Chmod(0755); err != nil {
+		if err := tmpFile.Chmod(0o755); err != nil {
 			return err
 		}
 		if err := tmpFile.Close(); err != nil {
@@ -1085,7 +1118,7 @@ func (s *ServerService) GetLogs(count string, level string, syslog string) []str
 		}
 
 		// Use hardcoded command with validated parameters
-		cmd := exec.Command("journalctl", "-u", "x-ui", "--no-pager", "-n", strconv.Itoa(countInt), "-p", level)
+		cmd := exec.CommandContext(context.Background(), "journalctl", "-u", "x-ui", "--no-pager", "-n", strconv.Itoa(countInt), "-p", level)
 		var out bytes.Buffer
 		cmd.Stdout = &out
 		err = cmd.Run()
@@ -1116,8 +1149,8 @@ func (s *ServerService) GetXrayLogs(
 	showBlocked string,
 	showProxy string,
 	freedoms []string,
-	blackholes []string) []LogEntry {
-
+	blackholes []string,
+) []LogEntry {
 	const (
 		Direct = iota
 		Blocked
@@ -1144,12 +1177,12 @@ func (s *ServerService) GetXrayLogs(
 		line := strings.TrimSpace(scanner.Text())
 
 		if line == "" || strings.Contains(line, "api -> api") {
-			//skipping empty lines and api calls
+			// skipping empty lines and api calls
 			continue
 		}
 
 		if filter != "" && !strings.Contains(line, filter) {
-			//applying filter if it's not empty
+			// applying filter if it's not empty
 			continue
 		}
 
@@ -1293,23 +1326,37 @@ func (s *ServerService) GetDb() ([]byte, error) {
 
 // BackupFilename returns the filename for a database backup, named after the
 // panel's address so a downloaded or Telegram-sent backup identifies the server
-// it came from. requestHost is the browser's address (the getDb handler passes
-// c.Request.Host, matching the host shown in the panel title); it is preferred
-// when present, otherwise the configured web domain and then the server's public
-// IP are used. The extension is .dump on PostgreSQL and .db on SQLite; the base
-// falls back to "x-ui" when no address is known.
+// it came from, followed by the current date and time (_YYYY-MM-DD_HHMMSS) so
+// files accumulated in Telegram chat history group by server then sort
+// chronologically and same-day backups stay distinct. requestHost is the
+// browser's address: the getDb handler passes c.Request.Host so a panel download
+// is named after whatever address the user reached the panel with, no Listen
+// Domain needed. The Telegram bot has no request and passes "", falling back to
+// the configured Listen Domain (webDomain) and then the public IP. The extension
+// is .dump on PostgreSQL and .db on SQLite; the base falls back to "x-ui" when
+// no address is known.
 func (s *ServerService) BackupFilename(requestHost string) string {
 	ext := ".db"
 	if database.IsPostgres() {
 		ext = ".dump"
 	}
-	return s.backupHost(requestHost) + ext
+	return s.backupHost(requestHost) + backupDateSuffix(time.Now()) + ext
+}
+
+// backupDateSuffix returns the _YYYY-MM-DD_HHMMSS chronological suffix appended
+// after the host in backup filenames. Uses server-local time for consistency
+// with the timestamp printed in the Telegram backup message body.
+func backupDateSuffix(now time.Time) string {
+	return "_" + now.Format("2006-01-02_150405")
 }
 
 // backupHost picks the address used to name backup files: the browser's request
-// host (port stripped, the same value the panel title shows) when available,
-// otherwise the configured web domain and then the cached public IP (IPv4 before
-// IPv6), reduced to safe filename characters.
+// host (port stripped) when available, otherwise the configured Listen Domain
+// (webDomain) and then the resolved public IP (IPv4 before IPv6), reduced to safe
+// filename characters. The public IP is resolved directly rather than read from
+// LastStatus so callers whose ServerService never runs the status ticker —
+// notably the Telegram bot — still get a real address instead of the "x-ui"
+// fallback.
 func (s *ServerService) backupHost(requestHost string) string {
 	host := extractHostname(strings.TrimSpace(requestHost))
 	if host == "" {
@@ -1318,12 +1365,11 @@ func (s *ServerService) backupHost(requestHost string) string {
 		}
 	}
 	if host == "" {
-		if st := s.LastStatus(); st != nil {
-			if ip := st.PublicIP.IPv4; ip != "" && ip != "N/A" {
-				host = ip
-			} else if ip := st.PublicIP.IPv6; ip != "" && ip != "N/A" {
-				host = ip
-			}
+		s.resolvePublicIPs()
+		if ip := s.cachedIPv4; ip != "" && ip != "N/A" {
+			host = ip
+		} else if ip := s.cachedIPv6; ip != "" && ip != "N/A" {
+			host = ip
 		}
 	}
 	return sanitizeBackupHost(host)
@@ -1562,7 +1608,7 @@ func (s *ServerService) exportPostgresDB() ([]byte, error) {
 	if err != nil {
 		return nil, common.NewErrorf("invalid PostgreSQL DSN: %v", err)
 	}
-	cmd := exec.Command(bin, "--format=custom", "--no-owner", "--no-privileges", "--dbname", dbname)
+	cmd := exec.CommandContext(context.Background(), bin, "--format=custom", "--no-owner", "--no-privileges", "--dbname", dbname)
 	cmd.Env = env
 	var out, stderr bytes.Buffer
 	cmd.Stdout = &out
@@ -1624,7 +1670,7 @@ func (s *ServerService) importPostgresDB(file multipart.File) error {
 		logger.Warningf("Failed to close existing DB before restore: %v", errClose)
 	}
 
-	cmd := exec.Command(bin,
+	cmd := exec.CommandContext(context.Background(), bin,
 		"--clean", "--if-exists", "--no-owner", "--no-privileges",
 		"--single-transaction", "--dbname", dbname, tempPath,
 	)
@@ -1703,7 +1749,7 @@ func (s *ServerService) UpdateGeofile(fileName string) error {
 
 	downloadFile := func(url, destPath string) error {
 		var req *http.Request
-		req, err := http.NewRequest("GET", url, nil)
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 		if err != nil {
 			return common.NewErrorf("Failed to create HTTP request for %s: %v", url, err)
 		}
@@ -1800,7 +1846,7 @@ func (s *ServerService) UpdateGeofile(fileName string) error {
 
 func (s *ServerService) GetNewX25519Cert() (any, error) {
 	// Run the command
-	cmd := exec.Command(xray.GetBinaryPath(), "x25519")
+	cmd := exec.CommandContext(context.Background(), xray.GetBinaryPath(), "x25519")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -1826,7 +1872,7 @@ func (s *ServerService) GetNewX25519Cert() (any, error) {
 
 func (s *ServerService) GetNewmldsa65() (any, error) {
 	// Run the command
-	cmd := exec.Command(xray.GetBinaryPath(), "mldsa65")
+	cmd := exec.CommandContext(context.Background(), xray.GetBinaryPath(), "mldsa65")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -2030,7 +2076,7 @@ func (s *ServerService) GetRemoteCertHash(server string) ([]string, error) {
 
 func (s *ServerService) GetNewEchCert(sni string) (any, error) {
 	// Run the command
-	cmd := exec.Command(xray.GetBinaryPath(), "tls", "ech", "--serverName", sni)
+	cmd := exec.CommandContext(context.Background(), xray.GetBinaryPath(), "tls", "ech", "--serverName", sni)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -2053,16 +2099,39 @@ func (s *ServerService) GetNewEchCert(sni string) (any, error) {
 }
 
 func (s *ServerService) GetNewVlessEnc() (any, error) {
-	cmd := exec.Command(xray.GetBinaryPath(), "vlessenc")
+	cmd := exec.CommandContext(context.Background(), xray.GetBinaryPath(), "vlessenc")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
 		return nil, err
 	}
 
+	auths := parseVlessEncAuths(out.String())
+	auths = append(auths, deriveVlessEncModes(auths)...)
+
 	return map[string]any{
-		"auths": parseVlessEncAuths(out.String()),
+		"auths": auths,
 	}, nil
+}
+
+func deriveVlessEncModes(auths []map[string]string) []map[string]string {
+	var extra []map[string]string
+	for _, a := range auths {
+		for _, mode := range []string{"xorpub", "random"} {
+			dec := strings.Replace(a["decryption"], ".native.", "."+mode+".", 1)
+			enc := strings.Replace(a["encryption"], ".native.", "."+mode+".", 1)
+			if dec == a["decryption"] && enc == a["encryption"] {
+				continue
+			}
+			extra = append(extra, map[string]string{
+				"id":         a["id"] + "_" + mode,
+				"label":      a["label"] + " (" + mode + ")",
+				"decryption": dec,
+				"encryption": enc,
+			})
+		}
+	}
+	return extra
 }
 
 func parseVlessEncAuths(output string) []map[string]string {
@@ -2125,7 +2194,7 @@ func (s *ServerService) GetNewUUID() (map[string]string, error) {
 
 func (s *ServerService) GetNewmlkem768() (any, error) {
 	// Run the command
-	cmd := exec.Command(xray.GetBinaryPath(), "mlkem768")
+	cmd := exec.CommandContext(context.Background(), xray.GetBinaryPath(), "mlkem768")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
