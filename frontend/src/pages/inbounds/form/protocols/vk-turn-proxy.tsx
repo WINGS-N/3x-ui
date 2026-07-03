@@ -218,6 +218,40 @@ export default function VkTurnProxyFields() {
         <Switch />
       </Form.Item>
 
+      <Divider titlePlacement="center">{t('pages.inbounds.protocols.vkTurnProxy.panel')}</Divider>
+      <Form.Item
+        name={['settings', 'panelGrpc']}
+        label={t('pages.inbounds.protocols.vkTurnProxy.panelGrpc')}
+        tooltip={t('pages.inbounds.protocols.vkTurnProxy.panelGrpcHint')}
+      >
+        <Input placeholder="v.wingsnet.org:443" />
+      </Form.Item>
+      <Form.Item
+        name={['settings', 'nodeId']}
+        label={t('pages.inbounds.protocols.vkTurnProxy.nodeId')}
+        tooltip={t('pages.inbounds.protocols.vkTurnProxy.nodeIdHint')}
+      >
+        <Input />
+      </Form.Item>
+      <Form.Item name={['settings', 'panelToken']} label={t('pages.inbounds.protocols.vkTurnProxy.panelToken')}>
+        <Input />
+      </Form.Item>
+      <Form.Item
+        name={['settings', 'panelCaPin']}
+        label={t('pages.inbounds.protocols.vkTurnProxy.panelCaPin')}
+        tooltip={t('pages.inbounds.protocols.vkTurnProxy.panelCaPinHint')}
+      >
+        <Input placeholder="sha256/..." />
+      </Form.Item>
+      <Form.Item
+        name={['settings', 'panelInsecure']}
+        label={t('pages.inbounds.protocols.vkTurnProxy.panelInsecure')}
+        tooltip={t('pages.inbounds.protocols.vkTurnProxy.panelInsecureHint')}
+        valuePropName="checked"
+      >
+        <Switch />
+      </Form.Item>
+
       <Divider titlePlacement="center">{t('pages.inbounds.protocols.vkTurnProxy.clients')}</Divider>
       <Form.List name={['settings', 'clients']}>
         {(fields, { add, remove }) => (

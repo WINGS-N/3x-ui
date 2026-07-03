@@ -92,23 +92,32 @@ type VKTurnProxySettings struct {
 	// VK call links shared by every client of this inbound. Per-client
 	// link/links/linkSecondary may still override these on the export
 	// path (legacy data and edge cases).
-	Link                 string              `json:"link,omitempty"`
-	Links                []string            `json:"links,omitempty"`
-	LinkSecondary        string              `json:"linkSecondary,omitempty"`
-	SessionMode          string              `json:"sessionMode,omitempty"`
-	LocalEndpoint        string              `json:"localEndpoint,omitempty"`
-	WGDNS                string              `json:"wgDns,omitempty"`
-	WGMTU                int                 `json:"wgMtu,omitempty"`
-	WGAllowedIPs         string              `json:"wgAllowedIps,omitempty"`
-	Threads              int                 `json:"threads,omitempty"`
-	UseUDP               *bool               `json:"useUdp,omitempty"`
-	NoObfuscation        *bool               `json:"noObfuscation,omitempty"`
-	CredsGroupSize       int                 `json:"credsGroupSize,omitempty"`
-	WrapMode             string              `json:"wrapMode,omitempty"`
-	WrapCipher           string              `json:"wrapCipher,omitempty"`
-	WrapKeyHex           string              `json:"wrapKeyHex,omitempty"`
-	WrapAcceptClientKeys *bool               `json:"wrapAcceptClientKeys,omitempty"`
-	Clients              []VKTurnProxyClient `json:"clients,omitempty"`
+	Link                 string   `json:"link,omitempty"`
+	Links                []string `json:"links,omitempty"`
+	LinkSecondary        string   `json:"linkSecondary,omitempty"`
+	SessionMode          string   `json:"sessionMode,omitempty"`
+	LocalEndpoint        string   `json:"localEndpoint,omitempty"`
+	WGDNS                string   `json:"wgDns,omitempty"`
+	WGMTU                int      `json:"wgMtu,omitempty"`
+	WGAllowedIPs         string   `json:"wgAllowedIps,omitempty"`
+	Threads              int      `json:"threads,omitempty"`
+	UseUDP               *bool    `json:"useUdp,omitempty"`
+	NoObfuscation        *bool    `json:"noObfuscation,omitempty"`
+	CredsGroupSize       int      `json:"credsGroupSize,omitempty"`
+	WrapMode             string   `json:"wrapMode,omitempty"`
+	WrapCipher           string   `json:"wrapCipher,omitempty"`
+	WrapKeyHex           string   `json:"wrapKeyHex,omitempty"`
+	WrapAcceptClientKeys *bool    `json:"wrapAcceptClientKeys,omitempty"`
+	// Panel DTLS-provisioning: when PanelGRPC is set the relay dials the wingsv
+	// panel so apps can self-enroll their wg config over the DTLS PROVISION path.
+	// NodeID is this relay's id as registered in the panel. PanelCAPin is only
+	// needed for a self-signed panel; a publicly trusted panel needs none.
+	PanelGRPC     string              `json:"panelGrpc,omitempty"`
+	NodeID        string              `json:"nodeId,omitempty"`
+	PanelToken    string              `json:"panelToken,omitempty"`
+	PanelCAPin    string              `json:"panelCaPin,omitempty"`
+	PanelInsecure *bool               `json:"panelInsecure,omitempty"`
+	Clients       []VKTurnProxyClient `json:"clients,omitempty"`
 }
 
 type VKTurnProxyPeerBinding struct {
@@ -500,6 +509,11 @@ func (s *VKTurnProxyService) loadDesiredSpecs(running map[int]vkturnproxy.Spec) 
 			WrapCipher:           settings.WrapCipher,
 			WrapKeyHex:           settings.WrapKeyHex,
 			WrapAcceptClientKeys: settings.WrapAcceptClientKeys,
+			PanelGRPC:            strings.TrimSpace(settings.PanelGRPC),
+			NodeID:               strings.TrimSpace(settings.NodeID),
+			PanelToken:           strings.TrimSpace(settings.PanelToken),
+			PanelCAPin:           strings.TrimSpace(settings.PanelCAPin),
+			PanelInsecure:        settings.PanelInsecure,
 		}
 		specs[inbound.Id] = spec
 	}

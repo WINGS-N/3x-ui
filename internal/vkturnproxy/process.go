@@ -54,6 +54,14 @@ type Spec struct {
 	WrapCipher           string // "any" | "srtp-aes-gcm" | "srtp-chacha20-poly1305"
 	WrapKeyHex           string // optional fixed key (64 hex chars); takes precedence over client proposal when set
 	WrapAcceptClientKeys *bool  // default true; when false requires WrapKeyHex
+	// Panel DTLS-provisioning wiring. PanelGRPC empty disables it. PanelCAPin is
+	// only for a self-signed panel; empty verifies the panel by system trust.
+	// PanelInsecure dials the panel over plaintext (trusted local network only).
+	PanelGRPC     string
+	NodeID        string
+	PanelToken    string
+	PanelCAPin    string
+	PanelInsecure *bool
 }
 
 type HeartbeatState struct {
@@ -75,6 +83,10 @@ func (s Spec) Key() string {
 			acceptClientKeys = "0"
 		}
 	}
+	panelInsecure := ""
+	if s.PanelInsecure != nil && *s.PanelInsecure {
+		panelInsecure = "1"
+	}
 	return strings.Join([]string{
 		fmt.Sprintf("%d", s.ID),
 		s.Listen,
@@ -84,6 +96,11 @@ func (s Spec) Key() string {
 		s.WrapCipher,
 		s.WrapKeyHex,
 		acceptClientKeys,
+		s.PanelGRPC,
+		s.NodeID,
+		s.PanelToken,
+		s.PanelCAPin,
+		panelInsecure,
 	}, "\x00")
 }
 
@@ -184,6 +201,21 @@ func (p *Process) Start() (err error) {
 		}
 		if p.spec.WrapAcceptClientKeys != nil && !*p.spec.WrapAcceptClientKeys {
 			args = append(args, "-wrap-accept-client-keys=false")
+		}
+	}
+
+	// Panel DTLS-provisioning: enable only when an endpoint and this node's id are
+	// set. The relay verifies the panel by system trust unless a self-signed pin is
+	// given, or plaintext when explicitly marked insecure.
+	if panelGRPC := strings.TrimSpace(p.spec.PanelGRPC); panelGRPC != "" && strings.TrimSpace(p.spec.NodeID) != "" {
+		args = append(args, "-panel-grpc", panelGRPC, "-node-id", strings.TrimSpace(p.spec.NodeID))
+		if token := strings.TrimSpace(p.spec.PanelToken); token != "" {
+			args = append(args, "-panel-token", token)
+		}
+		if pin := strings.TrimSpace(p.spec.PanelCAPin); pin != "" {
+			args = append(args, "-panel-ca-pin", pin)
+		} else if p.spec.PanelInsecure != nil && *p.spec.PanelInsecure {
+			args = append(args, "-panel-insecure")
 		}
 	}
 

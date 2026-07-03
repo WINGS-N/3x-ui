@@ -71,6 +71,11 @@ export const VkTurnProxyInboundSettingsSchema = z.object({
   wrapCipher: z.string().optional(),
   wrapKeyHex: z.string().optional(),
   wrapAcceptClientKeys: z.boolean().optional(),
+  panelGrpc: z.string().optional(),
+  nodeId: z.string().optional(),
+  panelToken: z.string().optional(),
+  panelCaPin: z.string().optional(),
+  panelInsecure: z.boolean().optional(),
   clients: z.array(VkTurnProxyClientSchema).default([]),
 });
 export type VkTurnProxyInboundSettings = z.infer<typeof VkTurnProxyInboundSettingsSchema>;
