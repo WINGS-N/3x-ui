@@ -23,6 +23,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/sys"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/controller"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/grpcapi"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/job"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/locale"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/middleware"
@@ -40,6 +41,8 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron/v3"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 //go:embed translation/*
@@ -111,6 +114,8 @@ func EmbeddedDist() embed.FS {
 type Server struct {
 	httpServer *http.Server
 	listener   net.Listener
+
+	grpcServer *grpc.Server
 
 	index *controller.IndexController
 	panel *controller.XUIController
@@ -607,6 +612,10 @@ func (s *Server) start(restartXray bool, startTgBot bool) (err error) {
 		_ = s.httpServer.Serve(listener)
 	}()
 
+	if err := s.startGRPC(certFile, keyFile); err != nil {
+		logger.Warning("gRPC panel API not started:", err)
+	}
+
 	// Create event bus before startTask so jobs can use it
 	s.bus = eventbus.New(eventbus.DefaultBufferSize)
 	service.SetEventBus(s.bus)
@@ -681,6 +690,40 @@ func (s *Server) start(restartXray bool, startTgBot bool) (err error) {
 }
 
 // Stop gracefully shuts down the web server, stops Xray, cron jobs, and Telegram bot.
+func (s *Server) startGRPC(certFile, keyFile string) error {
+	addr := config.GetGRPCListen()
+	if addr == "" {
+		return nil
+	}
+	var creds credentials.TransportCredentials
+	if certFile != "" && keyFile != "" {
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return err
+		}
+		c := &tls.Config{Certificates: []tls.Certificate{cert}}
+		if pool, perr := s.settingService.NodeMtlsClientCAPool(); perr != nil {
+			logger.Warning("gRPC node mTLS: failed to build client CA trust pool:", perr)
+		} else if pool != nil {
+			applyNodeMtls(c, pool)
+			logger.Info("gRPC panel API: verifying client certificates (node mTLS)")
+		}
+		creds = credentials.NewTLS(c)
+	} else {
+		logger.Warning("gRPC panel API listening without TLS on", addr)
+	}
+	lis, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", addr)
+	if err != nil {
+		return err
+	}
+	s.grpcServer = grpcapi.NewServer(creds)
+	go func() {
+		_ = s.grpcServer.Serve(lis)
+	}()
+	logger.Info("gRPC panel API running on", lis.Addr())
+	return nil
+}
+
 func (s *Server) Stop() error {
 	return s.stop(true, true)
 }
@@ -716,6 +759,9 @@ func (s *Server) stop(stopXray bool, stopTgBot bool) error {
 	// Gracefully stop WebSocket hub
 	if s.wsHub != nil {
 		s.wsHub.Stop()
+	}
+	if s.grpcServer != nil {
+		s.grpcServer.GracefulStop()
 	}
 	var err1 error
 	var err2 error

@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package wingsv.panel.v1;
+
+option go_package = "github.com/mhsanaei/3x-ui/v3/internal/wingsv/panelapi;panelapi";
+
+service Panel {
+  rpc GetClientTraffic(GetClientTrafficRequest) returns (ClientTraffic);
+  rpc ListOnlineClients(ListOnlineClientsRequest) returns (OnlineClients);
+}
+
+message GetClientTrafficRequest {
+  string email = 1;
+}
+
+message ClientTraffic {
+  int64 id = 1;
+  int64 inbound_id = 2;
+  bool enable = 3;
+  string email = 4;
+  int64 up = 5;
+  int64 down = 6;
+  int64 expiry_time = 7;
+  int64 total = 8;
+  int64 last_online = 9;
+}
+
+message ListOnlineClientsRequest {}
+
+message OnlineClients {
+  repeated string emails = 1;
+}

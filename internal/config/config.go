@@ -185,6 +185,10 @@ func GetDBDSN() string {
 	return strings.TrimSpace(os.Getenv("XUI_DB_DSN"))
 }
 
+func GetGRPCListen() string {
+	return strings.TrimSpace(os.Getenv("XUI_GRPC_LISTEN"))
+}
+
 // GetEnvFilePaths returns the candidate service environment file paths (the file
 // systemd loads via EnvironmentFile) across the supported distro families.
 func GetEnvFilePaths() []string {
