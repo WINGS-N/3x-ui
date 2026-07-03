@@ -2,7 +2,9 @@ package grpcapi
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -11,17 +13,69 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
+	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service/panel"
 	"github.com/mhsanaei/3x-ui/v3/internal/wingsv/panelapi"
+	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
 
 type panelService struct {
 	panelapi.UnimplementedPanelServer
-	inbound *service.InboundService
+	inbound       *service.InboundService
+	client        *service.ClientService
+	server        *service.ServerService
+	onNeedRestart func()
 }
 
-func (p *panelService) GetClientTraffic(ctx context.Context, req *panelapi.GetClientTrafficRequest) (*panelapi.ClientTraffic, error) {
+func (p *panelService) markRestart(needRestart bool) bool {
+	if needRestart && p.onNeedRestart != nil {
+		p.onNeedRestart()
+	}
+	return needRestart
+}
+
+func (p *panelService) GetServerStatus(context.Context, *panelapi.GetServerStatusRequest) (*panelapi.ServerStatus, error) {
+	st := p.server.GetStatus(&service.Status{})
+	return &panelapi.ServerStatus{
+		Cpu:         st.Cpu,
+		CpuCores:    int32(st.CpuCores),
+		MemCurrent:  st.Mem.Current,
+		MemTotal:    st.Mem.Total,
+		Uptime:      st.Uptime,
+		XrayState:   string(st.Xray.State),
+		XrayVersion: st.Xray.Version,
+		NetUp:       st.NetIO.Up,
+		NetDown:     st.NetIO.Down,
+		TcpCount:    int32(st.TcpCount),
+		UdpCount:    int32(st.UdpCount),
+	}, nil
+}
+
+func (p *panelService) ListInbounds(context.Context, *panelapi.ListInboundsRequest) (*panelapi.Inbounds, error) {
+	inbounds, err := p.inbound.GetAllInbounds()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	out := make([]*panelapi.InboundSummary, 0, len(inbounds))
+	for _, ib := range inbounds {
+		out = append(out, &panelapi.InboundSummary{
+			Id:       int64(ib.Id),
+			Tag:      ib.Tag,
+			Remark:   ib.Remark,
+			Protocol: string(ib.Protocol),
+			Listen:   ib.Listen,
+			Port:     int32(ib.Port),
+			Enable:   ib.Enable,
+			Up:       ib.Up,
+			Down:     ib.Down,
+			Total:    ib.Total,
+		})
+	}
+	return &panelapi.Inbounds{Inbounds: out}, nil
+}
+
+func (p *panelService) GetClientTraffic(_ context.Context, req *panelapi.GetClientTrafficRequest) (*panelapi.ClientTraffic, error) {
 	t, err := p.inbound.GetClientTrafficByEmail(req.GetEmail())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -29,6 +83,94 @@ func (p *panelService) GetClientTraffic(ctx context.Context, req *panelapi.GetCl
 	if t == nil {
 		return nil, status.Errorf(codes.NotFound, "no client with email %q", req.GetEmail())
 	}
+	return toClientTraffic(t), nil
+}
+
+func (p *panelService) ListOnlineClients(context.Context, *panelapi.ListOnlineClientsRequest) (*panelapi.OnlineClients, error) {
+	return &panelapi.OnlineClients{Emails: p.inbound.GetOnlineClients()}, nil
+}
+
+func (p *panelService) AddClient(_ context.Context, req *panelapi.AddClientRequest) (*panelapi.MutationResponse, error) {
+	var payload service.ClientCreatePayload
+	if err := json.Unmarshal([]byte(req.GetPayloadJson()), &payload); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "payload_json: "+err.Error())
+	}
+	needRestart, err := p.client.Create(p.inbound, &payload)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &panelapi.MutationResponse{Ok: true, NeedRestart: p.markRestart(needRestart)}, nil
+}
+
+func (p *panelService) UpdateClient(_ context.Context, req *panelapi.UpdateClientRequest) (*panelapi.MutationResponse, error) {
+	if req.GetEmail() == "" {
+		return nil, status.Error(codes.InvalidArgument, "email is required")
+	}
+	var updated model.Client
+	if err := json.Unmarshal([]byte(req.GetPayloadJson()), &updated); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "payload_json: "+err.Error())
+	}
+	needRestart, err := p.client.UpdateByEmail(p.inbound, req.GetEmail(), updated)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &panelapi.MutationResponse{Ok: true, NeedRestart: p.markRestart(needRestart)}, nil
+}
+
+func (p *panelService) DeleteClient(_ context.Context, req *panelapi.DeleteClientRequest) (*panelapi.MutationResponse, error) {
+	if req.GetEmail() == "" {
+		return nil, status.Error(codes.InvalidArgument, "email is required")
+	}
+	needRestart, err := p.client.DeleteByEmail(p.inbound, req.GetEmail(), req.GetKeepTraffic())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &panelapi.MutationResponse{Ok: true, NeedRestart: p.markRestart(needRestart)}, nil
+}
+
+func (p *panelService) StreamClientTraffic(req *panelapi.StreamClientTrafficRequest, stream grpc.ServerStreamingServer[panelapi.ClientTraffic]) error {
+	interval := time.Duration(req.GetIntervalSeconds()) * time.Second
+	if interval <= 0 {
+		interval = 5 * time.Second
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		if err := p.sendTraffic(req.GetEmail(), stream); err != nil {
+			return err
+		}
+		select {
+		case <-stream.Context().Done():
+			return nil
+		case <-ticker.C:
+		}
+	}
+}
+
+func (p *panelService) sendTraffic(email string, stream grpc.ServerStreamingServer[panelapi.ClientTraffic]) error {
+	if email != "" {
+		t, err := p.inbound.GetClientTrafficByEmail(email)
+		if err != nil {
+			return status.Error(codes.Internal, err.Error())
+		}
+		if t == nil {
+			return nil
+		}
+		return stream.Send(toClientTraffic(t))
+	}
+	traffics, err := p.inbound.GetAllClientTraffics()
+	if err != nil {
+		return status.Error(codes.Internal, err.Error())
+	}
+	for _, t := range traffics {
+		if err := stream.Send(toClientTraffic(t)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func toClientTraffic(t *xray.ClientTraffic) *panelapi.ClientTraffic {
 	return &panelapi.ClientTraffic{
 		Id:         int64(t.Id),
 		InboundId:  int64(t.InboundId),
@@ -39,11 +181,7 @@ func (p *panelService) GetClientTraffic(ctx context.Context, req *panelapi.GetCl
 		ExpiryTime: t.ExpiryTime,
 		Total:      t.Total,
 		LastOnline: t.LastOnline,
-	}, nil
-}
-
-func (p *panelService) ListOnlineClients(ctx context.Context, _ *panelapi.ListOnlineClientsRequest) (*panelapi.OnlineClients, error) {
-	return &panelapi.OnlineClients{Emails: p.inbound.GetOnlineClients()}, nil
+	}
 }
 
 type authenticator struct {
@@ -68,20 +206,35 @@ func (a *authenticator) authorize(ctx context.Context) bool {
 	return false
 }
 
-func (a *authenticator) unary(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+func (a *authenticator) unary(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 	if !a.authorize(ctx) {
 		return nil, status.Error(codes.Unauthenticated, "missing or invalid API credentials")
 	}
 	return handler(ctx, req)
 }
 
-func NewServer(creds credentials.TransportCredentials) *grpc.Server {
+func (a *authenticator) stream(srv any, ss grpc.ServerStream, _ *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	if !a.authorize(ss.Context()) {
+		return status.Error(codes.Unauthenticated, "missing or invalid API credentials")
+	}
+	return handler(srv, ss)
+}
+
+func NewServer(creds credentials.TransportCredentials, onNeedRestart func()) *grpc.Server {
 	auth := &authenticator{tokens: &panel.ApiTokenService{}}
-	options := []grpc.ServerOption{grpc.ChainUnaryInterceptor(auth.unary)}
+	options := []grpc.ServerOption{
+		grpc.ChainUnaryInterceptor(auth.unary),
+		grpc.ChainStreamInterceptor(auth.stream),
+	}
 	if creds != nil {
 		options = append(options, grpc.Creds(creds))
 	}
 	gs := grpc.NewServer(options...)
-	panelapi.RegisterPanelServer(gs, &panelService{inbound: &service.InboundService{}})
+	panelapi.RegisterPanelServer(gs, &panelService{
+		inbound:       &service.InboundService{},
+		client:        &service.ClientService{},
+		server:        &service.ServerService{},
+		onNeedRestart: onNeedRestart,
+	})
 	return gs
 }

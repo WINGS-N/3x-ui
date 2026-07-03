@@ -21,6 +21,362 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type GetServerStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetServerStatusRequest) Reset() {
+	*x = GetServerStatusRequest{}
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetServerStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetServerStatusRequest) ProtoMessage() {}
+
+func (x *GetServerStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetServerStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetServerStatusRequest) Descriptor() ([]byte, []int) {
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{0}
+}
+
+type ServerStatus struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Cpu           float64                `protobuf:"fixed64,1,opt,name=cpu,proto3" json:"cpu,omitempty"`
+	CpuCores      int32                  `protobuf:"varint,2,opt,name=cpu_cores,json=cpuCores,proto3" json:"cpu_cores,omitempty"`
+	MemCurrent    uint64                 `protobuf:"varint,3,opt,name=mem_current,json=memCurrent,proto3" json:"mem_current,omitempty"`
+	MemTotal      uint64                 `protobuf:"varint,4,opt,name=mem_total,json=memTotal,proto3" json:"mem_total,omitempty"`
+	Uptime        uint64                 `protobuf:"varint,5,opt,name=uptime,proto3" json:"uptime,omitempty"`
+	XrayState     string                 `protobuf:"bytes,6,opt,name=xray_state,json=xrayState,proto3" json:"xray_state,omitempty"`
+	XrayVersion   string                 `protobuf:"bytes,7,opt,name=xray_version,json=xrayVersion,proto3" json:"xray_version,omitempty"`
+	NetUp         uint64                 `protobuf:"varint,8,opt,name=net_up,json=netUp,proto3" json:"net_up,omitempty"`
+	NetDown       uint64                 `protobuf:"varint,9,opt,name=net_down,json=netDown,proto3" json:"net_down,omitempty"`
+	TcpCount      int32                  `protobuf:"varint,10,opt,name=tcp_count,json=tcpCount,proto3" json:"tcp_count,omitempty"`
+	UdpCount      int32                  `protobuf:"varint,11,opt,name=udp_count,json=udpCount,proto3" json:"udp_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ServerStatus) Reset() {
+	*x = ServerStatus{}
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServerStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServerStatus) ProtoMessage() {}
+
+func (x *ServerStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServerStatus.ProtoReflect.Descriptor instead.
+func (*ServerStatus) Descriptor() ([]byte, []int) {
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ServerStatus) GetCpu() float64 {
+	if x != nil {
+		return x.Cpu
+	}
+	return 0
+}
+
+func (x *ServerStatus) GetCpuCores() int32 {
+	if x != nil {
+		return x.CpuCores
+	}
+	return 0
+}
+
+func (x *ServerStatus) GetMemCurrent() uint64 {
+	if x != nil {
+		return x.MemCurrent
+	}
+	return 0
+}
+
+func (x *ServerStatus) GetMemTotal() uint64 {
+	if x != nil {
+		return x.MemTotal
+	}
+	return 0
+}
+
+func (x *ServerStatus) GetUptime() uint64 {
+	if x != nil {
+		return x.Uptime
+	}
+	return 0
+}
+
+func (x *ServerStatus) GetXrayState() string {
+	if x != nil {
+		return x.XrayState
+	}
+	return ""
+}
+
+func (x *ServerStatus) GetXrayVersion() string {
+	if x != nil {
+		return x.XrayVersion
+	}
+	return ""
+}
+
+func (x *ServerStatus) GetNetUp() uint64 {
+	if x != nil {
+		return x.NetUp
+	}
+	return 0
+}
+
+func (x *ServerStatus) GetNetDown() uint64 {
+	if x != nil {
+		return x.NetDown
+	}
+	return 0
+}
+
+func (x *ServerStatus) GetTcpCount() int32 {
+	if x != nil {
+		return x.TcpCount
+	}
+	return 0
+}
+
+func (x *ServerStatus) GetUdpCount() int32 {
+	if x != nil {
+		return x.UdpCount
+	}
+	return 0
+}
+
+type ListInboundsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListInboundsRequest) Reset() {
+	*x = ListInboundsRequest{}
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListInboundsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListInboundsRequest) ProtoMessage() {}
+
+func (x *ListInboundsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListInboundsRequest.ProtoReflect.Descriptor instead.
+func (*ListInboundsRequest) Descriptor() ([]byte, []int) {
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{2}
+}
+
+type Inbounds struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Inbounds      []*InboundSummary      `protobuf:"bytes,1,rep,name=inbounds,proto3" json:"inbounds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Inbounds) Reset() {
+	*x = Inbounds{}
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Inbounds) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Inbounds) ProtoMessage() {}
+
+func (x *Inbounds) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Inbounds.ProtoReflect.Descriptor instead.
+func (*Inbounds) Descriptor() ([]byte, []int) {
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Inbounds) GetInbounds() []*InboundSummary {
+	if x != nil {
+		return x.Inbounds
+	}
+	return nil
+}
+
+type InboundSummary struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Tag           string                 `protobuf:"bytes,2,opt,name=tag,proto3" json:"tag,omitempty"`
+	Remark        string                 `protobuf:"bytes,3,opt,name=remark,proto3" json:"remark,omitempty"`
+	Protocol      string                 `protobuf:"bytes,4,opt,name=protocol,proto3" json:"protocol,omitempty"`
+	Listen        string                 `protobuf:"bytes,5,opt,name=listen,proto3" json:"listen,omitempty"`
+	Port          int32                  `protobuf:"varint,6,opt,name=port,proto3" json:"port,omitempty"`
+	Enable        bool                   `protobuf:"varint,7,opt,name=enable,proto3" json:"enable,omitempty"`
+	Up            int64                  `protobuf:"varint,8,opt,name=up,proto3" json:"up,omitempty"`
+	Down          int64                  `protobuf:"varint,9,opt,name=down,proto3" json:"down,omitempty"`
+	Total         int64                  `protobuf:"varint,10,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InboundSummary) Reset() {
+	*x = InboundSummary{}
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InboundSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InboundSummary) ProtoMessage() {}
+
+func (x *InboundSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InboundSummary.ProtoReflect.Descriptor instead.
+func (*InboundSummary) Descriptor() ([]byte, []int) {
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *InboundSummary) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *InboundSummary) GetTag() string {
+	if x != nil {
+		return x.Tag
+	}
+	return ""
+}
+
+func (x *InboundSummary) GetRemark() string {
+	if x != nil {
+		return x.Remark
+	}
+	return ""
+}
+
+func (x *InboundSummary) GetProtocol() string {
+	if x != nil {
+		return x.Protocol
+	}
+	return ""
+}
+
+func (x *InboundSummary) GetListen() string {
+	if x != nil {
+		return x.Listen
+	}
+	return ""
+}
+
+func (x *InboundSummary) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *InboundSummary) GetEnable() bool {
+	if x != nil {
+		return x.Enable
+	}
+	return false
+}
+
+func (x *InboundSummary) GetUp() int64 {
+	if x != nil {
+		return x.Up
+	}
+	return 0
+}
+
+func (x *InboundSummary) GetDown() int64 {
+	if x != nil {
+		return x.Down
+	}
+	return 0
+}
+
+func (x *InboundSummary) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
 type GetClientTrafficRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
@@ -30,7 +386,7 @@ type GetClientTrafficRequest struct {
 
 func (x *GetClientTrafficRequest) Reset() {
 	*x = GetClientTrafficRequest{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[0]
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -42,7 +398,7 @@ func (x *GetClientTrafficRequest) String() string {
 func (*GetClientTrafficRequest) ProtoMessage() {}
 
 func (x *GetClientTrafficRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[0]
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -55,7 +411,7 @@ func (x *GetClientTrafficRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClientTrafficRequest.ProtoReflect.Descriptor instead.
 func (*GetClientTrafficRequest) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{0}
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetClientTrafficRequest) GetEmail() string {
@@ -82,7 +438,7 @@ type ClientTraffic struct {
 
 func (x *ClientTraffic) Reset() {
 	*x = ClientTraffic{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[1]
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -94,7 +450,7 @@ func (x *ClientTraffic) String() string {
 func (*ClientTraffic) ProtoMessage() {}
 
 func (x *ClientTraffic) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[1]
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -107,7 +463,7 @@ func (x *ClientTraffic) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClientTraffic.ProtoReflect.Descriptor instead.
 func (*ClientTraffic) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{1}
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ClientTraffic) GetId() int64 {
@@ -181,7 +537,7 @@ type ListOnlineClientsRequest struct {
 
 func (x *ListOnlineClientsRequest) Reset() {
 	*x = ListOnlineClientsRequest{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[2]
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -193,7 +549,7 @@ func (x *ListOnlineClientsRequest) String() string {
 func (*ListOnlineClientsRequest) ProtoMessage() {}
 
 func (x *ListOnlineClientsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[2]
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -206,7 +562,7 @@ func (x *ListOnlineClientsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOnlineClientsRequest.ProtoReflect.Descriptor instead.
 func (*ListOnlineClientsRequest) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{2}
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{7}
 }
 
 type OnlineClients struct {
@@ -218,7 +574,7 @@ type OnlineClients struct {
 
 func (x *OnlineClients) Reset() {
 	*x = OnlineClients{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[3]
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -230,7 +586,7 @@ func (x *OnlineClients) String() string {
 func (*OnlineClients) ProtoMessage() {}
 
 func (x *OnlineClients) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[3]
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -243,7 +599,7 @@ func (x *OnlineClients) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OnlineClients.ProtoReflect.Descriptor instead.
 func (*OnlineClients) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{3}
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *OnlineClients) GetEmails() []string {
@@ -253,11 +609,299 @@ func (x *OnlineClients) GetEmails() []string {
 	return nil
 }
 
+// AddClient / UpdateClient carry the client payload as JSON (the same shape the
+// REST API binds), since the Xray client settings are an open, protocol-specific
+// object best kept as JSON rather than mirrored field-by-field in proto.
+type AddClientRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PayloadJson   string                 `protobuf:"bytes,1,opt,name=payload_json,json=payloadJson,proto3" json:"payload_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddClientRequest) Reset() {
+	*x = AddClientRequest{}
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddClientRequest) ProtoMessage() {}
+
+func (x *AddClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddClientRequest.ProtoReflect.Descriptor instead.
+func (*AddClientRequest) Descriptor() ([]byte, []int) {
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *AddClientRequest) GetPayloadJson() string {
+	if x != nil {
+		return x.PayloadJson
+	}
+	return ""
+}
+
+type UpdateClientRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	PayloadJson   string                 `protobuf:"bytes,2,opt,name=payload_json,json=payloadJson,proto3" json:"payload_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateClientRequest) Reset() {
+	*x = UpdateClientRequest{}
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateClientRequest) ProtoMessage() {}
+
+func (x *UpdateClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateClientRequest.ProtoReflect.Descriptor instead.
+func (*UpdateClientRequest) Descriptor() ([]byte, []int) {
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *UpdateClientRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *UpdateClientRequest) GetPayloadJson() string {
+	if x != nil {
+		return x.PayloadJson
+	}
+	return ""
+}
+
+type DeleteClientRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	KeepTraffic   bool                   `protobuf:"varint,2,opt,name=keep_traffic,json=keepTraffic,proto3" json:"keep_traffic,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteClientRequest) Reset() {
+	*x = DeleteClientRequest{}
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteClientRequest) ProtoMessage() {}
+
+func (x *DeleteClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteClientRequest.ProtoReflect.Descriptor instead.
+func (*DeleteClientRequest) Descriptor() ([]byte, []int) {
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *DeleteClientRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *DeleteClientRequest) GetKeepTraffic() bool {
+	if x != nil {
+		return x.KeepTraffic
+	}
+	return false
+}
+
+type MutationResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ok            bool                   `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
+	NeedRestart   bool                   `protobuf:"varint,2,opt,name=need_restart,json=needRestart,proto3" json:"need_restart,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MutationResponse) Reset() {
+	*x = MutationResponse{}
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MutationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MutationResponse) ProtoMessage() {}
+
+func (x *MutationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MutationResponse.ProtoReflect.Descriptor instead.
+func (*MutationResponse) Descriptor() ([]byte, []int) {
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *MutationResponse) GetOk() bool {
+	if x != nil {
+		return x.Ok
+	}
+	return false
+}
+
+func (x *MutationResponse) GetNeedRestart() bool {
+	if x != nil {
+		return x.NeedRestart
+	}
+	return false
+}
+
+type StreamClientTrafficRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Empty email streams every client; a value streams just that client.
+	Email string `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	// Poll interval in seconds; 0 defaults to 5.
+	IntervalSeconds uint32 `protobuf:"varint,2,opt,name=interval_seconds,json=intervalSeconds,proto3" json:"interval_seconds,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *StreamClientTrafficRequest) Reset() {
+	*x = StreamClientTrafficRequest{}
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamClientTrafficRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamClientTrafficRequest) ProtoMessage() {}
+
+func (x *StreamClientTrafficRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamClientTrafficRequest.ProtoReflect.Descriptor instead.
+func (*StreamClientTrafficRequest) Descriptor() ([]byte, []int) {
+	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *StreamClientTrafficRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *StreamClientTrafficRequest) GetIntervalSeconds() uint32 {
+	if x != nil {
+		return x.IntervalSeconds
+	}
+	return 0
+}
+
 var File_internal_wingsv_panelapi_panel_proto protoreflect.FileDescriptor
 
 const file_internal_wingsv_panelapi_panel_proto_rawDesc = "" +
 	"\n" +
-	"$internal/wingsv/panelapi/panel.proto\x12\x0fwingsv.panel.v1\"/\n" +
+	"$internal/wingsv/panelapi/panel.proto\x12\x0fwingsv.panel.v1\"\x18\n" +
+	"\x16GetServerStatusRequest\"\xc1\x02\n" +
+	"\fServerStatus\x12\x10\n" +
+	"\x03cpu\x18\x01 \x01(\x01R\x03cpu\x12\x1b\n" +
+	"\tcpu_cores\x18\x02 \x01(\x05R\bcpuCores\x12\x1f\n" +
+	"\vmem_current\x18\x03 \x01(\x04R\n" +
+	"memCurrent\x12\x1b\n" +
+	"\tmem_total\x18\x04 \x01(\x04R\bmemTotal\x12\x16\n" +
+	"\x06uptime\x18\x05 \x01(\x04R\x06uptime\x12\x1d\n" +
+	"\n" +
+	"xray_state\x18\x06 \x01(\tR\txrayState\x12!\n" +
+	"\fxray_version\x18\a \x01(\tR\vxrayVersion\x12\x15\n" +
+	"\x06net_up\x18\b \x01(\x04R\x05netUp\x12\x19\n" +
+	"\bnet_down\x18\t \x01(\x04R\anetDown\x12\x1b\n" +
+	"\ttcp_count\x18\n" +
+	" \x01(\x05R\btcpCount\x12\x1b\n" +
+	"\tudp_count\x18\v \x01(\x05R\budpCount\"\x15\n" +
+	"\x13ListInboundsRequest\"G\n" +
+	"\bInbounds\x12;\n" +
+	"\binbounds\x18\x01 \x03(\v2\x1f.wingsv.panel.v1.InboundSummaryR\binbounds\"\xe4\x01\n" +
+	"\x0eInboundSummary\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x10\n" +
+	"\x03tag\x18\x02 \x01(\tR\x03tag\x12\x16\n" +
+	"\x06remark\x18\x03 \x01(\tR\x06remark\x12\x1a\n" +
+	"\bprotocol\x18\x04 \x01(\tR\bprotocol\x12\x16\n" +
+	"\x06listen\x18\x05 \x01(\tR\x06listen\x12\x12\n" +
+	"\x04port\x18\x06 \x01(\x05R\x04port\x12\x16\n" +
+	"\x06enable\x18\a \x01(\bR\x06enable\x12\x0e\n" +
+	"\x02up\x18\b \x01(\x03R\x02up\x12\x12\n" +
+	"\x04down\x18\t \x01(\x03R\x04down\x12\x14\n" +
+	"\x05total\x18\n" +
+	" \x01(\x03R\x05total\"/\n" +
 	"\x17GetClientTrafficRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\"\xe8\x01\n" +
 	"\rClientTraffic\x12\x0e\n" +
@@ -275,10 +919,30 @@ const file_internal_wingsv_panelapi_panel_proto_rawDesc = "" +
 	"lastOnline\"\x1a\n" +
 	"\x18ListOnlineClientsRequest\"'\n" +
 	"\rOnlineClients\x12\x16\n" +
-	"\x06emails\x18\x01 \x03(\tR\x06emails2\xc5\x01\n" +
-	"\x05Panel\x12\\\n" +
+	"\x06emails\x18\x01 \x03(\tR\x06emails\"5\n" +
+	"\x10AddClientRequest\x12!\n" +
+	"\fpayload_json\x18\x01 \x01(\tR\vpayloadJson\"N\n" +
+	"\x13UpdateClientRequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12!\n" +
+	"\fpayload_json\x18\x02 \x01(\tR\vpayloadJson\"N\n" +
+	"\x13DeleteClientRequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12!\n" +
+	"\fkeep_traffic\x18\x02 \x01(\bR\vkeepTraffic\"E\n" +
+	"\x10MutationResponse\x12\x0e\n" +
+	"\x02ok\x18\x01 \x01(\bR\x02ok\x12!\n" +
+	"\fneed_restart\x18\x02 \x01(\bR\vneedRestart\"]\n" +
+	"\x1aStreamClientTrafficRequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12)\n" +
+	"\x10interval_seconds\x18\x02 \x01(\rR\x0fintervalSeconds2\xdc\x05\n" +
+	"\x05Panel\x12Y\n" +
+	"\x0fGetServerStatus\x12'.wingsv.panel.v1.GetServerStatusRequest\x1a\x1d.wingsv.panel.v1.ServerStatus\x12O\n" +
+	"\fListInbounds\x12$.wingsv.panel.v1.ListInboundsRequest\x1a\x19.wingsv.panel.v1.Inbounds\x12\\\n" +
 	"\x10GetClientTraffic\x12(.wingsv.panel.v1.GetClientTrafficRequest\x1a\x1e.wingsv.panel.v1.ClientTraffic\x12^\n" +
-	"\x11ListOnlineClients\x12).wingsv.panel.v1.ListOnlineClientsRequest\x1a\x1e.wingsv.panel.v1.OnlineClientsB@Z>github.com/mhsanaei/3x-ui/v3/internal/wingsv/panelapi;panelapib\x06proto3"
+	"\x11ListOnlineClients\x12).wingsv.panel.v1.ListOnlineClientsRequest\x1a\x1e.wingsv.panel.v1.OnlineClients\x12Q\n" +
+	"\tAddClient\x12!.wingsv.panel.v1.AddClientRequest\x1a!.wingsv.panel.v1.MutationResponse\x12W\n" +
+	"\fUpdateClient\x12$.wingsv.panel.v1.UpdateClientRequest\x1a!.wingsv.panel.v1.MutationResponse\x12W\n" +
+	"\fDeleteClient\x12$.wingsv.panel.v1.DeleteClientRequest\x1a!.wingsv.panel.v1.MutationResponse\x12d\n" +
+	"\x13StreamClientTraffic\x12+.wingsv.panel.v1.StreamClientTrafficRequest\x1a\x1e.wingsv.panel.v1.ClientTraffic0\x01B@Z>github.com/mhsanaei/3x-ui/v3/internal/wingsv/panelapi;panelapib\x06proto3"
 
 var (
 	file_internal_wingsv_panelapi_panel_proto_rawDescOnce sync.Once
@@ -292,23 +956,46 @@ func file_internal_wingsv_panelapi_panel_proto_rawDescGZIP() []byte {
 	return file_internal_wingsv_panelapi_panel_proto_rawDescData
 }
 
-var file_internal_wingsv_panelapi_panel_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_internal_wingsv_panelapi_panel_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_internal_wingsv_panelapi_panel_proto_goTypes = []any{
-	(*GetClientTrafficRequest)(nil),  // 0: wingsv.panel.v1.GetClientTrafficRequest
-	(*ClientTraffic)(nil),            // 1: wingsv.panel.v1.ClientTraffic
-	(*ListOnlineClientsRequest)(nil), // 2: wingsv.panel.v1.ListOnlineClientsRequest
-	(*OnlineClients)(nil),            // 3: wingsv.panel.v1.OnlineClients
+	(*GetServerStatusRequest)(nil),     // 0: wingsv.panel.v1.GetServerStatusRequest
+	(*ServerStatus)(nil),               // 1: wingsv.panel.v1.ServerStatus
+	(*ListInboundsRequest)(nil),        // 2: wingsv.panel.v1.ListInboundsRequest
+	(*Inbounds)(nil),                   // 3: wingsv.panel.v1.Inbounds
+	(*InboundSummary)(nil),             // 4: wingsv.panel.v1.InboundSummary
+	(*GetClientTrafficRequest)(nil),    // 5: wingsv.panel.v1.GetClientTrafficRequest
+	(*ClientTraffic)(nil),              // 6: wingsv.panel.v1.ClientTraffic
+	(*ListOnlineClientsRequest)(nil),   // 7: wingsv.panel.v1.ListOnlineClientsRequest
+	(*OnlineClients)(nil),              // 8: wingsv.panel.v1.OnlineClients
+	(*AddClientRequest)(nil),           // 9: wingsv.panel.v1.AddClientRequest
+	(*UpdateClientRequest)(nil),        // 10: wingsv.panel.v1.UpdateClientRequest
+	(*DeleteClientRequest)(nil),        // 11: wingsv.panel.v1.DeleteClientRequest
+	(*MutationResponse)(nil),           // 12: wingsv.panel.v1.MutationResponse
+	(*StreamClientTrafficRequest)(nil), // 13: wingsv.panel.v1.StreamClientTrafficRequest
 }
 var file_internal_wingsv_panelapi_panel_proto_depIdxs = []int32{
-	0, // 0: wingsv.panel.v1.Panel.GetClientTraffic:input_type -> wingsv.panel.v1.GetClientTrafficRequest
-	2, // 1: wingsv.panel.v1.Panel.ListOnlineClients:input_type -> wingsv.panel.v1.ListOnlineClientsRequest
-	1, // 2: wingsv.panel.v1.Panel.GetClientTraffic:output_type -> wingsv.panel.v1.ClientTraffic
-	3, // 3: wingsv.panel.v1.Panel.ListOnlineClients:output_type -> wingsv.panel.v1.OnlineClients
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	4,  // 0: wingsv.panel.v1.Inbounds.inbounds:type_name -> wingsv.panel.v1.InboundSummary
+	0,  // 1: wingsv.panel.v1.Panel.GetServerStatus:input_type -> wingsv.panel.v1.GetServerStatusRequest
+	2,  // 2: wingsv.panel.v1.Panel.ListInbounds:input_type -> wingsv.panel.v1.ListInboundsRequest
+	5,  // 3: wingsv.panel.v1.Panel.GetClientTraffic:input_type -> wingsv.panel.v1.GetClientTrafficRequest
+	7,  // 4: wingsv.panel.v1.Panel.ListOnlineClients:input_type -> wingsv.panel.v1.ListOnlineClientsRequest
+	9,  // 5: wingsv.panel.v1.Panel.AddClient:input_type -> wingsv.panel.v1.AddClientRequest
+	10, // 6: wingsv.panel.v1.Panel.UpdateClient:input_type -> wingsv.panel.v1.UpdateClientRequest
+	11, // 7: wingsv.panel.v1.Panel.DeleteClient:input_type -> wingsv.panel.v1.DeleteClientRequest
+	13, // 8: wingsv.panel.v1.Panel.StreamClientTraffic:input_type -> wingsv.panel.v1.StreamClientTrafficRequest
+	1,  // 9: wingsv.panel.v1.Panel.GetServerStatus:output_type -> wingsv.panel.v1.ServerStatus
+	3,  // 10: wingsv.panel.v1.Panel.ListInbounds:output_type -> wingsv.panel.v1.Inbounds
+	6,  // 11: wingsv.panel.v1.Panel.GetClientTraffic:output_type -> wingsv.panel.v1.ClientTraffic
+	8,  // 12: wingsv.panel.v1.Panel.ListOnlineClients:output_type -> wingsv.panel.v1.OnlineClients
+	12, // 13: wingsv.panel.v1.Panel.AddClient:output_type -> wingsv.panel.v1.MutationResponse
+	12, // 14: wingsv.panel.v1.Panel.UpdateClient:output_type -> wingsv.panel.v1.MutationResponse
+	12, // 15: wingsv.panel.v1.Panel.DeleteClient:output_type -> wingsv.panel.v1.MutationResponse
+	6,  // 16: wingsv.panel.v1.Panel.StreamClientTraffic:output_type -> wingsv.panel.v1.ClientTraffic
+	9,  // [9:17] is the sub-list for method output_type
+	1,  // [1:9] is the sub-list for method input_type
+	1,  // [1:1] is the sub-list for extension type_name
+	1,  // [1:1] is the sub-list for extension extendee
+	0,  // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_internal_wingsv_panelapi_panel_proto_init() }
@@ -322,7 +1009,7 @@ func file_internal_wingsv_panelapi_panel_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_wingsv_panelapi_panel_proto_rawDesc), len(file_internal_wingsv_panelapi_panel_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

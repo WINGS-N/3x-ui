@@ -716,7 +716,7 @@ func (s *Server) startGRPC(certFile, keyFile string) error {
 	if err != nil {
 		return err
 	}
-	s.grpcServer = grpcapi.NewServer(creds)
+	s.grpcServer = grpcapi.NewServer(creds, s.xrayService.SetToNeedRestart)
 	go func() {
 		_ = s.grpcServer.Serve(lis)
 	}()

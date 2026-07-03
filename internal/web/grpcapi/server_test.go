@@ -26,7 +26,7 @@ func newTestClient(t *testing.T) panelapi.PanelClient {
 	t.Cleanup(func() { _ = database.CloseDB() })
 
 	lis := bufconn.Listen(1 << 20)
-	gs := NewServer(nil)
+	gs := NewServer(nil, nil)
 	go func() { _ = gs.Serve(lis) }()
 	t.Cleanup(gs.Stop)
 
@@ -77,5 +77,46 @@ func TestGetClientTrafficNotFound(t *testing.T) {
 	_, err := client.GetClientTraffic(bearerContext(t), &panelapi.GetClientTrafficRequest{Email: "nobody@example"})
 	if status.Code(err) != codes.NotFound {
 		t.Fatalf("code = %v, want NotFound (err=%v)", status.Code(err), err)
+	}
+}
+
+func TestListInboundsEmpty(t *testing.T) {
+	client := newTestClient(t)
+	resp, err := client.ListInbounds(bearerContext(t), &panelapi.ListInboundsRequest{})
+	if err != nil {
+		t.Fatalf("ListInbounds: %v", err)
+	}
+	if len(resp.GetInbounds()) != 0 {
+		t.Fatalf("inbounds = %d, want 0 on a fresh panel", len(resp.GetInbounds()))
+	}
+}
+
+func TestGetServerStatus(t *testing.T) {
+	client := newTestClient(t)
+	resp, err := client.GetServerStatus(bearerContext(t), &panelapi.GetServerStatusRequest{})
+	if err != nil {
+		t.Fatalf("GetServerStatus: %v", err)
+	}
+	if resp.GetCpuCores() < 1 {
+		t.Fatalf("cpu_cores = %d, want >= 1", resp.GetCpuCores())
+	}
+}
+
+func TestAddClientRejectsBadJSON(t *testing.T) {
+	client := newTestClient(t)
+	_, err := client.AddClient(bearerContext(t), &panelapi.AddClientRequest{PayloadJson: "{not json"})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("code = %v, want InvalidArgument", status.Code(err))
+	}
+}
+
+func TestStreamClientTrafficUnauthenticated(t *testing.T) {
+	client := newTestClient(t)
+	stream, err := client.StreamClientTraffic(context.Background(), &panelapi.StreamClientTrafficRequest{})
+	if err != nil {
+		t.Fatalf("open stream: %v", err)
+	}
+	if _, err := stream.Recv(); status.Code(err) != codes.Unauthenticated {
+		t.Fatalf("code = %v, want Unauthenticated", status.Code(err))
 	}
 }

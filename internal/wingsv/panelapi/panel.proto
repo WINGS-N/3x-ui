@@ -5,8 +5,49 @@ package wingsv.panel.v1;
 option go_package = "github.com/mhsanaei/3x-ui/v3/internal/wingsv/panelapi;panelapi";
 
 service Panel {
+  rpc GetServerStatus(GetServerStatusRequest) returns (ServerStatus);
+  rpc ListInbounds(ListInboundsRequest) returns (Inbounds);
   rpc GetClientTraffic(GetClientTrafficRequest) returns (ClientTraffic);
   rpc ListOnlineClients(ListOnlineClientsRequest) returns (OnlineClients);
+  rpc AddClient(AddClientRequest) returns (MutationResponse);
+  rpc UpdateClient(UpdateClientRequest) returns (MutationResponse);
+  rpc DeleteClient(DeleteClientRequest) returns (MutationResponse);
+  rpc StreamClientTraffic(StreamClientTrafficRequest) returns (stream ClientTraffic);
+}
+
+message GetServerStatusRequest {}
+
+message ServerStatus {
+  double cpu = 1;
+  int32 cpu_cores = 2;
+  uint64 mem_current = 3;
+  uint64 mem_total = 4;
+  uint64 uptime = 5;
+  string xray_state = 6;
+  string xray_version = 7;
+  uint64 net_up = 8;
+  uint64 net_down = 9;
+  int32 tcp_count = 10;
+  int32 udp_count = 11;
+}
+
+message ListInboundsRequest {}
+
+message Inbounds {
+  repeated InboundSummary inbounds = 1;
+}
+
+message InboundSummary {
+  int64 id = 1;
+  string tag = 2;
+  string remark = 3;
+  string protocol = 4;
+  string listen = 5;
+  int32 port = 6;
+  bool enable = 7;
+  int64 up = 8;
+  int64 down = 9;
+  int64 total = 10;
 }
 
 message GetClientTrafficRequest {
@@ -29,4 +70,33 @@ message ListOnlineClientsRequest {}
 
 message OnlineClients {
   repeated string emails = 1;
+}
+
+// AddClient / UpdateClient carry the client payload as JSON (the same shape the
+// REST API binds), since the Xray client settings are an open, protocol-specific
+// object best kept as JSON rather than mirrored field-by-field in proto.
+message AddClientRequest {
+  string payload_json = 1;
+}
+
+message UpdateClientRequest {
+  string email = 1;
+  string payload_json = 2;
+}
+
+message DeleteClientRequest {
+  string email = 1;
+  bool keep_traffic = 2;
+}
+
+message MutationResponse {
+  bool ok = 1;
+  bool need_restart = 2;
+}
+
+message StreamClientTrafficRequest {
+  // Empty email streams every client; a value streams just that client.
+  string email = 1;
+  // Poll interval in seconds; 0 defaults to 5.
+  uint32 interval_seconds = 2;
 }

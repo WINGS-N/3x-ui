@@ -19,16 +19,28 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Panel_GetClientTraffic_FullMethodName  = "/wingsv.panel.v1.Panel/GetClientTraffic"
-	Panel_ListOnlineClients_FullMethodName = "/wingsv.panel.v1.Panel/ListOnlineClients"
+	Panel_GetServerStatus_FullMethodName     = "/wingsv.panel.v1.Panel/GetServerStatus"
+	Panel_ListInbounds_FullMethodName        = "/wingsv.panel.v1.Panel/ListInbounds"
+	Panel_GetClientTraffic_FullMethodName    = "/wingsv.panel.v1.Panel/GetClientTraffic"
+	Panel_ListOnlineClients_FullMethodName   = "/wingsv.panel.v1.Panel/ListOnlineClients"
+	Panel_AddClient_FullMethodName           = "/wingsv.panel.v1.Panel/AddClient"
+	Panel_UpdateClient_FullMethodName        = "/wingsv.panel.v1.Panel/UpdateClient"
+	Panel_DeleteClient_FullMethodName        = "/wingsv.panel.v1.Panel/DeleteClient"
+	Panel_StreamClientTraffic_FullMethodName = "/wingsv.panel.v1.Panel/StreamClientTraffic"
 )
 
 // PanelClient is the client API for Panel service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PanelClient interface {
+	GetServerStatus(ctx context.Context, in *GetServerStatusRequest, opts ...grpc.CallOption) (*ServerStatus, error)
+	ListInbounds(ctx context.Context, in *ListInboundsRequest, opts ...grpc.CallOption) (*Inbounds, error)
 	GetClientTraffic(ctx context.Context, in *GetClientTrafficRequest, opts ...grpc.CallOption) (*ClientTraffic, error)
 	ListOnlineClients(ctx context.Context, in *ListOnlineClientsRequest, opts ...grpc.CallOption) (*OnlineClients, error)
+	AddClient(ctx context.Context, in *AddClientRequest, opts ...grpc.CallOption) (*MutationResponse, error)
+	UpdateClient(ctx context.Context, in *UpdateClientRequest, opts ...grpc.CallOption) (*MutationResponse, error)
+	DeleteClient(ctx context.Context, in *DeleteClientRequest, opts ...grpc.CallOption) (*MutationResponse, error)
+	StreamClientTraffic(ctx context.Context, in *StreamClientTrafficRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ClientTraffic], error)
 }
 
 type panelClient struct {
@@ -37,6 +49,26 @@ type panelClient struct {
 
 func NewPanelClient(cc grpc.ClientConnInterface) PanelClient {
 	return &panelClient{cc}
+}
+
+func (c *panelClient) GetServerStatus(ctx context.Context, in *GetServerStatusRequest, opts ...grpc.CallOption) (*ServerStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ServerStatus)
+	err := c.cc.Invoke(ctx, Panel_GetServerStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *panelClient) ListInbounds(ctx context.Context, in *ListInboundsRequest, opts ...grpc.CallOption) (*Inbounds, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Inbounds)
+	err := c.cc.Invoke(ctx, Panel_ListInbounds_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *panelClient) GetClientTraffic(ctx context.Context, in *GetClientTrafficRequest, opts ...grpc.CallOption) (*ClientTraffic, error) {
@@ -59,12 +91,67 @@ func (c *panelClient) ListOnlineClients(ctx context.Context, in *ListOnlineClien
 	return out, nil
 }
 
+func (c *panelClient) AddClient(ctx context.Context, in *AddClientRequest, opts ...grpc.CallOption) (*MutationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MutationResponse)
+	err := c.cc.Invoke(ctx, Panel_AddClient_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *panelClient) UpdateClient(ctx context.Context, in *UpdateClientRequest, opts ...grpc.CallOption) (*MutationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MutationResponse)
+	err := c.cc.Invoke(ctx, Panel_UpdateClient_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *panelClient) DeleteClient(ctx context.Context, in *DeleteClientRequest, opts ...grpc.CallOption) (*MutationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MutationResponse)
+	err := c.cc.Invoke(ctx, Panel_DeleteClient_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *panelClient) StreamClientTraffic(ctx context.Context, in *StreamClientTrafficRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ClientTraffic], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &Panel_ServiceDesc.Streams[0], Panel_StreamClientTraffic_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[StreamClientTrafficRequest, ClientTraffic]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Panel_StreamClientTrafficClient = grpc.ServerStreamingClient[ClientTraffic]
+
 // PanelServer is the server API for Panel service.
 // All implementations must embed UnimplementedPanelServer
 // for forward compatibility.
 type PanelServer interface {
+	GetServerStatus(context.Context, *GetServerStatusRequest) (*ServerStatus, error)
+	ListInbounds(context.Context, *ListInboundsRequest) (*Inbounds, error)
 	GetClientTraffic(context.Context, *GetClientTrafficRequest) (*ClientTraffic, error)
 	ListOnlineClients(context.Context, *ListOnlineClientsRequest) (*OnlineClients, error)
+	AddClient(context.Context, *AddClientRequest) (*MutationResponse, error)
+	UpdateClient(context.Context, *UpdateClientRequest) (*MutationResponse, error)
+	DeleteClient(context.Context, *DeleteClientRequest) (*MutationResponse, error)
+	StreamClientTraffic(*StreamClientTrafficRequest, grpc.ServerStreamingServer[ClientTraffic]) error
 	mustEmbedUnimplementedPanelServer()
 }
 
@@ -75,11 +162,29 @@ type PanelServer interface {
 // pointer dereference when methods are called.
 type UnimplementedPanelServer struct{}
 
+func (UnimplementedPanelServer) GetServerStatus(context.Context, *GetServerStatusRequest) (*ServerStatus, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetServerStatus not implemented")
+}
+func (UnimplementedPanelServer) ListInbounds(context.Context, *ListInboundsRequest) (*Inbounds, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListInbounds not implemented")
+}
 func (UnimplementedPanelServer) GetClientTraffic(context.Context, *GetClientTrafficRequest) (*ClientTraffic, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetClientTraffic not implemented")
 }
 func (UnimplementedPanelServer) ListOnlineClients(context.Context, *ListOnlineClientsRequest) (*OnlineClients, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListOnlineClients not implemented")
+}
+func (UnimplementedPanelServer) AddClient(context.Context, *AddClientRequest) (*MutationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddClient not implemented")
+}
+func (UnimplementedPanelServer) UpdateClient(context.Context, *UpdateClientRequest) (*MutationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateClient not implemented")
+}
+func (UnimplementedPanelServer) DeleteClient(context.Context, *DeleteClientRequest) (*MutationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteClient not implemented")
+}
+func (UnimplementedPanelServer) StreamClientTraffic(*StreamClientTrafficRequest, grpc.ServerStreamingServer[ClientTraffic]) error {
+	return status.Errorf(codes.Unimplemented, "method StreamClientTraffic not implemented")
 }
 func (UnimplementedPanelServer) mustEmbedUnimplementedPanelServer() {}
 func (UnimplementedPanelServer) testEmbeddedByValue()               {}
@@ -100,6 +205,42 @@ func RegisterPanelServer(s grpc.ServiceRegistrar, srv PanelServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Panel_ServiceDesc, srv)
+}
+
+func _Panel_GetServerStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetServerStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PanelServer).GetServerStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Panel_GetServerStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PanelServer).GetServerStatus(ctx, req.(*GetServerStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Panel_ListInbounds_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListInboundsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PanelServer).ListInbounds(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Panel_ListInbounds_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PanelServer).ListInbounds(ctx, req.(*ListInboundsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Panel_GetClientTraffic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -138,6 +279,71 @@ func _Panel_ListOnlineClients_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Panel_AddClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddClientRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PanelServer).AddClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Panel_AddClient_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PanelServer).AddClient(ctx, req.(*AddClientRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Panel_UpdateClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateClientRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PanelServer).UpdateClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Panel_UpdateClient_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PanelServer).UpdateClient(ctx, req.(*UpdateClientRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Panel_DeleteClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteClientRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PanelServer).DeleteClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Panel_DeleteClient_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PanelServer).DeleteClient(ctx, req.(*DeleteClientRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Panel_StreamClientTraffic_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StreamClientTrafficRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(PanelServer).StreamClientTraffic(m, &grpc.GenericServerStream[StreamClientTrafficRequest, ClientTraffic]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Panel_StreamClientTrafficServer = grpc.ServerStreamingServer[ClientTraffic]
+
 // Panel_ServiceDesc is the grpc.ServiceDesc for Panel service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -146,6 +352,14 @@ var Panel_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*PanelServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "GetServerStatus",
+			Handler:    _Panel_GetServerStatus_Handler,
+		},
+		{
+			MethodName: "ListInbounds",
+			Handler:    _Panel_ListInbounds_Handler,
+		},
+		{
 			MethodName: "GetClientTraffic",
 			Handler:    _Panel_GetClientTraffic_Handler,
 		},
@@ -153,7 +367,25 @@ var Panel_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "ListOnlineClients",
 			Handler:    _Panel_ListOnlineClients_Handler,
 		},
+		{
+			MethodName: "AddClient",
+			Handler:    _Panel_AddClient_Handler,
+		},
+		{
+			MethodName: "UpdateClient",
+			Handler:    _Panel_UpdateClient_Handler,
+		},
+		{
+			MethodName: "DeleteClient",
+			Handler:    _Panel_DeleteClient_Handler,
+		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "StreamClientTraffic",
+			Handler:       _Panel_StreamClientTraffic_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "internal/wingsv/panelapi/panel.proto",
 }
