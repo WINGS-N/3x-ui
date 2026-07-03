@@ -3,6 +3,7 @@ package grpcapi
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
+	wgutil "github.com/mhsanaei/3x-ui/v3/internal/util/wireguard"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service/panel"
 	"github.com/mhsanaei/3x-ui/v3/internal/wingsv/panelapi"
@@ -88,6 +90,106 @@ func (p *panelService) GetClientTraffic(_ context.Context, req *panelapi.GetClie
 
 func (p *panelService) ListOnlineClients(context.Context, *panelapi.ListOnlineClientsRequest) (*panelapi.OnlineClients, error) {
 	return &panelapi.OnlineClients{Emails: p.inbound.GetOnlineClients()}, nil
+}
+
+// CreateWireguardClient adds a peer to a WireGuard inbound (generating a keypair
+// and allocating a tunnel address) and returns the peer config. It is idempotent
+// on client_id: a re-provision returns the already-created peer.
+func (p *panelService) CreateWireguardClient(_ context.Context, req *panelapi.CreateWireguardClientRequest) (*panelapi.WireguardClientConfig, error) {
+	if req.GetClientId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "client_id is required")
+	}
+	inbounds, err := p.inbound.GetAllInbounds()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	var wg *model.Inbound
+	for _, ib := range inbounds {
+		if ib.Protocol == model.WireGuard && (req.GetInboundTag() == "" || ib.Tag == req.GetInboundTag()) {
+			wg = ib
+			break
+		}
+	}
+	if wg == nil {
+		return nil, status.Error(codes.NotFound, "no matching wireguard inbound")
+	}
+	serverPub, mtu := wireguardServerInfo(wg.Settings)
+
+	if existing, ok := p.findWireguardPeer(wg, req.GetClientId()); ok {
+		return wireguardConfig(existing, serverPub, mtu, wg), nil
+	}
+
+	priv, pub, err := wgutil.GenerateWireguardKeypair()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "keypair: "+err.Error())
+	}
+	needRestart, err := p.client.CreateOne(p.inbound, wg.Id, model.Client{
+		Email: req.GetClientId(), Enable: true, PublicKey: pub, PrivateKey: priv,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	p.markRestart(needRestart)
+
+	created, err := p.inbound.GetInbound(wg.Id)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	peer, ok := p.findWireguardPeer(created, req.GetClientId())
+	if !ok {
+		return nil, status.Error(codes.Internal, "created peer not found")
+	}
+	return wireguardConfig(peer, serverPub, mtu, created), nil
+}
+
+func (p *panelService) findWireguardPeer(inbound *model.Inbound, email string) (model.Client, bool) {
+	clients, err := p.inbound.GetClients(inbound)
+	if err != nil {
+		return model.Client{}, false
+	}
+	for _, c := range clients {
+		if c.Email == email {
+			return c, true
+		}
+	}
+	return model.Client{}, false
+}
+
+func wireguardConfig(c model.Client, serverPub string, mtu int, inbound *model.Inbound) *panelapi.WireguardClientConfig {
+	addr := ""
+	if len(c.AllowedIPs) > 0 {
+		addr = c.AllowedIPs[0]
+	}
+	return &panelapi.WireguardClientConfig{
+		PrivateKey:      c.PrivateKey,
+		PublicKey:       c.PublicKey,
+		Address:         addr,
+		ServerPublicKey: serverPub,
+		Mtu:             uint32(mtu),
+		Endpoint:        fmt.Sprintf("%s:%d", inbound.Listen, inbound.Port),
+	}
+}
+
+func wireguardServerInfo(settings string) (string, int) {
+	var parsed struct {
+		PublicKey string `json:"publicKey"`
+		PubKey    string `json:"pubKey"`
+		SecretKey string `json:"secretKey"`
+		MTU       int    `json:"mtu"`
+	}
+	if json.Unmarshal([]byte(settings), &parsed) != nil {
+		return "", 0
+	}
+	pub := parsed.PublicKey
+	if pub == "" {
+		pub = parsed.PubKey
+	}
+	if pub == "" && parsed.SecretKey != "" {
+		if derived, derr := wgutil.PublicKeyFromPrivate(parsed.SecretKey); derr == nil {
+			pub = derived
+		}
+	}
+	return pub, parsed.MTU
 }
 
 func (p *panelService) AddClient(_ context.Context, req *panelapi.AddClientRequest) (*panelapi.MutationResponse, error) {

@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v7.35.0
-// source: internal/wingsv/panelapi/panel.proto
+// source: panel.proto
 
 package panelapi
 
@@ -21,6 +21,144 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type CreateWireguardClientRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Empty selects the first WireGuard inbound; otherwise the inbound with this tag.
+	InboundTag string `protobuf:"bytes,1,opt,name=inbound_tag,json=inboundTag,proto3" json:"inbound_tag,omitempty"`
+	// Stable identity used as the peer email so a re-provision returns the same peer.
+	ClientId      string `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateWireguardClientRequest) Reset() {
+	*x = CreateWireguardClientRequest{}
+	mi := &file_panel_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateWireguardClientRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateWireguardClientRequest) ProtoMessage() {}
+
+func (x *CreateWireguardClientRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_panel_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateWireguardClientRequest.ProtoReflect.Descriptor instead.
+func (*CreateWireguardClientRequest) Descriptor() ([]byte, []int) {
+	return file_panel_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *CreateWireguardClientRequest) GetInboundTag() string {
+	if x != nil {
+		return x.InboundTag
+	}
+	return ""
+}
+
+func (x *CreateWireguardClientRequest) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+type WireguardClientConfig struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	PrivateKey      string                 `protobuf:"bytes,1,opt,name=private_key,json=privateKey,proto3" json:"private_key,omitempty"`
+	PublicKey       string                 `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	Address         string                 `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
+	ServerPublicKey string                 `protobuf:"bytes,4,opt,name=server_public_key,json=serverPublicKey,proto3" json:"server_public_key,omitempty"`
+	Mtu             uint32                 `protobuf:"varint,5,opt,name=mtu,proto3" json:"mtu,omitempty"`
+	Endpoint        string                 `protobuf:"bytes,6,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *WireguardClientConfig) Reset() {
+	*x = WireguardClientConfig{}
+	mi := &file_panel_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WireguardClientConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WireguardClientConfig) ProtoMessage() {}
+
+func (x *WireguardClientConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_panel_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WireguardClientConfig.ProtoReflect.Descriptor instead.
+func (*WireguardClientConfig) Descriptor() ([]byte, []int) {
+	return file_panel_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *WireguardClientConfig) GetPrivateKey() string {
+	if x != nil {
+		return x.PrivateKey
+	}
+	return ""
+}
+
+func (x *WireguardClientConfig) GetPublicKey() string {
+	if x != nil {
+		return x.PublicKey
+	}
+	return ""
+}
+
+func (x *WireguardClientConfig) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+func (x *WireguardClientConfig) GetServerPublicKey() string {
+	if x != nil {
+		return x.ServerPublicKey
+	}
+	return ""
+}
+
+func (x *WireguardClientConfig) GetMtu() uint32 {
+	if x != nil {
+		return x.Mtu
+	}
+	return 0
+}
+
+func (x *WireguardClientConfig) GetEndpoint() string {
+	if x != nil {
+		return x.Endpoint
+	}
+	return ""
+}
+
 type GetServerStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -29,7 +167,7 @@ type GetServerStatusRequest struct {
 
 func (x *GetServerStatusRequest) Reset() {
 	*x = GetServerStatusRequest{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[0]
+	mi := &file_panel_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -41,7 +179,7 @@ func (x *GetServerStatusRequest) String() string {
 func (*GetServerStatusRequest) ProtoMessage() {}
 
 func (x *GetServerStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[0]
+	mi := &file_panel_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -54,7 +192,7 @@ func (x *GetServerStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetServerStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetServerStatusRequest) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{0}
+	return file_panel_proto_rawDescGZIP(), []int{2}
 }
 
 type ServerStatus struct {
@@ -76,7 +214,7 @@ type ServerStatus struct {
 
 func (x *ServerStatus) Reset() {
 	*x = ServerStatus{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[1]
+	mi := &file_panel_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -88,7 +226,7 @@ func (x *ServerStatus) String() string {
 func (*ServerStatus) ProtoMessage() {}
 
 func (x *ServerStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[1]
+	mi := &file_panel_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -101,7 +239,7 @@ func (x *ServerStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerStatus.ProtoReflect.Descriptor instead.
 func (*ServerStatus) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{1}
+	return file_panel_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ServerStatus) GetCpu() float64 {
@@ -189,7 +327,7 @@ type ListInboundsRequest struct {
 
 func (x *ListInboundsRequest) Reset() {
 	*x = ListInboundsRequest{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[2]
+	mi := &file_panel_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -201,7 +339,7 @@ func (x *ListInboundsRequest) String() string {
 func (*ListInboundsRequest) ProtoMessage() {}
 
 func (x *ListInboundsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[2]
+	mi := &file_panel_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -214,7 +352,7 @@ func (x *ListInboundsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInboundsRequest.ProtoReflect.Descriptor instead.
 func (*ListInboundsRequest) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{2}
+	return file_panel_proto_rawDescGZIP(), []int{4}
 }
 
 type Inbounds struct {
@@ -226,7 +364,7 @@ type Inbounds struct {
 
 func (x *Inbounds) Reset() {
 	*x = Inbounds{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[3]
+	mi := &file_panel_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -238,7 +376,7 @@ func (x *Inbounds) String() string {
 func (*Inbounds) ProtoMessage() {}
 
 func (x *Inbounds) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[3]
+	mi := &file_panel_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -251,7 +389,7 @@ func (x *Inbounds) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Inbounds.ProtoReflect.Descriptor instead.
 func (*Inbounds) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{3}
+	return file_panel_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Inbounds) GetInbounds() []*InboundSummary {
@@ -279,7 +417,7 @@ type InboundSummary struct {
 
 func (x *InboundSummary) Reset() {
 	*x = InboundSummary{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[4]
+	mi := &file_panel_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -291,7 +429,7 @@ func (x *InboundSummary) String() string {
 func (*InboundSummary) ProtoMessage() {}
 
 func (x *InboundSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[4]
+	mi := &file_panel_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -304,7 +442,7 @@ func (x *InboundSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InboundSummary.ProtoReflect.Descriptor instead.
 func (*InboundSummary) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{4}
+	return file_panel_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *InboundSummary) GetId() int64 {
@@ -386,7 +524,7 @@ type GetClientTrafficRequest struct {
 
 func (x *GetClientTrafficRequest) Reset() {
 	*x = GetClientTrafficRequest{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[5]
+	mi := &file_panel_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -398,7 +536,7 @@ func (x *GetClientTrafficRequest) String() string {
 func (*GetClientTrafficRequest) ProtoMessage() {}
 
 func (x *GetClientTrafficRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[5]
+	mi := &file_panel_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -411,7 +549,7 @@ func (x *GetClientTrafficRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClientTrafficRequest.ProtoReflect.Descriptor instead.
 func (*GetClientTrafficRequest) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{5}
+	return file_panel_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetClientTrafficRequest) GetEmail() string {
@@ -438,7 +576,7 @@ type ClientTraffic struct {
 
 func (x *ClientTraffic) Reset() {
 	*x = ClientTraffic{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[6]
+	mi := &file_panel_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -450,7 +588,7 @@ func (x *ClientTraffic) String() string {
 func (*ClientTraffic) ProtoMessage() {}
 
 func (x *ClientTraffic) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[6]
+	mi := &file_panel_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -463,7 +601,7 @@ func (x *ClientTraffic) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClientTraffic.ProtoReflect.Descriptor instead.
 func (*ClientTraffic) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{6}
+	return file_panel_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ClientTraffic) GetId() int64 {
@@ -537,7 +675,7 @@ type ListOnlineClientsRequest struct {
 
 func (x *ListOnlineClientsRequest) Reset() {
 	*x = ListOnlineClientsRequest{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[7]
+	mi := &file_panel_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -549,7 +687,7 @@ func (x *ListOnlineClientsRequest) String() string {
 func (*ListOnlineClientsRequest) ProtoMessage() {}
 
 func (x *ListOnlineClientsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[7]
+	mi := &file_panel_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -562,7 +700,7 @@ func (x *ListOnlineClientsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOnlineClientsRequest.ProtoReflect.Descriptor instead.
 func (*ListOnlineClientsRequest) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{7}
+	return file_panel_proto_rawDescGZIP(), []int{9}
 }
 
 type OnlineClients struct {
@@ -574,7 +712,7 @@ type OnlineClients struct {
 
 func (x *OnlineClients) Reset() {
 	*x = OnlineClients{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[8]
+	mi := &file_panel_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -586,7 +724,7 @@ func (x *OnlineClients) String() string {
 func (*OnlineClients) ProtoMessage() {}
 
 func (x *OnlineClients) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[8]
+	mi := &file_panel_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -599,7 +737,7 @@ func (x *OnlineClients) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OnlineClients.ProtoReflect.Descriptor instead.
 func (*OnlineClients) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{8}
+	return file_panel_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *OnlineClients) GetEmails() []string {
@@ -621,7 +759,7 @@ type AddClientRequest struct {
 
 func (x *AddClientRequest) Reset() {
 	*x = AddClientRequest{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[9]
+	mi := &file_panel_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -633,7 +771,7 @@ func (x *AddClientRequest) String() string {
 func (*AddClientRequest) ProtoMessage() {}
 
 func (x *AddClientRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[9]
+	mi := &file_panel_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -646,7 +784,7 @@ func (x *AddClientRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddClientRequest.ProtoReflect.Descriptor instead.
 func (*AddClientRequest) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{9}
+	return file_panel_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *AddClientRequest) GetPayloadJson() string {
@@ -666,7 +804,7 @@ type UpdateClientRequest struct {
 
 func (x *UpdateClientRequest) Reset() {
 	*x = UpdateClientRequest{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[10]
+	mi := &file_panel_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -678,7 +816,7 @@ func (x *UpdateClientRequest) String() string {
 func (*UpdateClientRequest) ProtoMessage() {}
 
 func (x *UpdateClientRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[10]
+	mi := &file_panel_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -691,7 +829,7 @@ func (x *UpdateClientRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateClientRequest.ProtoReflect.Descriptor instead.
 func (*UpdateClientRequest) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{10}
+	return file_panel_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *UpdateClientRequest) GetEmail() string {
@@ -718,7 +856,7 @@ type DeleteClientRequest struct {
 
 func (x *DeleteClientRequest) Reset() {
 	*x = DeleteClientRequest{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[11]
+	mi := &file_panel_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -730,7 +868,7 @@ func (x *DeleteClientRequest) String() string {
 func (*DeleteClientRequest) ProtoMessage() {}
 
 func (x *DeleteClientRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[11]
+	mi := &file_panel_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -743,7 +881,7 @@ func (x *DeleteClientRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteClientRequest.ProtoReflect.Descriptor instead.
 func (*DeleteClientRequest) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{11}
+	return file_panel_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeleteClientRequest) GetEmail() string {
@@ -770,7 +908,7 @@ type MutationResponse struct {
 
 func (x *MutationResponse) Reset() {
 	*x = MutationResponse{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[12]
+	mi := &file_panel_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -782,7 +920,7 @@ func (x *MutationResponse) String() string {
 func (*MutationResponse) ProtoMessage() {}
 
 func (x *MutationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[12]
+	mi := &file_panel_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -795,7 +933,7 @@ func (x *MutationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MutationResponse.ProtoReflect.Descriptor instead.
 func (*MutationResponse) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{12}
+	return file_panel_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *MutationResponse) GetOk() bool {
@@ -824,7 +962,7 @@ type StreamClientTrafficRequest struct {
 
 func (x *StreamClientTrafficRequest) Reset() {
 	*x = StreamClientTrafficRequest{}
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[13]
+	mi := &file_panel_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -836,7 +974,7 @@ func (x *StreamClientTrafficRequest) String() string {
 func (*StreamClientTrafficRequest) ProtoMessage() {}
 
 func (x *StreamClientTrafficRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_wingsv_panelapi_panel_proto_msgTypes[13]
+	mi := &file_panel_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -849,7 +987,7 @@ func (x *StreamClientTrafficRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamClientTrafficRequest.ProtoReflect.Descriptor instead.
 func (*StreamClientTrafficRequest) Descriptor() ([]byte, []int) {
-	return file_internal_wingsv_panelapi_panel_proto_rawDescGZIP(), []int{13}
+	return file_panel_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *StreamClientTrafficRequest) GetEmail() string {
@@ -866,11 +1004,24 @@ func (x *StreamClientTrafficRequest) GetIntervalSeconds() uint32 {
 	return 0
 }
 
-var File_internal_wingsv_panelapi_panel_proto protoreflect.FileDescriptor
+var File_panel_proto protoreflect.FileDescriptor
 
-const file_internal_wingsv_panelapi_panel_proto_rawDesc = "" +
+const file_panel_proto_rawDesc = "" +
 	"\n" +
-	"$internal/wingsv/panelapi/panel.proto\x12\x0fwingsv.panel.v1\"\x18\n" +
+	"\vpanel.proto\x12\x0fwingsv.panel.v1\"\\\n" +
+	"\x1cCreateWireguardClientRequest\x12\x1f\n" +
+	"\vinbound_tag\x18\x01 \x01(\tR\n" +
+	"inboundTag\x12\x1b\n" +
+	"\tclient_id\x18\x02 \x01(\tR\bclientId\"\xcb\x01\n" +
+	"\x15WireguardClientConfig\x12\x1f\n" +
+	"\vprivate_key\x18\x01 \x01(\tR\n" +
+	"privateKey\x12\x1d\n" +
+	"\n" +
+	"public_key\x18\x02 \x01(\tR\tpublicKey\x12\x18\n" +
+	"\aaddress\x18\x03 \x01(\tR\aaddress\x12*\n" +
+	"\x11server_public_key\x18\x04 \x01(\tR\x0fserverPublicKey\x12\x10\n" +
+	"\x03mtu\x18\x05 \x01(\rR\x03mtu\x12\x1a\n" +
+	"\bendpoint\x18\x06 \x01(\tR\bendpoint\"\x18\n" +
 	"\x16GetServerStatusRequest\"\xc1\x02\n" +
 	"\fServerStatus\x12\x10\n" +
 	"\x03cpu\x18\x01 \x01(\x01R\x03cpu\x12\x1b\n" +
@@ -933,7 +1084,7 @@ const file_internal_wingsv_panelapi_panel_proto_rawDesc = "" +
 	"\fneed_restart\x18\x02 \x01(\bR\vneedRestart\"]\n" +
 	"\x1aStreamClientTrafficRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12)\n" +
-	"\x10interval_seconds\x18\x02 \x01(\rR\x0fintervalSeconds2\xdc\x05\n" +
+	"\x10interval_seconds\x18\x02 \x01(\rR\x0fintervalSeconds2\xcc\x06\n" +
 	"\x05Panel\x12Y\n" +
 	"\x0fGetServerStatus\x12'.wingsv.panel.v1.GetServerStatusRequest\x1a\x1d.wingsv.panel.v1.ServerStatus\x12O\n" +
 	"\fListInbounds\x12$.wingsv.panel.v1.ListInboundsRequest\x1a\x19.wingsv.panel.v1.Inbounds\x12\\\n" +
@@ -942,82 +1093,87 @@ const file_internal_wingsv_panelapi_panel_proto_rawDesc = "" +
 	"\tAddClient\x12!.wingsv.panel.v1.AddClientRequest\x1a!.wingsv.panel.v1.MutationResponse\x12W\n" +
 	"\fUpdateClient\x12$.wingsv.panel.v1.UpdateClientRequest\x1a!.wingsv.panel.v1.MutationResponse\x12W\n" +
 	"\fDeleteClient\x12$.wingsv.panel.v1.DeleteClientRequest\x1a!.wingsv.panel.v1.MutationResponse\x12d\n" +
-	"\x13StreamClientTraffic\x12+.wingsv.panel.v1.StreamClientTrafficRequest\x1a\x1e.wingsv.panel.v1.ClientTraffic0\x01B@Z>github.com/mhsanaei/3x-ui/v3/internal/wingsv/panelapi;panelapib\x06proto3"
+	"\x13StreamClientTraffic\x12+.wingsv.panel.v1.StreamClientTrafficRequest\x1a\x1e.wingsv.panel.v1.ClientTraffic0\x01\x12n\n" +
+	"\x15CreateWireguardClient\x12-.wingsv.panel.v1.CreateWireguardClientRequest\x1a&.wingsv.panel.v1.WireguardClientConfigB@Z>github.com/mhsanaei/3x-ui/v3/internal/wingsv/panelapi;panelapib\x06proto3"
 
 var (
-	file_internal_wingsv_panelapi_panel_proto_rawDescOnce sync.Once
-	file_internal_wingsv_panelapi_panel_proto_rawDescData []byte
+	file_panel_proto_rawDescOnce sync.Once
+	file_panel_proto_rawDescData []byte
 )
 
-func file_internal_wingsv_panelapi_panel_proto_rawDescGZIP() []byte {
-	file_internal_wingsv_panelapi_panel_proto_rawDescOnce.Do(func() {
-		file_internal_wingsv_panelapi_panel_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_internal_wingsv_panelapi_panel_proto_rawDesc), len(file_internal_wingsv_panelapi_panel_proto_rawDesc)))
+func file_panel_proto_rawDescGZIP() []byte {
+	file_panel_proto_rawDescOnce.Do(func() {
+		file_panel_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_panel_proto_rawDesc), len(file_panel_proto_rawDesc)))
 	})
-	return file_internal_wingsv_panelapi_panel_proto_rawDescData
+	return file_panel_proto_rawDescData
 }
 
-var file_internal_wingsv_panelapi_panel_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
-var file_internal_wingsv_panelapi_panel_proto_goTypes = []any{
-	(*GetServerStatusRequest)(nil),     // 0: wingsv.panel.v1.GetServerStatusRequest
-	(*ServerStatus)(nil),               // 1: wingsv.panel.v1.ServerStatus
-	(*ListInboundsRequest)(nil),        // 2: wingsv.panel.v1.ListInboundsRequest
-	(*Inbounds)(nil),                   // 3: wingsv.panel.v1.Inbounds
-	(*InboundSummary)(nil),             // 4: wingsv.panel.v1.InboundSummary
-	(*GetClientTrafficRequest)(nil),    // 5: wingsv.panel.v1.GetClientTrafficRequest
-	(*ClientTraffic)(nil),              // 6: wingsv.panel.v1.ClientTraffic
-	(*ListOnlineClientsRequest)(nil),   // 7: wingsv.panel.v1.ListOnlineClientsRequest
-	(*OnlineClients)(nil),              // 8: wingsv.panel.v1.OnlineClients
-	(*AddClientRequest)(nil),           // 9: wingsv.panel.v1.AddClientRequest
-	(*UpdateClientRequest)(nil),        // 10: wingsv.panel.v1.UpdateClientRequest
-	(*DeleteClientRequest)(nil),        // 11: wingsv.panel.v1.DeleteClientRequest
-	(*MutationResponse)(nil),           // 12: wingsv.panel.v1.MutationResponse
-	(*StreamClientTrafficRequest)(nil), // 13: wingsv.panel.v1.StreamClientTrafficRequest
+var file_panel_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_panel_proto_goTypes = []any{
+	(*CreateWireguardClientRequest)(nil), // 0: wingsv.panel.v1.CreateWireguardClientRequest
+	(*WireguardClientConfig)(nil),        // 1: wingsv.panel.v1.WireguardClientConfig
+	(*GetServerStatusRequest)(nil),       // 2: wingsv.panel.v1.GetServerStatusRequest
+	(*ServerStatus)(nil),                 // 3: wingsv.panel.v1.ServerStatus
+	(*ListInboundsRequest)(nil),          // 4: wingsv.panel.v1.ListInboundsRequest
+	(*Inbounds)(nil),                     // 5: wingsv.panel.v1.Inbounds
+	(*InboundSummary)(nil),               // 6: wingsv.panel.v1.InboundSummary
+	(*GetClientTrafficRequest)(nil),      // 7: wingsv.panel.v1.GetClientTrafficRequest
+	(*ClientTraffic)(nil),                // 8: wingsv.panel.v1.ClientTraffic
+	(*ListOnlineClientsRequest)(nil),     // 9: wingsv.panel.v1.ListOnlineClientsRequest
+	(*OnlineClients)(nil),                // 10: wingsv.panel.v1.OnlineClients
+	(*AddClientRequest)(nil),             // 11: wingsv.panel.v1.AddClientRequest
+	(*UpdateClientRequest)(nil),          // 12: wingsv.panel.v1.UpdateClientRequest
+	(*DeleteClientRequest)(nil),          // 13: wingsv.panel.v1.DeleteClientRequest
+	(*MutationResponse)(nil),             // 14: wingsv.panel.v1.MutationResponse
+	(*StreamClientTrafficRequest)(nil),   // 15: wingsv.panel.v1.StreamClientTrafficRequest
 }
-var file_internal_wingsv_panelapi_panel_proto_depIdxs = []int32{
-	4,  // 0: wingsv.panel.v1.Inbounds.inbounds:type_name -> wingsv.panel.v1.InboundSummary
-	0,  // 1: wingsv.panel.v1.Panel.GetServerStatus:input_type -> wingsv.panel.v1.GetServerStatusRequest
-	2,  // 2: wingsv.panel.v1.Panel.ListInbounds:input_type -> wingsv.panel.v1.ListInboundsRequest
-	5,  // 3: wingsv.panel.v1.Panel.GetClientTraffic:input_type -> wingsv.panel.v1.GetClientTrafficRequest
-	7,  // 4: wingsv.panel.v1.Panel.ListOnlineClients:input_type -> wingsv.panel.v1.ListOnlineClientsRequest
-	9,  // 5: wingsv.panel.v1.Panel.AddClient:input_type -> wingsv.panel.v1.AddClientRequest
-	10, // 6: wingsv.panel.v1.Panel.UpdateClient:input_type -> wingsv.panel.v1.UpdateClientRequest
-	11, // 7: wingsv.panel.v1.Panel.DeleteClient:input_type -> wingsv.panel.v1.DeleteClientRequest
-	13, // 8: wingsv.panel.v1.Panel.StreamClientTraffic:input_type -> wingsv.panel.v1.StreamClientTrafficRequest
-	1,  // 9: wingsv.panel.v1.Panel.GetServerStatus:output_type -> wingsv.panel.v1.ServerStatus
-	3,  // 10: wingsv.panel.v1.Panel.ListInbounds:output_type -> wingsv.panel.v1.Inbounds
-	6,  // 11: wingsv.panel.v1.Panel.GetClientTraffic:output_type -> wingsv.panel.v1.ClientTraffic
-	8,  // 12: wingsv.panel.v1.Panel.ListOnlineClients:output_type -> wingsv.panel.v1.OnlineClients
-	12, // 13: wingsv.panel.v1.Panel.AddClient:output_type -> wingsv.panel.v1.MutationResponse
-	12, // 14: wingsv.panel.v1.Panel.UpdateClient:output_type -> wingsv.panel.v1.MutationResponse
-	12, // 15: wingsv.panel.v1.Panel.DeleteClient:output_type -> wingsv.panel.v1.MutationResponse
-	6,  // 16: wingsv.panel.v1.Panel.StreamClientTraffic:output_type -> wingsv.panel.v1.ClientTraffic
-	9,  // [9:17] is the sub-list for method output_type
-	1,  // [1:9] is the sub-list for method input_type
+var file_panel_proto_depIdxs = []int32{
+	6,  // 0: wingsv.panel.v1.Inbounds.inbounds:type_name -> wingsv.panel.v1.InboundSummary
+	2,  // 1: wingsv.panel.v1.Panel.GetServerStatus:input_type -> wingsv.panel.v1.GetServerStatusRequest
+	4,  // 2: wingsv.panel.v1.Panel.ListInbounds:input_type -> wingsv.panel.v1.ListInboundsRequest
+	7,  // 3: wingsv.panel.v1.Panel.GetClientTraffic:input_type -> wingsv.panel.v1.GetClientTrafficRequest
+	9,  // 4: wingsv.panel.v1.Panel.ListOnlineClients:input_type -> wingsv.panel.v1.ListOnlineClientsRequest
+	11, // 5: wingsv.panel.v1.Panel.AddClient:input_type -> wingsv.panel.v1.AddClientRequest
+	12, // 6: wingsv.panel.v1.Panel.UpdateClient:input_type -> wingsv.panel.v1.UpdateClientRequest
+	13, // 7: wingsv.panel.v1.Panel.DeleteClient:input_type -> wingsv.panel.v1.DeleteClientRequest
+	15, // 8: wingsv.panel.v1.Panel.StreamClientTraffic:input_type -> wingsv.panel.v1.StreamClientTrafficRequest
+	0,  // 9: wingsv.panel.v1.Panel.CreateWireguardClient:input_type -> wingsv.panel.v1.CreateWireguardClientRequest
+	3,  // 10: wingsv.panel.v1.Panel.GetServerStatus:output_type -> wingsv.panel.v1.ServerStatus
+	5,  // 11: wingsv.panel.v1.Panel.ListInbounds:output_type -> wingsv.panel.v1.Inbounds
+	8,  // 12: wingsv.panel.v1.Panel.GetClientTraffic:output_type -> wingsv.panel.v1.ClientTraffic
+	10, // 13: wingsv.panel.v1.Panel.ListOnlineClients:output_type -> wingsv.panel.v1.OnlineClients
+	14, // 14: wingsv.panel.v1.Panel.AddClient:output_type -> wingsv.panel.v1.MutationResponse
+	14, // 15: wingsv.panel.v1.Panel.UpdateClient:output_type -> wingsv.panel.v1.MutationResponse
+	14, // 16: wingsv.panel.v1.Panel.DeleteClient:output_type -> wingsv.panel.v1.MutationResponse
+	8,  // 17: wingsv.panel.v1.Panel.StreamClientTraffic:output_type -> wingsv.panel.v1.ClientTraffic
+	1,  // 18: wingsv.panel.v1.Panel.CreateWireguardClient:output_type -> wingsv.panel.v1.WireguardClientConfig
+	10, // [10:19] is the sub-list for method output_type
+	1,  // [1:10] is the sub-list for method input_type
 	1,  // [1:1] is the sub-list for extension type_name
 	1,  // [1:1] is the sub-list for extension extendee
 	0,  // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_internal_wingsv_panelapi_panel_proto_init() }
-func file_internal_wingsv_panelapi_panel_proto_init() {
-	if File_internal_wingsv_panelapi_panel_proto != nil {
+func init() { file_panel_proto_init() }
+func file_panel_proto_init() {
+	if File_panel_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_wingsv_panelapi_panel_proto_rawDesc), len(file_internal_wingsv_panelapi_panel_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_panel_proto_rawDesc), len(file_panel_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_internal_wingsv_panelapi_panel_proto_goTypes,
-		DependencyIndexes: file_internal_wingsv_panelapi_panel_proto_depIdxs,
-		MessageInfos:      file_internal_wingsv_panelapi_panel_proto_msgTypes,
+		GoTypes:           file_panel_proto_goTypes,
+		DependencyIndexes: file_panel_proto_depIdxs,
+		MessageInfos:      file_panel_proto_msgTypes,
 	}.Build()
-	File_internal_wingsv_panelapi_panel_proto = out.File
-	file_internal_wingsv_panelapi_panel_proto_goTypes = nil
-	file_internal_wingsv_panelapi_panel_proto_depIdxs = nil
+	File_panel_proto = out.File
+	file_panel_proto_goTypes = nil
+	file_panel_proto_depIdxs = nil
 }

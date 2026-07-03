@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v7.35.0
-// source: internal/wingsv/panelapi/panel.proto
+// source: panel.proto
 
 package panelapi
 
@@ -19,14 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Panel_GetServerStatus_FullMethodName     = "/wingsv.panel.v1.Panel/GetServerStatus"
-	Panel_ListInbounds_FullMethodName        = "/wingsv.panel.v1.Panel/ListInbounds"
-	Panel_GetClientTraffic_FullMethodName    = "/wingsv.panel.v1.Panel/GetClientTraffic"
-	Panel_ListOnlineClients_FullMethodName   = "/wingsv.panel.v1.Panel/ListOnlineClients"
-	Panel_AddClient_FullMethodName           = "/wingsv.panel.v1.Panel/AddClient"
-	Panel_UpdateClient_FullMethodName        = "/wingsv.panel.v1.Panel/UpdateClient"
-	Panel_DeleteClient_FullMethodName        = "/wingsv.panel.v1.Panel/DeleteClient"
-	Panel_StreamClientTraffic_FullMethodName = "/wingsv.panel.v1.Panel/StreamClientTraffic"
+	Panel_GetServerStatus_FullMethodName       = "/wingsv.panel.v1.Panel/GetServerStatus"
+	Panel_ListInbounds_FullMethodName          = "/wingsv.panel.v1.Panel/ListInbounds"
+	Panel_GetClientTraffic_FullMethodName      = "/wingsv.panel.v1.Panel/GetClientTraffic"
+	Panel_ListOnlineClients_FullMethodName     = "/wingsv.panel.v1.Panel/ListOnlineClients"
+	Panel_AddClient_FullMethodName             = "/wingsv.panel.v1.Panel/AddClient"
+	Panel_UpdateClient_FullMethodName          = "/wingsv.panel.v1.Panel/UpdateClient"
+	Panel_DeleteClient_FullMethodName          = "/wingsv.panel.v1.Panel/DeleteClient"
+	Panel_StreamClientTraffic_FullMethodName   = "/wingsv.panel.v1.Panel/StreamClientTraffic"
+	Panel_CreateWireguardClient_FullMethodName = "/wingsv.panel.v1.Panel/CreateWireguardClient"
 )
 
 // PanelClient is the client API for Panel service.
@@ -41,6 +42,9 @@ type PanelClient interface {
 	UpdateClient(ctx context.Context, in *UpdateClientRequest, opts ...grpc.CallOption) (*MutationResponse, error)
 	DeleteClient(ctx context.Context, in *DeleteClientRequest, opts ...grpc.CallOption) (*MutationResponse, error)
 	StreamClientTraffic(ctx context.Context, in *StreamClientTrafficRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ClientTraffic], error)
+	// CreateWireguardClient adds a peer to a WireGuard inbound and returns the peer
+	// config so the panel can hand a managed client its wg tunnel (DTLS provisioning).
+	CreateWireguardClient(ctx context.Context, in *CreateWireguardClientRequest, opts ...grpc.CallOption) (*WireguardClientConfig, error)
 }
 
 type panelClient struct {
@@ -140,6 +144,16 @@ func (c *panelClient) StreamClientTraffic(ctx context.Context, in *StreamClientT
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Panel_StreamClientTrafficClient = grpc.ServerStreamingClient[ClientTraffic]
 
+func (c *panelClient) CreateWireguardClient(ctx context.Context, in *CreateWireguardClientRequest, opts ...grpc.CallOption) (*WireguardClientConfig, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(WireguardClientConfig)
+	err := c.cc.Invoke(ctx, Panel_CreateWireguardClient_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PanelServer is the server API for Panel service.
 // All implementations must embed UnimplementedPanelServer
 // for forward compatibility.
@@ -152,6 +166,9 @@ type PanelServer interface {
 	UpdateClient(context.Context, *UpdateClientRequest) (*MutationResponse, error)
 	DeleteClient(context.Context, *DeleteClientRequest) (*MutationResponse, error)
 	StreamClientTraffic(*StreamClientTrafficRequest, grpc.ServerStreamingServer[ClientTraffic]) error
+	// CreateWireguardClient adds a peer to a WireGuard inbound and returns the peer
+	// config so the panel can hand a managed client its wg tunnel (DTLS provisioning).
+	CreateWireguardClient(context.Context, *CreateWireguardClientRequest) (*WireguardClientConfig, error)
 	mustEmbedUnimplementedPanelServer()
 }
 
@@ -185,6 +202,9 @@ func (UnimplementedPanelServer) DeleteClient(context.Context, *DeleteClientReque
 }
 func (UnimplementedPanelServer) StreamClientTraffic(*StreamClientTrafficRequest, grpc.ServerStreamingServer[ClientTraffic]) error {
 	return status.Errorf(codes.Unimplemented, "method StreamClientTraffic not implemented")
+}
+func (UnimplementedPanelServer) CreateWireguardClient(context.Context, *CreateWireguardClientRequest) (*WireguardClientConfig, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateWireguardClient not implemented")
 }
 func (UnimplementedPanelServer) mustEmbedUnimplementedPanelServer() {}
 func (UnimplementedPanelServer) testEmbeddedByValue()               {}
@@ -344,6 +364,24 @@ func _Panel_StreamClientTraffic_Handler(srv interface{}, stream grpc.ServerStrea
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Panel_StreamClientTrafficServer = grpc.ServerStreamingServer[ClientTraffic]
 
+func _Panel_CreateWireguardClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWireguardClientRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PanelServer).CreateWireguardClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Panel_CreateWireguardClient_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PanelServer).CreateWireguardClient(ctx, req.(*CreateWireguardClientRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Panel_ServiceDesc is the grpc.ServiceDesc for Panel service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -379,6 +417,10 @@ var Panel_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "DeleteClient",
 			Handler:    _Panel_DeleteClient_Handler,
 		},
+		{
+			MethodName: "CreateWireguardClient",
+			Handler:    _Panel_CreateWireguardClient_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -387,5 +429,5 @@ var Panel_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "internal/wingsv/panelapi/panel.proto",
+	Metadata: "panel.proto",
 }

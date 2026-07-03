@@ -13,6 +13,25 @@ service Panel {
   rpc UpdateClient(UpdateClientRequest) returns (MutationResponse);
   rpc DeleteClient(DeleteClientRequest) returns (MutationResponse);
   rpc StreamClientTraffic(StreamClientTrafficRequest) returns (stream ClientTraffic);
+  // CreateWireguardClient adds a peer to a WireGuard inbound and returns the peer
+  // config so the panel can hand a managed client its wg tunnel (DTLS provisioning).
+  rpc CreateWireguardClient(CreateWireguardClientRequest) returns (WireguardClientConfig);
+}
+
+message CreateWireguardClientRequest {
+  // Empty selects the first WireGuard inbound; otherwise the inbound with this tag.
+  string inbound_tag = 1;
+  // Stable identity used as the peer email so a re-provision returns the same peer.
+  string client_id = 2;
+}
+
+message WireguardClientConfig {
+  string private_key = 1;
+  string public_key = 2;
+  string address = 3;
+  string server_public_key = 4;
+  uint32 mtu = 5;
+  string endpoint = 6;
 }
 
 message GetServerStatusRequest {}
