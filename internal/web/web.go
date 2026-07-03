@@ -693,6 +693,13 @@ func (s *Server) start(restartXray bool, startTgBot bool) (err error) {
 func (s *Server) startGRPC(certFile, keyFile string) error {
 	addr := config.GetGRPCListen()
 	if addr == "" {
+		// Fall back to the persisted setting so `x-ui grpc-connect` can enable the
+		// panel API without editing the service environment.
+		if stored, err := s.settingService.GetGRPCListen(); err == nil {
+			addr = strings.TrimSpace(stored)
+		}
+	}
+	if addr == "" {
 		return nil
 	}
 	var creds credentials.TransportCredentials
