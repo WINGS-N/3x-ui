@@ -1,6 +1,7 @@
 package service
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
@@ -43,12 +44,14 @@ func (s *InboundService) ReconcileVKTurnProxyClientPeers() error {
 
 		desiredPresent := map[string]wireguardPeer{}
 		desiredAbsent := map[string]struct{}{}
+		emailByPK := map[string]string{}
 		for i := range settings.Clients {
 			client := &settings.Clients[i]
 			publicKey := strings.TrimSpace(resolveVKTurnProxyClientPublicKey(client))
 			if publicKey == "" {
 				continue
 			}
+			emailByPK[publicKey] = client.Email
 			te, ok := trafficEnabled[client.Email]
 			if !ok {
 				te = true // no traffic row yet: treat as active until one is synced
@@ -74,22 +77,19 @@ func (s *InboundService) ReconcileVKTurnProxyClientPeers() error {
 			present[strings.TrimSpace(peer.PublicKey)] = struct{}{}
 		}
 
-		changeNeeded := false
+		var toAdd []string
+		var toRemove []string
 		for pk := range desiredPresent {
 			if _, ok := present[pk]; !ok {
-				changeNeeded = true
-				break
+				toAdd = append(toAdd, pk)
 			}
 		}
-		if !changeNeeded {
-			for pk := range desiredAbsent {
-				if _, ok := present[pk]; ok {
-					changeNeeded = true
-					break
-				}
+		for pk := range desiredAbsent {
+			if _, ok := present[pk]; ok {
+				toRemove = append(toRemove, pk)
 			}
 		}
-		if !changeNeeded {
+		if len(toAdd) == 0 && len(toRemove) == 0 {
 			continue
 		}
 
@@ -116,9 +116,69 @@ func (s *InboundService) ReconcileVKTurnProxyClientPeers() error {
 			return out, nil
 		}); err != nil {
 			logger.Warning("vk-turn-proxy: reconcile client peers failed for inbound", inbound.Id, ":", err)
+			continue
 		}
+
+		// Hot-apply the peer delta into the running Xray so a freshly provisioned
+		// client connects immediately - no restart, no dropped sessions. On any
+		// failure fall back to a full restart on the next config check.
+		s.hotApplyWireguardPeerDelta(wgInbound.Tag, toAdd, toRemove, desiredPresent, emailByPK)
 	}
 	return nil
+}
+
+// hotApplyWireguardPeerDelta pushes added/removed wireguard peers straight into
+// the live Xray core over its gRPC API (AlterInbound), so vk-turn-proxy managed
+// peers take effect without restarting Xray. Any error flips the restart flag so
+// the peer set is reconciled by a full config reload on the next check.
+func (s *InboundService) hotApplyWireguardPeerDelta(
+	tag string,
+	toAdd, toRemove []string,
+	peers map[string]wireguardPeer,
+	emailByPK map[string]string,
+) {
+	if p == nil || !p.IsRunning() {
+		isNeedXrayRestart.Store(true)
+		return
+	}
+	if err := s.xrayApi.Init(p.GetAPIPort()); err != nil {
+		isNeedXrayRestart.Store(true)
+		return
+	}
+	defer s.xrayApi.Close()
+
+	for _, pk := range toRemove {
+		email := emailByPK[pk]
+		if email == "" {
+			isNeedXrayRestart.Store(true)
+			continue
+		}
+		if err := s.xrayApi.RemoveUser(tag, email); err != nil {
+			isNeedXrayRestart.Store(true)
+		}
+	}
+	for _, pk := range toAdd {
+		peer, ok := peers[pk]
+		email := emailByPK[pk]
+		if !ok || email == "" {
+			isNeedXrayRestart.Store(true)
+			continue
+		}
+		user := map[string]any{
+			"email":      email,
+			"publicKey":  peer.PublicKey,
+			"allowedIPs": peer.AllowedIPs,
+		}
+		if peer.PreSharedKey != "" {
+			user["preSharedKey"] = peer.PreSharedKey
+		}
+		if peer.KeepAlive > 0 {
+			user["keepAlive"] = strconv.Itoa(peer.KeepAlive)
+		}
+		if err := s.xrayApi.AddUser("wireguard", tag, user); err != nil {
+			isNeedXrayRestart.Store(true)
+		}
+	}
 }
 
 // vkTurnProxyClientIDByEmail resolves a vk-turn-proxy client's ID from its
