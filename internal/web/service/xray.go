@@ -241,25 +241,23 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		var mutated bool
 		if inbound.Protocol == model.WireGuard {
 			// This fork keeps WireGuard peers INLINE in settings.peers (vk-turn-proxy
-			// mirrors into them) with no client rows, whereas upstream (>=v3.4) models
-			// them as client rows and projects them back here. Preserve a populated
-			// inline peers list as-is so it is not clobbered into an empty list (which
-			// makes xray-core fail to start with "empty peers"); otherwise fall back
-			// to the upstream client->peer projection.
+			// mirrors its managed client peers into them) whereas upstream (>=v3.4)
+			// models them as client rows and projects them back into wgPeers here.
+			// A wireguard inbound can carry BOTH at once (a raw client row plus
+			// vk-turn-proxy managed inline peers when it is a forward target), so
+			// UNION the two by public key rather than letting the client-derived list
+			// clobber the managed inline peers - clobbering drops forwarded
+			// vk-turn-proxy clients from the live config and kills their connectivity.
 			inlinePeers, _ := settings["peers"].([]any)
-			if len(wgPeers) == 0 && len(inlinePeers) > 0 {
-				if _, hadClients := settings["clients"]; hadClients {
-					delete(settings, "clients")
-					mutated = true
-				}
-			} else {
-				delete(settings, "clients")
-				if wgPeers == nil {
-					wgPeers = []any{}
-				}
-				settings["peers"] = wgPeers
-				mutated = true
+			merged := mergeWireguardConfigPeers(inlinePeers, wgPeers)
+			if merged == nil {
+				merged = []any{}
 			}
+			if _, hadClients := settings["clients"]; hadClients {
+				delete(settings, "clients")
+			}
+			settings["peers"] = merged
+			mutated = true
 		} else {
 			_, hadClients := settings["clients"]
 			mutated = hadClients || len(finalClients) > 0
@@ -1255,4 +1253,36 @@ func liftOutboundsXhttpSessionIDKeys(raw json_util.RawMessage) json_util.RawMess
 		return rewritten
 	}
 	return raw
+}
+
+// mergeWireguardConfigPeers unions inline wireguard peers (this fork's
+// vk-turn-proxy managed peers, stored raw in settings.peers) with client-derived
+// peers (the upstream client->peer projection), de-duplicating by public key so a
+// raw client row on a forward-target wireguard inbound never clobbers the managed
+// inline peers. Inline peers win on a public-key collision. Peers without a public
+// key are kept as-is (they cannot collide).
+func mergeWireguardConfigPeers(inline, derived []any) []any {
+	out := make([]any, 0, len(inline)+len(derived))
+	seen := make(map[string]struct{}, len(inline)+len(derived))
+	add := func(list []any) {
+		for _, entry := range list {
+			m, ok := entry.(map[string]any)
+			if !ok {
+				out = append(out, entry)
+				continue
+			}
+			pk, _ := m["publicKey"].(string)
+			pk = strings.TrimSpace(pk)
+			if pk != "" {
+				if _, dup := seen[pk]; dup {
+					continue
+				}
+				seen[pk] = struct{}{}
+			}
+			out = append(out, entry)
+		}
+	}
+	add(inline)
+	add(derived)
+	return out
 }
