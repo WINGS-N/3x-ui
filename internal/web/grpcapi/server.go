@@ -111,7 +111,20 @@ func (p *panelService) CreateWireguardClient(_ context.Context, req *panelapi.Cr
 		}
 	}
 	if wg == nil {
-		return nil, status.Error(codes.NotFound, "no matching wireguard inbound")
+		// Embedded relay variant: the configured inbound is a vk-turn-proxy inbound
+		// (3x-ui hosts the relay). Create a first-class managed VK TURN client there
+		// instead of a raw wg peer; its auto-provisioned peer is the wg config.
+		if cfg, vkErr := p.inbound.CreateVKTurnProxyManagedClientConfig(req.GetInboundTag(), req.GetClientId()); vkErr == nil {
+			return &panelapi.WireguardClientConfig{
+				PrivateKey:      cfg.PrivateKey,
+				PublicKey:       cfg.PublicKey,
+				Address:         cfg.Address,
+				ServerPublicKey: cfg.ServerPublicKey,
+				Mtu:             uint32(cfg.MTU),
+				Endpoint:        cfg.Endpoint,
+			}, nil
+		}
+		return nil, status.Error(codes.NotFound, "no matching wireguard or vk-turn-proxy inbound")
 	}
 	serverPub, mtu := wireguardServerInfo(wg.Settings)
 

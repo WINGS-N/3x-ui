@@ -725,6 +725,92 @@ func (s *InboundService) AddVKTurnProxyClientDirect(inboundID int, client *VKTur
 	return result, needRestart, nil
 }
 
+// VKTurnProxyManagedWGConfig is the provisioned WireGuard config of a managed
+// vk-turn-proxy client, returned to the panel for DTLS self-enrollment.
+type VKTurnProxyManagedWGConfig struct {
+	PrivateKey      string
+	PublicKey       string
+	Address         string
+	ServerPublicKey string
+	MTU             int
+	Endpoint        string
+}
+
+// CreateVKTurnProxyManagedClientConfig adds (or reuses) a managed client on the
+// vk-turn-proxy inbound with the given tag and returns its auto-provisioned wg
+// peer plus the forward wireguard inbound's server key. This is the embedded
+// (3x-ui-hosted relay) counterpart of CreateWireguardClient: instead of a raw wg
+// peer, the client becomes a first-class VK TURN inbound entry. An empty tag
+// selects the first vk-turn-proxy inbound.
+func (s *InboundService) CreateVKTurnProxyManagedClientConfig(inboundTag, clientID string) (*VKTurnProxyManagedWGConfig, error) {
+	if strings.TrimSpace(clientID) == "" {
+		return nil, common.NewError("client id is required")
+	}
+	inbounds, err := s.GetAllInbounds()
+	if err != nil {
+		return nil, err
+	}
+	var ib *model.Inbound
+	for _, x := range inbounds {
+		if x.Protocol == model.VKTurnProxy && (inboundTag == "" || x.Tag == inboundTag) {
+			ib = x
+			break
+		}
+	}
+	if ib == nil {
+		return nil, common.NewError("no matching vk-turn-proxy inbound")
+	}
+	// Idempotent: a re-provision returns the existing client's peer.
+	if _, settings, index, gErr := s.getVKTurnProxyClient(ib.Id, clientID); gErr == nil {
+		return s.buildVKTurnProxyManagedWGConfig(settings, &settings.Clients[index])
+	}
+	if _, _, aErr := s.AddVKTurnProxyClientDirect(ib.Id, &VKTurnProxyClient{
+		ID: clientID, Email: clientID, Enable: true,
+	}, ""); aErr != nil {
+		return nil, aErr
+	}
+	_, settings, index, gErr := s.getVKTurnProxyClient(ib.Id, clientID)
+	if gErr != nil {
+		return nil, gErr
+	}
+	return s.buildVKTurnProxyManagedWGConfig(settings, &settings.Clients[index])
+}
+
+func (s *InboundService) buildVKTurnProxyManagedWGConfig(settings *VKTurnProxySettings, client *VKTurnProxyClient) (*VKTurnProxyManagedWGConfig, error) {
+	if client.Peer == nil {
+		return nil, common.NewError("vk-turn-proxy client has no provisioned peer")
+	}
+	wgInbound, err := s.GetInbound(settings.Forward.WireGuardInboundID)
+	if err != nil {
+		return nil, err
+	}
+	wgSettings, _, err := s.getWireguardSettings(wgInbound.Settings)
+	if err != nil {
+		return nil, err
+	}
+	secretKey, _ := wgSettings["secretKey"].(string)
+	serverPublicKey, err := deriveWireGuardPublicKey(secretKey)
+	if err != nil {
+		return nil, err
+	}
+	mtu := 0
+	if m, ok := wgSettings["mtu"].(float64); ok {
+		mtu = int(m)
+	}
+	address := ""
+	if len(client.Peer.AllowedIPs) > 0 {
+		address = client.Peer.AllowedIPs[0]
+	}
+	return &VKTurnProxyManagedWGConfig{
+		PrivateKey:      client.Peer.PrivateKey,
+		PublicKey:       client.Peer.PublicKey,
+		Address:         address,
+		ServerPublicKey: serverPublicKey,
+		MTU:             mtu,
+		Endpoint:        fmt.Sprintf("%s:%d", wgInbound.Listen, wgInbound.Port),
+	}, nil
+}
+
 func (s *InboundService) GetVKTurnProxyClientTraffic(inboundID int, clientID string) (*xray.ClientTraffic, error) {
 	inbound, settings, index, err := s.getVKTurnProxyClient(inboundID, clientID)
 	if err != nil {
