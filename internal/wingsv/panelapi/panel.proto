@@ -23,6 +23,9 @@ message CreateWireguardClientRequest {
   string inbound_tag = 1;
   // Stable identity used as the peer email so a re-provision returns the same peer.
   string client_id = 2;
+  // Human-readable client name shown in the clients list; falls back to client_id
+  // when empty.
+  string client_name = 3;
 }
 
 message WireguardClientConfig {

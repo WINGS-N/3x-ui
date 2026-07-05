@@ -742,9 +742,13 @@ type VKTurnProxyManagedWGConfig struct {
 // (3x-ui-hosted relay) counterpart of CreateWireguardClient: instead of a raw wg
 // peer, the client becomes a first-class VK TURN inbound entry. An empty tag
 // selects the first vk-turn-proxy inbound.
-func (s *InboundService) CreateVKTurnProxyManagedClientConfig(inboundTag, clientID string) (*VKTurnProxyManagedWGConfig, error) {
+func (s *InboundService) CreateVKTurnProxyManagedClientConfig(inboundTag, clientID, clientName string) (*VKTurnProxyManagedWGConfig, error) {
 	if strings.TrimSpace(clientID) == "" {
 		return nil, common.NewError("client id is required")
+	}
+	email := strings.TrimSpace(clientName)
+	if email == "" {
+		email = clientID
 	}
 	inbounds, err := s.GetAllInbounds()
 	if err != nil {
@@ -770,7 +774,7 @@ func (s *InboundService) CreateVKTurnProxyManagedClientConfig(inboundTag, client
 		return s.buildVKTurnProxyManagedWGConfig(settings, &settings.Clients[index])
 	}
 	if _, _, aErr := s.AddVKTurnProxyClientDirect(ib.Id, &VKTurnProxyClient{
-		ID: clientID, Email: clientID, Enable: true,
+		ID: clientID, Email: email, Enable: true,
 	}, ""); aErr != nil {
 		return nil, aErr
 	}

@@ -26,7 +26,10 @@ type CreateWireguardClientRequest struct {
 	// Empty selects the first WireGuard inbound; otherwise the inbound with this tag.
 	InboundTag string `protobuf:"bytes,1,opt,name=inbound_tag,json=inboundTag,proto3" json:"inbound_tag,omitempty"`
 	// Stable identity used as the peer email so a re-provision returns the same peer.
-	ClientId      string `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	ClientId string `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	// Human-readable client name shown in the clients list; falls back to client_id
+	// when empty.
+	ClientName    string `protobuf:"bytes,3,opt,name=client_name,json=clientName,proto3" json:"client_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -71,6 +74,13 @@ func (x *CreateWireguardClientRequest) GetInboundTag() string {
 func (x *CreateWireguardClientRequest) GetClientId() string {
 	if x != nil {
 		return x.ClientId
+	}
+	return ""
+}
+
+func (x *CreateWireguardClientRequest) GetClientName() string {
+	if x != nil {
+		return x.ClientName
 	}
 	return ""
 }
@@ -1008,11 +1018,13 @@ var File_panel_proto protoreflect.FileDescriptor
 
 const file_panel_proto_rawDesc = "" +
 	"\n" +
-	"\vpanel.proto\x12\x0fwingsv.panel.v1\"\\\n" +
+	"\vpanel.proto\x12\x0fwingsv.panel.v1\"}\n" +
 	"\x1cCreateWireguardClientRequest\x12\x1f\n" +
 	"\vinbound_tag\x18\x01 \x01(\tR\n" +
 	"inboundTag\x12\x1b\n" +
-	"\tclient_id\x18\x02 \x01(\tR\bclientId\"\xcb\x01\n" +
+	"\tclient_id\x18\x02 \x01(\tR\bclientId\x12\x1f\n" +
+	"\vclient_name\x18\x03 \x01(\tR\n" +
+	"clientName\"\xcb\x01\n" +
 	"\x15WireguardClientConfig\x12\x1f\n" +
 	"\vprivate_key\x18\x01 \x01(\tR\n" +
 	"privateKey\x12\x1d\n" +

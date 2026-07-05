@@ -114,7 +114,7 @@ func (p *panelService) CreateWireguardClient(_ context.Context, req *panelapi.Cr
 		// Embedded relay variant: the configured inbound is a vk-turn-proxy inbound
 		// (3x-ui hosts the relay). Create a first-class managed VK TURN client there
 		// instead of a raw wg peer; its auto-provisioned peer is the wg config.
-		if cfg, vkErr := p.inbound.CreateVKTurnProxyManagedClientConfig(req.GetInboundTag(), req.GetClientId()); vkErr == nil {
+		if cfg, vkErr := p.inbound.CreateVKTurnProxyManagedClientConfig(req.GetInboundTag(), req.GetClientId(), req.GetClientName()); vkErr == nil {
 			return &panelapi.WireguardClientConfig{
 				PrivateKey:      cfg.PrivateKey,
 				PublicKey:       cfg.PublicKey,
@@ -136,8 +136,12 @@ func (p *panelService) CreateWireguardClient(_ context.Context, req *panelapi.Cr
 	if err != nil {
 		return nil, status.Error(codes.Internal, "keypair: "+err.Error())
 	}
+	email := strings.TrimSpace(req.GetClientName())
+	if email == "" {
+		email = req.GetClientId()
+	}
 	needRestart, err := p.client.CreateOne(p.inbound, wg.Id, model.Client{
-		Email: req.GetClientId(), Enable: true, PublicKey: pub, PrivateKey: priv,
+		Email: email, Enable: true, PublicKey: pub, PrivateKey: priv,
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
