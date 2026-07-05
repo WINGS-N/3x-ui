@@ -760,8 +760,13 @@ func (s *InboundService) CreateVKTurnProxyManagedClientConfig(inboundTag, client
 	if ib == nil {
 		return nil, common.NewError("no matching vk-turn-proxy inbound")
 	}
-	// Idempotent: a re-provision returns the existing client's peer.
+	// Idempotent: a re-provision returns the existing client's peer. Backfill the
+	// clients table on this path too, so clients provisioned before materialization
+	// was wired still show up in the global clients list on their next re-provision.
 	if _, settings, index, gErr := s.getVKTurnProxyClient(ib.Id, clientID); gErr == nil {
+		if modelClients, cErr := s.GetClients(ib); cErr == nil {
+			_ = s.clientService.SyncInbound(nil, ib.Id, modelClients)
+		}
 		return s.buildVKTurnProxyManagedWGConfig(settings, &settings.Clients[index])
 	}
 	if _, _, aErr := s.AddVKTurnProxyClientDirect(ib.Id, &VKTurnProxyClient{
