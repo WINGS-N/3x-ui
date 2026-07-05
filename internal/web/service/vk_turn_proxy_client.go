@@ -933,7 +933,15 @@ func (s *InboundService) AddVKTurnProxyClient(data *model.Inbound) (bool, error)
 				return err
 			}
 		}
-		return nil
+		// Materialize the inbound's clients into the normalized clients table so
+		// they appear in the global clients list. A gRPC/provision-driven add
+		// otherwise only wrote settings + client_traffics, leaving no ClientRecord
+		// row, so panel-provisioned vk-turn-proxy clients were invisible there.
+		modelClients, cErr := s.GetClients(oldInbound)
+		if cErr != nil {
+			return cErr
+		}
+		return s.clientService.SyncInbound(tx, oldInbound.Id, modelClients)
 	})
 	return needRestart, err
 }
