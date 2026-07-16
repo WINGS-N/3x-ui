@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/logger"
 	"github.com/op/go-logging"
+
+	"github.com/mhsanaei/3x-ui/v3/internal/logger"
 )
 
 // writePanelLog seeds the panel log file the file backend writes, in the same

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -84,7 +85,11 @@ func resolveInstalledReleaseTag(binaryPath string, getStored func() (string, err
 func getGitHubLatestReleaseVersion(repo string) (string, error) {
 	releaseURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Get(releaseURL)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, releaseURL, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}

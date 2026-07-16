@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"compress/zlib"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -18,6 +19,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/curve25519"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/logger"
@@ -25,8 +29,6 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/util/random"
 	"github.com/mhsanaei/3x-ui/v3/internal/vkturnproxy"
 	wingsvproto "github.com/mhsanaei/3x-ui/v3/internal/wingsv/proto"
-	"golang.org/x/crypto/curve25519"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -552,7 +554,11 @@ func (s *VKTurnProxyService) downloadBinary(version string) (string, error) {
 	downloadURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", vkTurnProxyReleaseRepo, url.PathEscape(resolvedVersion), assetName)
 
 	client := &http.Client{Timeout: 2 * time.Minute}
-	resp, err := client.Get(downloadURL)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, downloadURL, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}

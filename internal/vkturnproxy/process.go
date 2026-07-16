@@ -2,6 +2,7 @@ package vkturnproxy
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -187,9 +188,10 @@ func (p *Process) Start() (err error) {
 		args = append(args, "-session-mode", p.spec.SessionMode)
 	}
 	wrapMode := strings.ToLower(strings.TrimSpace(p.spec.WrapMode))
-	if wrapMode == "off" {
+	switch wrapMode {
+	case "off":
 		args = append(args, "-wrap-mode", "off")
-	} else if wrapMode == "" || wrapMode == "on" {
+	case "", "on":
 		// vk-turn-server defaults to -wrap-mode=on already; pass it
 		// explicitly only when the user picked a specific cipher or
 		// preset key so the spec is reproducible from the args alone.
@@ -219,7 +221,9 @@ func (p *Process) Start() (err error) {
 		}
 	}
 
-	cmd := exec.Command(GetBinaryPath(), args...)
+	// Background: the relay is a supervised sidecar whose lifetime is owned by this
+	// Process (Stop kills p.cmd), not by a request context that could cancel it.
+	cmd := exec.CommandContext(context.Background(), GetBinaryPath(), args...)
 	cmd.Stdout = p.logWriter
 	cmd.Stderr = p.logWriter
 	setSysProcAttr(cmd)

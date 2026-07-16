@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"maps"
 	"net"
-	"strconv"
 	"strings"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
@@ -73,66 +72,6 @@ func (p wireguardPeer) toClientObject() map[string]any {
 		obj["subId"] = random.NumLower(16)
 	}
 	return obj
-}
-
-func normalizeClientTGIDInMap(client map[string]any) bool {
-	tgIDRaw, ok := client["tgId"]
-	if !ok {
-		return false
-	}
-
-	switch value := tgIDRaw.(type) {
-	case nil:
-		client["tgId"] = int64(0)
-		return true
-	case string:
-		trimmed := strings.TrimSpace(value)
-		if trimmed == "" {
-			client["tgId"] = int64(0)
-			return true
-		}
-		tgID, err := strconv.ParseInt(trimmed, 10, 64)
-		if err != nil {
-			client["tgId"] = int64(0)
-			return true
-		}
-		client["tgId"] = tgID
-		return true
-	case json.Number:
-		tgID, err := value.Int64()
-		if err != nil {
-			client["tgId"] = int64(0)
-			return true
-		}
-		client["tgId"] = tgID
-		return true
-	default:
-		return false
-	}
-}
-
-func normalizeRawClientsTGID(rawClients json.RawMessage) (json.RawMessage, bool, error) {
-	var clients []map[string]any
-	if err := json.Unmarshal(rawClients, &clients); err != nil {
-		return nil, false, err
-	}
-
-	changed := false
-	for _, client := range clients {
-		if normalizeClientTGIDInMap(client) {
-			changed = true
-		}
-	}
-
-	if !changed {
-		return rawClients, false, nil
-	}
-
-	normalizedClients, err := json.Marshal(clients)
-	if err != nil {
-		return nil, false, err
-	}
-	return normalizedClients, true, nil
 }
 
 func (s *InboundService) AddInboundPeer(data *model.Inbound) (bool, error) {

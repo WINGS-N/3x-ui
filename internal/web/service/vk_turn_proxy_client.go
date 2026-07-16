@@ -4,17 +4,19 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
+
+	"gorm.io/gorm"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
 	wingsvproto "github.com/mhsanaei/3x-ui/v3/internal/wingsv/proto"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
-	"gorm.io/gorm"
 )
 
 // vkTurnProxyPeerAllocator hands out the next free 10.0.0.X/32 address
@@ -838,7 +840,7 @@ func (s *InboundService) GetVKTurnProxyClientTraffic(inboundID int, clientID str
 	if err == nil {
 		return s.GetClientTrafficByEmail(client.Email)
 	}
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 

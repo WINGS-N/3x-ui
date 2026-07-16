@@ -346,7 +346,7 @@ func (s *Server) startTask(restartXray bool) {
 
 	// Keep the vk-turn-proxy sidecar reconciled with its inbounds: starts
 	// missing instances, stops orphaned ones, restarts on settings drift.
-	s.cron.AddFunc("@every 5s", func() {
+	_, _ = s.cron.AddFunc("@every 5s", func() {
 		if err := service.VKTurnProxyRuntime().ReconcileClientPeers(); err != nil {
 			logger.Debug("vk-turn-proxy reconcile client peers:", err)
 		}

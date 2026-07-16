@@ -1,14 +1,16 @@
 package service
 
 import (
+	"errors"
 	"strconv"
 	"strings"
+
+	"gorm.io/gorm"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/logger"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
-	"gorm.io/gorm"
 )
 
 type vkTurnProxyTrafficBinding struct {
@@ -150,42 +152,6 @@ func (s *InboundService) syncVKTurnProxyClientTrafficRows(tx *gorm.DB, inbounds 
 	}
 
 	return changed, nil
-}
-
-func (s *InboundService) loadInboundClientStats(tx *gorm.DB, inbounds []*model.Inbound) error {
-	if len(inbounds) == 0 {
-		return nil
-	}
-
-	inboundIDs := make([]int, 0, len(inbounds))
-	for _, inbound := range inbounds {
-		if inbound == nil {
-			continue
-		}
-		inboundIDs = append(inboundIDs, inbound.Id)
-	}
-	if len(inboundIDs) == 0 {
-		return nil
-	}
-
-	var rows []xray.ClientTraffic
-	if err := tx.Where("inbound_id IN ?", inboundIDs).Find(&rows).Error; err != nil {
-		return err
-	}
-
-	statsByInboundID := make(map[int][]xray.ClientTraffic, len(inbounds))
-	for _, row := range rows {
-		statsByInboundID[row.InboundId] = append(statsByInboundID[row.InboundId], row)
-	}
-
-	for _, inbound := range inbounds {
-		if inbound == nil {
-			continue
-		}
-		inbound.ClientStats = statsByInboundID[inbound.Id]
-	}
-
-	return nil
 }
 
 // BuildVKTurnProxyClientTraffics maps patched WireGuard peer stats to vk-turn-proxy clients
@@ -374,7 +340,8 @@ func (s *InboundService) MigrationBackfillVKTurnProxyClientTraffics() {
 			modelClient := vkTurnProxyClientToModelClient(&client)
 			var traffic xray.ClientTraffic
 			err := db.Where("email = ?", modelClient.Email).First(&traffic).Error
-			if err == nil {
+			switch {
+			case err == nil:
 				err = db.Model(&traffic).Updates(map[string]any{
 					"inbound_id":  inbound.Id,
 					"enable":      modelClient.Enable,
@@ -382,7 +349,7 @@ func (s *InboundService) MigrationBackfillVKTurnProxyClientTraffics() {
 					"expiry_time": modelClient.ExpiryTime,
 					"reset":       modelClient.Reset,
 				}).Error
-			} else if err == gorm.ErrRecordNotFound {
+			case errors.Is(err, gorm.ErrRecordNotFound):
 				traffic = xray.ClientTraffic{
 					InboundId:  inbound.Id,
 					Email:      modelClient.Email,

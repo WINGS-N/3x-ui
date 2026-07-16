@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,15 +16,16 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v3/internal/config"
 	"github.com/mhsanaei/3x-ui/v3/internal/logger"
-	"github.com/mhsanaei/3x-ui/v3/internal/vkturnproxy"
 )
-
-const xrayReleaseRepo = "WINGS-N/Xray-core"
 
 func getGitHubReleaseVersions(repo string) ([]string, error) {
 	releasesURL := fmt.Sprintf("https://api.github.com/repos/%s/releases", repo)
 	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Get(releasesURL)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, releasesURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -125,14 +127,6 @@ func (s *ServerService) GetVKTurnProxyLogs(count string, level string) []string 
 		}
 	}
 	return filtered
-}
-
-func (s *ServerService) getInstalledVKTurnProxyReleaseTag() string {
-	return resolveInstalledReleaseTag(
-		vkturnproxy.GetBinaryPath(),
-		s.settingService.GetVKTurnProxyReleaseTag,
-		s.settingService.SetVKTurnProxyReleaseTag,
-	)
 }
 
 // tailMatchingLogLines returns up to limit matching lines (newest first) from

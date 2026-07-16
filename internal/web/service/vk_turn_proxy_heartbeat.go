@@ -3,7 +3,6 @@ package service
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"sort"
 	"strings"
 	"time"
 
@@ -45,67 +44,6 @@ func wireGuardPublicKeyFingerprint(publicKey string) (string, error) {
 
 	sum := sha256.Sum256(decoded)
 	return "sha256:" + base64.RawStdEncoding.EncodeToString(sum[:]), nil
-}
-
-func mergeOnlineClientLists(base []string, extra map[string]struct{}, authoritative map[string]struct{}) []string {
-	if len(extra) == 0 && len(authoritative) == 0 {
-		return append([]string(nil), base...)
-	}
-
-	extraKeys := normalizedEmailSet(extra)
-	authoritativeKeys := normalizedEmailSet(authoritative)
-	result := make([]string, 0, len(base)+len(extra))
-	seen := make(map[string]struct{}, len(base)+len(extra))
-	for _, email := range base {
-		trimmed := strings.TrimSpace(email)
-		if trimmed == "" {
-			continue
-		}
-		key := strings.ToLower(trimmed)
-		if _, isAuthoritative := authoritativeKeys[key]; isAuthoritative {
-			if _, isOnline := extraKeys[key]; !isOnline {
-				continue
-			}
-		}
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		result = append(result, trimmed)
-	}
-
-	appended := make([]string, 0, len(extra))
-	for email := range extra {
-		trimmed := strings.TrimSpace(email)
-		if trimmed == "" {
-			continue
-		}
-		key := strings.ToLower(trimmed)
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		appended = append(appended, trimmed)
-	}
-	sort.Strings(appended)
-
-	return append(result, appended...)
-}
-
-func normalizedEmailSet(values map[string]struct{}) map[string]struct{} {
-	if len(values) == 0 {
-		return nil
-	}
-
-	result := make(map[string]struct{}, len(values))
-	for email := range values {
-		trimmed := strings.TrimSpace(email)
-		if trimmed == "" {
-			continue
-		}
-		result[strings.ToLower(trimmed)] = struct{}{}
-	}
-	return result
 }
 
 func (s *InboundService) getVKTurnProxyHeartbeatPresence(now time.Time) (map[string]struct{}, map[string]struct{}, map[string]int64, error) {
