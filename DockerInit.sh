@@ -33,7 +33,7 @@ fi
 # WINGS fork: xray comes from the WINGS-N/Xray-core fork release (carries the WG
 # peer stats + gVisor TUN UID patches), not upstream XTLS. The .release sidecar
 # lets the panel report the -wv tag as the running xray version.
-XRAY_VERSION="v26.6.22-wv"
+XRAY_VERSION="v26.7.11-wv"
 mkdir -p build/bin
 cd build/bin
 curl -sfLRO "https://github.com/WINGS-N/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-${ARCH}.zip"
