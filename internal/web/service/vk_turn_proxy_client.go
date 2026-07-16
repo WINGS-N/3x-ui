@@ -394,7 +394,11 @@ func cloneWireguardPeerToVKTurnProxyClientPeer(peer *wireguardPeer) *VKTurnProxy
 	}
 }
 
-func vkTurnProxyClientPeerToWireguardPeer(peer *VKTurnProxyClientPeer) wireguardPeer {
+// vkTurnProxyClientPeerToWireguardPeer mirrors a vk-turn-proxy client's peer into
+// the forward wireguard inbound. email carries the vk-turn client's identity: a
+// wireguard peer is a client row since upstream v3.5, and one ClientRecord (keyed
+// by email) is deliberately shared across both inbounds - it is the same user.
+func vkTurnProxyClientPeerToWireguardPeer(peer *VKTurnProxyClientPeer, email string) wireguardPeer {
 	allowedIPs := make([]string, len(peer.AllowedIPs))
 	copy(allowedIPs, peer.AllowedIPs)
 	return wireguardPeer{
@@ -403,6 +407,7 @@ func vkTurnProxyClientPeerToWireguardPeer(peer *VKTurnProxyClientPeer) wireguard
 		PreSharedKey: strings.TrimSpace(peer.PreSharedKey),
 		AllowedIPs:   allowedIPs,
 		KeepAlive:    peer.KeepAlive,
+		Email:        strings.TrimSpace(email),
 	}
 }
 
@@ -527,7 +532,7 @@ func (s *InboundService) ensureVKTurnProxyClientPeerEnabled(wgInboundID int, cli
 		if client.Peer == nil {
 			return false, common.NewError("managed wireguard peer is empty")
 		}
-		peer := vkTurnProxyClientPeerToWireguardPeer(client.Peer)
+		peer := vkTurnProxyClientPeerToWireguardPeer(client.Peer, client.Email)
 		restart, err := s.upsertWireguardPeerByPublicKey(wgInboundID, peer)
 		if err != nil {
 			return restart, err
@@ -537,7 +542,7 @@ func (s *InboundService) ensureVKTurnProxyClientPeerEnabled(wgInboundID int, cli
 	}
 
 	if client.Peer != nil && strings.TrimSpace(client.Peer.PublicKey) != "" {
-		peer := vkTurnProxyClientPeerToWireguardPeer(client.Peer)
+		peer := vkTurnProxyClientPeerToWireguardPeer(client.Peer, client.Email)
 		restart, err := s.upsertWireguardPeerByPublicKey(wgInboundID, peer)
 		if err != nil {
 			return restart, err

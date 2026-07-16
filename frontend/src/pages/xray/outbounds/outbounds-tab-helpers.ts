@@ -1,5 +1,8 @@
+import type { TFunction } from 'i18next';
+
 import { OutboundProtocols as Protocols } from '@/schemas/primitives';
-import type { OutboundTestState, OutboundTrafficRow } from '@/hooks/useXraySetting';
+import { isUdpOutbound } from '@/hooks/useXraySetting';
+import type { OutboundTestMode, OutboundTestState, OutboundTrafficRow } from '@/hooks/useXraySetting';
 
 import type { OutboundRow } from './outbounds-tab-types';
 
@@ -45,9 +48,33 @@ export function showSecurity(security?: string): boolean {
   return security === 'tls' || security === 'reality';
 }
 
+export function effectiveTestMode(o: unknown, mode: OutboundTestMode): OutboundTestMode {
+  return mode === 'tcp' && isUdpOutbound(o) ? 'http' : mode;
+}
+
+export function testModeLabel(mode: string, t: TFunction): string {
+  return mode === 'real' ? t('pages.xray.outbound.modeRealDelay') : mode.toUpperCase();
+}
+
 export function trafficFor(outboundsTraffic: OutboundTrafficRow[], o: OutboundRow): { up: number; down: number } {
   const tr = outboundsTraffic.find((x) => x.tag === o.tag);
   return { up: tr?.up || 0, down: tr?.down || 0 };
+}
+
+export function countryFlag(country?: string): string {
+  const code = (country || '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return '';
+  return String.fromCodePoint(...[...code].map((ch) => 0x1f1e6 + ch.charCodeAt(0) - 65));
+}
+
+export function countryName(country?: string, locale?: string): string {
+  const code = (country || '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return '';
+  try {
+    return new Intl.DisplayNames(locale ? [locale] : undefined, { type: 'region' }).of(code) || code;
+  } catch {
+    return code;
+  }
 }
 
 export function isTesting<K extends string | number>(states: Record<K, OutboundTestState>, idx: K): boolean {

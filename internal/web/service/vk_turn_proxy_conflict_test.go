@@ -2,18 +2,30 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 )
 
+// wgInboundSettingsJSON builds a wireguard inbound's settings in the current
+// shape: peers are client rows (settings.clients) since WireguardPeersToClients.
 func wgInboundSettingsJSON(t *testing.T, peers []wireguardPeer) string {
 	t.Helper()
+	clients := make([]map[string]any, 0, len(peers))
+	for i, peer := range peers {
+		obj := peer.toClientObject()
+		if strings.TrimSpace(peer.Email) == "" {
+			obj["email"] = fmt.Sprintf("wg-peer-%d", i+1)
+		}
+		clients = append(clients, obj)
+	}
 	payload := map[string]any{
 		"mtu":       1420,
 		"secretKey": "iLZqxL6Tn1Qe3jBJ7Bz1ULbpAFvWPLnGz0kSV0Zd2A=",
-		"peers":     peers,
+		"clients":   clients,
 	}
 	raw, err := json.Marshal(payload)
 	if err != nil {

@@ -55,7 +55,7 @@ func (s *InboundService) ReconcileVKTurnProxyClientPeers() error {
 			}
 			active := inbound.Enable && client.Enable && te
 			if active && client.Peer != nil {
-				desiredPresent[publicKey] = vkTurnProxyClientPeerToWireguardPeer(client.Peer)
+				desiredPresent[publicKey] = vkTurnProxyClientPeerToWireguardPeer(client.Peer, client.Email)
 			} else {
 				desiredAbsent[publicKey] = struct{}{}
 			}

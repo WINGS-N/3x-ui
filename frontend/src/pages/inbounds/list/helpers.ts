@@ -72,6 +72,8 @@ export function isInboundMultiUser(record: { protocol: string; settings: unknown
     case 'vless':
     case 'trojan':
     case 'hysteria':
+    case 'mtproto':
+    case 'wireguard':
     case 'vk-turn-proxy':
       return true;
     case 'shadowsocks':

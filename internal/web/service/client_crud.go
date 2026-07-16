@@ -82,6 +82,20 @@ func (s *ClientService) Create(inboundSvc *InboundService, payload *ClientCreate
 		if existing.SubID == "" || existing.SubID != client.SubID {
 			return false, common.NewError("email already in use:", client.Email)
 		}
+		// Reuse stored credentials when re-adding an existing identity, or
+		// fillProtocolDefaults mints a fresh UUID that desyncs other inbounds.
+		if client.ID == "" {
+			client.ID = existing.UUID
+		}
+		if client.Password == "" {
+			client.Password = existing.Password
+		}
+		if client.Auth == "" {
+			client.Auth = existing.Auth
+		}
+		if client.Secret == "" {
+			client.Secret = existing.Secret
+		}
 	}
 
 	if client.SubID != "" {
@@ -142,8 +156,34 @@ func (s *ClientService) fillProtocolDefaults(c *model.Client, ib *model.Inbound)
 		if c.Auth == "" {
 			c.Auth = strings.ReplaceAll(uuid.NewString(), "-", "")
 		}
+	case model.MTProto:
+		if c.Secret == "" {
+			c.Secret = model.GenerateFakeTLSSecret(mtprotoDomainFromSettings(ib.Settings))
+		}
 	}
 	return nil
+}
+
+// defaultMtprotoDomain is the FakeTLS fronting domain used when an mtproto
+// inbound carries no fakeTlsDomain of its own; it mirrors the frontend default.
+const defaultMtprotoDomain = "www.cloudflare.com"
+
+// mtprotoDomainFromSettings returns the inbound-level FakeTLS domain, falling
+// back to the default when unset, so a generated client secret always fronts a
+// real hostname.
+func mtprotoDomainFromSettings(settings string) string {
+	domain := ""
+	if settings != "" {
+		var m map[string]any
+		if err := json.Unmarshal([]byte(settings), &m); err == nil {
+			domain, _ = m["fakeTlsDomain"].(string)
+		}
+	}
+	domain = strings.TrimSpace(domain)
+	if domain == "" {
+		return defaultMtprotoDomain
+	}
+	return domain
 }
 
 func clientWithInboundFlow(c model.Client, ib *model.Inbound) model.Client {
@@ -319,6 +359,9 @@ func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model
 	if updated.Auth == "" {
 		updated.Auth = existing.Auth
 	}
+	if updated.Secret == "" {
+		updated.Secret = existing.Secret
+	}
 
 	if updated.Email != existing.Email {
 		var collisionCount int64
@@ -329,11 +372,6 @@ func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model
 		}
 		if collisionCount > 0 {
 			return false, common.NewError("Duplicate email:", updated.Email)
-		}
-		if err := database.GetDB().Model(&model.ClientRecord{}).
-			Where("id = ?", id).
-			Update("email", updated.Email).Error; err != nil {
-			return false, err
 		}
 	}
 
@@ -385,6 +423,16 @@ func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model
 		}
 	}
 
+	// UpdateInboundClient renames the record atomically with each inbound's
+	// settings JSON; this direct write only covers records with no inbound left.
+	if updated.Email != existing.Email {
+		if err := database.GetDB().Model(&model.ClientRecord{}).
+			Where("id = ? AND email = ?", id, existing.Email).
+			Update("email", updated.Email).Error; err != nil {
+			return needRestart, err
+		}
+	}
+
 	reverseStr := ""
 	if updated.Reverse != nil && strings.TrimSpace(updated.Reverse.Tag) != "" {
 		if b, mErr := json.Marshal(updated.Reverse); mErr == nil {
@@ -406,6 +454,15 @@ func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model
 	if err := database.GetDB().Model(&model.ClientRecord{}).
 		Where("id = ?", id).
 		UpdateColumn("group_name", updated.Group).Error; err != nil {
+		return needRestart, err
+	}
+
+	// Same shape as the group write above: SyncInbound keeps a stored ad-tag
+	// when the incoming settings carry none, so clearing the override must be
+	// applied here, where the editor always round-trips the field.
+	if err := database.GetDB().Model(&model.ClientRecord{}).
+		Where("id = ?", id).
+		UpdateColumn("ad_tag", updated.AdTag).Error; err != nil {
 		return needRestart, err
 	}
 
@@ -436,12 +493,14 @@ func (s *ClientService) Delete(inboundSvc *InboundService, id int, keepTraffic b
 	}
 
 	needRestart := false
+	var delErrs []error
 	for _, ibId := range inboundIds {
 		if _, getErr := inboundSvc.GetInbound(ibId); getErr != nil {
 			if errors.Is(getErr, gorm.ErrRecordNotFound) {
 				continue
 			}
-			return needRestart, getErr
+			delErrs = append(delErrs, fmt.Errorf("inbound %d: %w", ibId, getErr))
+			continue
 		}
 
 		// Always delete by email — the client's stable identity. This removes
@@ -451,39 +510,55 @@ func (s *ClientService) Delete(inboundSvc *InboundService, id int, keepTraffic b
 		if existing.Email == "" {
 			continue
 		}
-		nr, delErr := s.DelInboundClientByEmail(inboundSvc, ibId, existing.Email, false)
+		nr, delErr := s.DelInboundClientByEmail(inboundSvc, ibId, existing.Email, false, true)
 		if delErr != nil {
 			// The client is already absent from this inbound (data drift or a
 			// retried delete). Skip it — deletion stays idempotent.
 			if errors.Is(delErr, ErrClientNotInInbound) {
 				continue
 			}
-			return needRestart, delErr
+			delErrs = append(delErrs, fmt.Errorf("inbound %d: %w", ibId, delErr))
+			continue
 		}
 		if nr {
 			needRestart = true
 		}
 	}
+	// A failed inbound still holds the client in its settings JSON: keep the
+	// record so the next delete retries exactly the leftovers, and report it.
+	if len(delErrs) > 0 {
+		return needRestart, errors.Join(delErrs...)
+	}
 
 	db := database.GetDB()
-	if err := db.Where("client_id = ?", id).Delete(&model.ClientInbound{}).Error; err != nil {
-		return needRestart, err
-	}
-	if err := db.Where("client_id = ?", id).Delete(&model.ClientExternalLink{}).Error; err != nil {
-		return needRestart, err
-	}
-	if !keepTraffic && existing.Email != "" {
-		if err := db.Where("email = ?", existing.Email).Delete(&xray.ClientTraffic{}).Error; err != nil {
-			return needRestart, err
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		if existing.Email != "" {
+			if err := adjustGroupBaselinesForRemovedTraffic(tx, []string{existing.Email}); err != nil {
+				return err
+			}
 		}
-		if err := clearGlobalTraffic(db, existing.Email); err != nil {
-			return needRestart, err
+		if err := tx.Where("client_id = ?", id).Delete(&model.ClientInbound{}).Error; err != nil {
+			return err
 		}
-		if err := db.Where("client_email = ?", existing.Email).Delete(&model.InboundClientIps{}).Error; err != nil {
-			return needRestart, err
+		if err := tx.Where("client_id = ?", id).Delete(&model.ClientExternalLink{}).Error; err != nil {
+			return err
 		}
-	}
-	if err := db.Delete(&model.ClientRecord{}, id).Error; err != nil {
+		if !keepTraffic && existing.Email != "" {
+			if err := tx.Where("email = ?", existing.Email).Delete(&xray.ClientTraffic{}).Error; err != nil {
+				return err
+			}
+			if err := clearGlobalTraffic(tx, existing.Email); err != nil {
+				return err
+			}
+			if err := tx.Where("client_email = ?", existing.Email).Delete(&model.InboundClientIps{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("email = ?", existing.Email).Delete(&model.NodeClientTraffic{}).Error; err != nil {
+				return err
+			}
+		}
+		return tx.Delete(&model.ClientRecord{}, id).Error
+	}); err != nil {
 		return needRestart, err
 	}
 	return needRestart, nil
@@ -601,17 +676,22 @@ func (s *ClientService) DeleteByEmail(inboundSvc *InboundService, email string, 
 		return false, common.NewError(fmt.Sprintf("client %q not found in any inbound or client record", email))
 	}
 	needRestart := false
+	var delErrs []error
 	for _, ibId := range inboundIds {
-		nr, delErr := s.DelInboundClientByEmail(inboundSvc, ibId, email, false)
+		nr, delErr := s.DelInboundClientByEmail(inboundSvc, ibId, email, false, true)
 		if delErr != nil {
 			if errors.Is(delErr, ErrClientNotInInbound) {
 				continue
 			}
-			return needRestart, delErr
+			delErrs = append(delErrs, fmt.Errorf("inbound %d: %w", ibId, delErr))
+			continue
 		}
 		if nr {
 			needRestart = true
 		}
+	}
+	if len(delErrs) > 0 {
+		return needRestart, errors.Join(delErrs...)
 	}
 	if !keepTraffic {
 		db := database.GetDB()
@@ -622,6 +702,9 @@ func (s *ClientService) DeleteByEmail(inboundSvc *InboundService, email string, 
 			return needRestart, err
 		}
 		if err := db.Where("client_email = ?", email).Delete(&model.InboundClientIps{}).Error; err != nil {
+			return needRestart, err
+		}
+		if err := db.Where("email = ?", email).Delete(&model.NodeClientTraffic{}).Error; err != nil {
 			return needRestart, err
 		}
 	}
@@ -665,7 +748,7 @@ func (s *ClientService) Detach(inboundSvc *InboundService, id int, inboundIds []
 		if existing.Email == "" {
 			continue
 		}
-		nr, delErr := s.DelInboundClientByEmail(inboundSvc, ibId, existing.Email, true)
+		nr, delErr := s.DelInboundClientByEmail(inboundSvc, ibId, existing.Email, true, false)
 		if delErr != nil {
 			if errors.Is(delErr, ErrClientNotInInbound) {
 				continue
