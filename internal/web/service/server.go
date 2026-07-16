@@ -1080,7 +1080,19 @@ func (s *ServerService) UpdateXray(version string) error {
 		return err
 	}
 
-	// 5. Restart xray
+	// 5. Record which release is now installed. GetXrayVersion reads this sidecar in
+	// preference to the binary's own -version output, because the binary reports the
+	// plain upstream version without the fork's -wv tag. Leaving it behind would keep
+	// the panel showing whatever release the image was built with, making a switch
+	// look like it did nothing.
+	if err := writeReleaseMetadata(xray.GetBinaryPath(), version); err != nil {
+		return err
+	}
+	if err := s.settingService.SetXrayReleaseTag(version); err != nil {
+		return err
+	}
+
+	// 6. Restart xray
 	if err := s.xrayService.RestartXray(true); err != nil {
 		logger.Error("start xray failed:", err)
 		return err
