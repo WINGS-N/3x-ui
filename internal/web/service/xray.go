@@ -239,9 +239,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			if merged == nil {
 				merged = []any{}
 			}
-			if _, hadClients := settings["clients"]; hadClients {
-				delete(settings, "clients")
-			}
+			delete(settings, "clients")
 			settings["peers"] = merged
 			mutated = true
 		} else {
