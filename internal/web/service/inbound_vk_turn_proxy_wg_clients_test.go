@@ -8,6 +8,69 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 )
 
+// Refreshing a mirrored vk-turn peer must NOT rewrite the wireguard client's
+// identity. After WireguardPeersToClients an existing peer already became a
+// client row (its own email/subId, its traffic keyed by that email), so mirroring
+// the peer material onto it may only touch the keys/allowedIPs.
+func TestUpsertMirroredPeerKeepsExistingClientIdentity(t *testing.T) {
+	existing := wireguardPeer{
+		PrivateKey: "k-old",
+		PublicKey:  "pub-1",
+		AllowedIPs: []string{"10.0.0.2/32"},
+		Email:      "wg-test-2",
+		raw: map[string]any{
+			"email":   "wg-test-2",
+			"subId":   "sub-migrated",
+			"enable":  true,
+			"totalGB": float64(7),
+		},
+	}
+	// What the vk-turn client mirrors in: fresh peer material, vk's own email,
+	// and no raw (it is built in code, not decoded from a client row).
+	incoming := wireguardPeer{
+		PrivateKey: "k-new",
+		PublicKey:  "pub-1",
+		AllowedIPs: []string{"10.0.0.9/32"},
+		Email:      "artyom-vk",
+	}
+
+	merged := keepClientIdentity(incoming, existing)
+	obj := merged.toClientObject()
+
+	if got := obj["email"]; got != "wg-test-2" {
+		t.Errorf("email = %v, want wg-test-2 (renaming orphans the ClientRecord and its traffic)", got)
+	}
+	if got := obj["subId"]; got != "sub-migrated" {
+		t.Errorf("subId = %v, want sub-migrated (would break the client's subscription link)", got)
+	}
+	if got := obj["totalGB"]; got != float64(7) {
+		t.Errorf("totalGB = %v, want 7 (client limits must survive a peer refresh)", got)
+	}
+	// The peer material itself IS refreshed from the vk-turn client.
+	if got := obj["privateKey"]; got != "k-new" {
+		t.Errorf("privateKey = %v, want k-new", got)
+	}
+	ips, _ := obj["allowedIPs"].([]string)
+	if len(ips) != 1 || ips[0] != "10.0.0.9/32" {
+		t.Errorf("allowedIPs = %v, want [10.0.0.9/32]", obj["allowedIPs"])
+	}
+}
+
+// A brand-new mirrored peer (no existing client row) keeps the vk-turn client's
+// email, so the two inbounds share one ClientRecord for the same user.
+func TestMintedMirroredPeerUsesVkTurnEmail(t *testing.T) {
+	incoming := wireguardPeer{
+		PrivateKey: "k1",
+		PublicKey:  "pub-new",
+		AllowedIPs: []string{"10.0.0.12/32"},
+		Email:      "carol-vk",
+	}
+	obj := incoming.toClientObject()
+	if got := obj["email"]; got != "carol-vk" {
+		t.Errorf("minted email = %v, want carol-vk", got)
+	}
+}
+
 // A wireguard peer is a client row since upstream v3.5 (WireguardPeersToClients).
 // getWireguardSettings must decode settings.clients, and mutateWireguardPeers must
 // write back into settings.clients WITHOUT dropping the client fields the peer view

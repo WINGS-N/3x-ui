@@ -575,7 +575,7 @@ func (s *InboundService) upsertWireguardPeerByPublicKey(inboundID int, peer wire
 	return s.mutateWireguardPeers(inboundID, func(peers []wireguardPeer) ([]wireguardPeer, error) {
 		index := s.findWireguardPeerIndexByPublicKey(peers, peer.PublicKey)
 		if index >= 0 {
-			peers[index] = peer
+			peers[index] = keepClientIdentity(peer, peers[index])
 			return peers, nil
 		}
 		return append(peers, peer), nil

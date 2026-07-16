@@ -99,7 +99,7 @@ func (s *InboundService) ReconcileVKTurnProxyClientPeers() error {
 					continue
 				}
 				if replacement, ok := desiredPresent[pk]; ok {
-					out = append(out, replacement)
+					out = append(out, keepClientIdentity(replacement, peer))
 					seen[pk] = struct{}{}
 					continue
 				}

@@ -30,6 +30,19 @@ type wireguardPeer struct {
 	raw map[string]any
 }
 
+// keepClientIdentity carries an existing client's identity onto a peer that is
+// being refreshed from a vk-turn-proxy client. Only the peer material (keys,
+// allowedIPs) is mirrored: the wireguard client row keeps its own email, subId,
+// limits and any other fields. Replacing the row wholesale would rename it, and
+// since ClientRecord is keyed by email that orphans the row and its traffic.
+func keepClientIdentity(incoming wireguardPeer, existing wireguardPeer) wireguardPeer {
+	incoming.raw = existing.raw
+	if strings.TrimSpace(existing.Email) != "" {
+		incoming.Email = existing.Email
+	}
+	return incoming
+}
+
 // toClientObject renders the peer back into its client object, preserving any
 // unmodelled fields carried in raw.
 func (p wireguardPeer) toClientObject() map[string]any {
