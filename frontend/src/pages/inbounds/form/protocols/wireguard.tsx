@@ -30,6 +30,9 @@ export default function WireguardFields({ wgPubKey, regenInboundWg }: WireguardF
       <FormField name={['settings', 'dns']} label={t('pages.inbounds.info.dns')}>
         <Input placeholder="1.1.1.1, 1.0.0.1" />
       </FormField>
+      <FormField name={['settings', 'forcedDns']} label={t('pages.inbounds.info.forcedDns')}>
+        <Input placeholder="9.9.9.9" />
+      </FormField>
       <FormField
         name={['settings', 'noKernelTun']}
         label={t('pages.inbounds.info.noKernelTun')}

@@ -707,6 +707,7 @@
         "autoSystemRoutes": "Otomatik Sistem Yönlendirmeleri",
         "followRedirect": "FollowRedirect",
         "auth": "Auth",
+        "forcedDns": "Zorunlu DNS",
         "noKernelTun": "Çekirdeksiz TUN",
         "keepAlive": "Keep alive",
         "peerNumber": "Peer {n}",

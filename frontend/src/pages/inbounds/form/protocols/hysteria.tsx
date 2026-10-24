@@ -133,6 +133,9 @@ export default function HysteriaFields() {
           options={(outboundTags ?? []).map((tag) => ({ value: tag, label: tag }))}
         />
       </FormField>
+      <FormField name={['settings', 'forcedDns']} label={t('pages.inbounds.info.forcedDns')}>
+        <Input placeholder="9.9.9.9" />
+      </FormField>
     </>
   );
 }

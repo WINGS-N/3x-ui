@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -362,6 +363,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		switch inbound.Protocol {
 		case model.WireGuard, model.Hysteria, model.Hysteria2:
 			injectInboundEgress(xrayConfig, inbound)
+			injectInboundForcedDNS(xrayConfig, inbound)
 		}
 	}
 
@@ -611,6 +613,77 @@ func injectInboundEgress(cfg *xray.Config, inbound *model.Inbound) {
 	} else {
 		logger.Warning("inbound egress: failed to rebuild routing section, skipping rule:", err)
 	}
+}
+
+// injectInboundForcedDNS уводит DNS клиентов инбаунда на резолвер из его
+// настроек. Правило идёт первым, иначе его перебьёт pinning инбаунда на свой
+// outbound.
+func injectInboundForcedDNS(cfg *xray.Config, inbound *model.Inbound) {
+	var parsed struct {
+		ForcedDNS string `json:"forcedDns"`
+	}
+	if err := json.Unmarshal([]byte(inbound.Settings), &parsed); err != nil {
+		return
+	}
+	resolver := strings.TrimSpace(parsed.ForcedDNS)
+	if resolver == "" || inbound.Tag == "" {
+		return
+	}
+	if _, _, err := net.SplitHostPort(resolver); err != nil {
+		resolver = net.JoinHostPort(resolver, "53")
+	}
+	if host, _, err := net.SplitHostPort(resolver); err != nil || net.ParseIP(host) == nil {
+		logger.Warning("forced dns: inbound [", inbound.Tag, "] has an unusable resolver, skipping:", parsed.ForcedDNS)
+		return
+	}
+
+	tag := "forced-dns-" + inbound.Tag
+	var outbounds []any
+	if len(cfg.OutboundConfigs) > 0 {
+		if err := json.Unmarshal(cfg.OutboundConfigs, &outbounds); err != nil {
+			logger.Warning("forced dns: outbounds are unparsable, skipping injection:", err)
+			return
+		}
+	}
+	for _, entry := range outbounds {
+		if existing, ok := entry.(map[string]any); ok && existing["tag"] == tag {
+			return
+		}
+	}
+	outbounds = append(outbounds, map[string]any{
+		"tag":      tag,
+		"protocol": "freedom",
+		"settings": map[string]any{"redirect": resolver},
+	})
+
+	routing := map[string]any{}
+	if len(cfg.RouterConfig) > 0 {
+		if err := json.Unmarshal(cfg.RouterConfig, &routing); err != nil {
+			logger.Warning("forced dns: routing section is unparsable, skipping injection:", err)
+			return
+		}
+	}
+	rules, _ := routing["rules"].([]any)
+	routing["rules"] = append([]any{map[string]any{
+		"type":        "field",
+		"inboundTag":  []any{inbound.Tag},
+		"network":     "udp,tcp",
+		"port":        "53",
+		"outboundTag": tag,
+	}}, rules...)
+
+	newOutbounds, err := json.MarshalIndent(outbounds, "", "  ")
+	if err != nil {
+		logger.Warning("forced dns: failed to rebuild outbounds, skipping injection:", err)
+		return
+	}
+	newRouting, err := json.Marshal(routing)
+	if err != nil {
+		logger.Warning("forced dns: failed to rebuild routing section, skipping injection:", err)
+		return
+	}
+	cfg.OutboundConfigs = json_util.RawMessage(newOutbounds)
+	cfg.RouterConfig = json_util.RawMessage(newRouting)
 }
 
 func injectMtprotoEgress(cfg *xray.Config, inbound *model.Inbound) {

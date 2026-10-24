@@ -707,6 +707,7 @@
         "autoSystemRoutes": "مسیریابی خودکار سیستم",
         "followRedirect": "FollowRedirect",
         "auth": "احراز",
+        "forcedDns": "DNS اجباری",
         "noKernelTun": "TUN غیرکرنل",
         "keepAlive": "Keep alive",
         "peerNumber": "Peer {n}",

@@ -39,7 +39,7 @@ const (
 	vkTurnProxyFormatProtoDeflate  = 0x12
 	vkTurnProxyDefaultSessionMode  = "auto"
 	vkTurnProxyDefaultLocalAddress = "127.0.0.1:9000"
-	vkTurnProxyDefaultWGDNS        = "1.1.1.1, 1.0.0.1"
+	vkTurnProxyDefaultWGDNS        = "77.88.8.8, 9.9.9.9"
 	vkTurnProxyDefaultWGMTU        = 1280
 	vkTurnProxyDefaultWGAllowedIPs = "0.0.0.0/0, ::/0"
 )

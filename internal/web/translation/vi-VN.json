@@ -707,6 +707,7 @@
         "autoSystemRoutes": "Định tuyến hệ thống tự động",
         "followRedirect": "FollowRedirect",
         "auth": "Auth",
+        "forcedDns": "DNS bắt buộc",
         "noKernelTun": "TUN không kernel",
         "keepAlive": "Keep alive",
         "peerNumber": "Peer {n}",

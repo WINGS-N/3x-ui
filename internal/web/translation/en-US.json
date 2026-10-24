@@ -727,6 +727,7 @@
         "autoSystemRoutes": "Auto system routes",
         "followRedirect": "FollowRedirect",
         "auth": "Auth",
+        "forcedDns": "Forced DNS",
         "noKernelTun": "No-kernel TUN",
         "keepAlive": "Keep alive",
         "peerNumber": "Peer {n}",

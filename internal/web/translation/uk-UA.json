@@ -707,6 +707,7 @@
         "autoSystemRoutes": "Авто-маршрути системи",
         "followRedirect": "FollowRedirect",
         "auth": "Auth",
+        "forcedDns": "Примусовий DNS",
         "noKernelTun": "TUN без kernel",
         "keepAlive": "Keep alive",
         "peerNumber": "Peer {n}",

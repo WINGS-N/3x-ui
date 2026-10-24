@@ -70,5 +70,8 @@ export const WireguardInboundSettingsSchema = z.object({
   // turns it into a routing rule so it does not fall back to the default
   // (first) outbound. Empty leaves it on the default.
   outboundTag: z.string().optional(),
+  // Уводит DNS клиентов этого инбаунда на один резолвер: сервер перебивает
+  // выбор клиента, когда до выбранного им резолвера запрос не доходит
+  forcedDns: z.string().optional(),
 });
 export type WireguardInboundSettings = z.infer<typeof WireguardInboundSettingsSchema>;

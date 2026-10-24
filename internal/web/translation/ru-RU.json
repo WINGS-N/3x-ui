@@ -727,6 +727,7 @@
         "autoSystemRoutes": "Авто-маршруты системы",
         "followRedirect": "FollowRedirect",
         "auth": "Auth",
+        "forcedDns": "Принудительный DNS",
         "noKernelTun": "TUN без kernel",
         "keepAlive": "Keep alive",
         "peerNumber": "Peer {n}",

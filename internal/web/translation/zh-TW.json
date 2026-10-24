@@ -707,6 +707,7 @@
         "autoSystemRoutes": "自動系統路由",
         "followRedirect": "FollowRedirect",
         "auth": "認證",
+        "forcedDns": "強制 DNS",
         "noKernelTun": "非核心 TUN",
         "keepAlive": "Keep alive",
         "peerNumber": "Peer {n}",

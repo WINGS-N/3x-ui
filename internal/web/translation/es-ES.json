@@ -707,6 +707,7 @@
         "autoSystemRoutes": "Rutas del sistema automáticas",
         "followRedirect": "FollowRedirect",
         "auth": "Auth",
+        "forcedDns": "DNS forzado",
         "noKernelTun": "TUN sin kernel",
         "keepAlive": "Keep alive",
         "peerNumber": "Peer {n}",
