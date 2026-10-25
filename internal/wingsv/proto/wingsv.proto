@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package wingsv;
 
-option go_package = "github.com/mhsanaei/3x-ui/v3/internal/wingsv/proto;wingsvproto";
 option java_package = "wings.v.proto";
 option java_outer_classname = "WingsvProto";
 option optimize_for = LITE_RUNTIME;
+option go_package = "github.com/mhsanaei/3x-ui/v3/internal/wingsv/proto;wingsvproto";
 
 message Config {
   uint32 ver = 1;
@@ -17,6 +17,19 @@ message Config {
   AmneziaWG awg = 7;
   AppRouting app_routing = 8;
   WbStream wb_stream = 9;
+  Xposed xposed = 10;
+  RootSettings root = 11;
+  AppPreferences app_preferences = 12;
+  SubscriptionHwid subscription_hwid = 13;
+  Sharing sharing = 14;
+  ByeDpi bye_dpi = 15;
+  Guardian guardian = 16;
+  // Монотонно растущая ревизия конфига, выставляется панелью при
+  // UpsertClientConfig. Клиент сохраняет её при успешном apply и шлёт
+  // обратно в ClientHello.last_applied_config_version - сервер на welcome
+  // решает, нужен ли вообще ConfigPush, и тем самым не «перезатирает»
+  // только что отредактированные админом поля на reconnect-гонке.
+  uint64 config_version = 17;
 }
 
 enum ConfigType {
@@ -28,16 +41,75 @@ enum ConfigType {
   CONFIG_TYPE_APP_ROUTING = 5;
   CONFIG_TYPE_XRAY_ROUTING = 6;
   CONFIG_TYPE_WB_STREAM = 7;
+  CONFIG_TYPE_XPOSED = 8;
+  CONFIG_TYPE_GUARDIAN = 9;
+  // Single VK TURN profile share link: carries Turn (with title + tunnel_mode)
+  // plus the referenced transport sub-config (wg OR awg) embedded in the same
+  // Config so the importer can fully reconstruct the profile on a device where
+  // the original transport id does not exist.
+  CONFIG_TYPE_VK_TURN_PROFILE = 10;
 }
 
+message Guardian {
+  string ws_url = 1;
+  string client_id = 2;
+  bytes client_token = 3;
+  string client_name = 4;
+  GuardianSyncMode sync_mode = 5;
+  uint32 periodic_interval_minutes = 6;
+  // Admin (panel operator) who issued this config push. WINGS V renders the
+  // import confirmation card with the admin's identity: admin_username is
+  // shown verbatim; the client derives the avatar URL as
+  // {ws_url base}/api/admin/avatars/{admin_id}.png?v={admin_avatar_version}.
+  string admin_username = 7;
+  int64 admin_id = 8;
+  int64 admin_avatar_version = 9;
+  // 10 was server_ca_pins: an earlier SHA-256 pin the panel filled but no app
+  // build ever read. Field 11 replaces it rather than reusing the number, so an
+  // old link's SHA-256 bytes can never be mistaken for the new digest.
+  reserved 10;
+  // SPKI pins the app must accept for the panel's control-plane TLS: raw 32-byte
+  // SHA-512/256 of the panel CA's SubjectPublicKeyInfo. Set when the panel has no
+  // publicly trusted certificate, which is the only way a domain-less deployment
+  // reachable by bare IP can be verified at all. Empty means verify against the
+  // system trust store. Multiple entries allow CA rotation with overlap. This
+  // never applies to the VK TURN DTLS relay.
+  repeated bytes server_ca_pins_sha512_256 = 11;
+}
+
+enum GuardianSyncMode {
+  GUARDIAN_SYNC_MODE_UNSPECIFIED = 0;
+  GUARDIAN_SYNC_MODE_ALWAYS = 1;
+  GUARDIAN_SYNC_MODE_PERIODIC = 2;
+  GUARDIAN_SYNC_MODE_FOREGROUND_ONLY = 3;
+}
+
+// BackendType - top-level выбор пользователя. Legacy-значения
+// BACKEND_TYPE_VK_TURN_WIREGUARD / BACKEND_TYPE_AMNEZIAWG /
+// BACKEND_TYPE_AMNEZIAWG_PLAIN остаются для совместимости со старыми
+// конфигами и читателями; новые конфиги используют BACKEND_TYPE_VK_TURN
+// + Turn.tunnel_mode и BACKEND_TYPE_AMNEZIAWG_PLAIN → BACKEND_TYPE_AMNEZIAWG
+// (без подтипа). Маппинг см. в Android BackendType.fromProto / WingsImportParser.
 enum BackendType {
   BACKEND_TYPE_UNSPECIFIED = 0;
-  BACKEND_TYPE_VK_TURN_WIREGUARD = 1;
+  BACKEND_TYPE_VK_TURN_WIREGUARD = 1 [deprecated = true];  // legacy alias for VK_TURN + WG
   BACKEND_TYPE_XRAY = 2;
-  BACKEND_TYPE_AMNEZIAWG = 3;
+  BACKEND_TYPE_AMNEZIAWG = 3 [deprecated = true];          // legacy alias for VK_TURN + AWG
   BACKEND_TYPE_WIREGUARD = 4;
-  BACKEND_TYPE_AMNEZIAWG_PLAIN = 5;
+  BACKEND_TYPE_AMNEZIAWG_PLAIN = 5 [deprecated = true];    // legacy alias for top-level AmneziaWG
   BACKEND_TYPE_WB_STREAM = 6;
+  BACKEND_TYPE_VK_TURN = 7;       // top-level "VK TURN"; реальный туннель - по Turn.tunnel_mode
+  BACKEND_TYPE_AMNEZIAWG_TL = 8;  // top-level "AmneziaWG" (заменяет AMNEZIAWG_PLAIN)
+}
+
+// TunnelMode - какой тип туннеля поднимать внутри backend-обёртки.
+// Применимо к BACKEND_TYPE_VK_TURN (Turn.tunnel_mode) и BACKEND_TYPE_WB_STREAM
+// (WbStream.tunnel_mode). Для top-level WIREGUARD / AMNEZIAWG_TL / XRAY значение
+// игнорируется - тип туннеля жёстко задан backend'ом.
+enum TunnelMode {
+  TUNNEL_MODE_UNSPECIFIED = 0;
+  TUNNEL_MODE_WIREGUARD = 1;
+  TUNNEL_MODE_AMNEZIAWG = 2;
 }
 
 message WbStream {
@@ -46,10 +118,31 @@ message WbStream {
   bool e2e_enabled = 3;
   bytes e2e_secret = 4;
   string display_name = 5;
+  optional uint32 room_count = 6;
+  // Какой туннель пускать поверх WB Stream userspace-прокси: WG или AWG.
+  // UNSPECIFIED трактуется как WIREGUARD (поведение до введения поля).
+  TunnelMode tunnel_mode = 7;
 }
 
 message AmneziaWG {
   string awg_quick_config = 1;
+  // Optional profile title carried by single-profile share links (built from a
+  // saved AmneziaWG profile). Empty in legacy / full-settings exports; the
+  // importer synthesizes a title when this is empty.
+  string title = 2;
+  // Multi-profile library for the standalone AmneziaWG backend (mirrors Xray).
+  // The active profile is projected onto the flat field above at runtime.
+  string active_profile_id = 3;
+  repeated AmneziaProfile profiles = 4;
+  optional bool merge_only = 5;
+}
+
+message AmneziaProfile {
+  string id = 1;
+  string title = 2;
+  string awg_quick_config = 3;
+  string subscription_id = 4;
+  string subscription_title = 5;
 }
 
 message Endpoint {
@@ -75,6 +168,111 @@ message Turn {
   repeated string links = 10;
   string link_secondary = 11;
   optional uint32 creds_group_size = 12;
+  optional bool manual_captcha = 13;
+  string captcha_auto_solver = 14;
+  optional bool restart_on_network_change = 15;
+  ProxyRuntimeMode runtime_mode = 16;
+  // Пользовательские DNS-резолверы, ставятся ПЕРЕД встроенным (yandex →
+  // google → cloudflare). Каждая запись - одна строка в формате URL:
+  //   https://dns.example/dns-query  (DoH)
+  //   udp://77.88.8.8:53             (plain UDP/53; порт необязателен)
+  //   77.88.8.8                      (то же самое, plain UDP/53)
+  // Записи без ответа на bootstrap-резолюции просто отбрасываются;
+  // в любом случае встроенный список остаётся как fallback.
+  repeated string user_dns = 17;
+  // Какой туннель пускать поверх VK TURN userspace-прокси: WG или AWG.
+  // UNSPECIFIED трактуется как WIREGUARD (поведение до введения поля).
+  TunnelMode tunnel_mode = 18;
+  // Режим WRAP per-packet obfuscation. UNSPECIFIED ≡ PREFERRED.
+  WrapMode wrap_mode = 19;
+  // Pre-shared ключ для WRAP (32 байта для AES-256-CTR/ChaCha20-XOR).
+  // Пустое поле = клиент сгенерирует случайный ключ при первом запуске.
+  bytes wrap_key = 20;
+  // Список разрешённых шифров в порядке предпочтения (первый - наиболее
+  // желательный). Пустой ≡ [AES_256_CTR].
+  repeated WrapCipher wrap_ciphers = 21;
+  // Передавать wrap_key in-band через mu/v1 SessionHello.
+  // По умолчанию (UNSPECIFIED) - true. ON_FALSE отключает передачу
+  // (сервер обязан иметь preset).
+  WrapKeyDelivery wrap_key_delivery = 22;
+  // Optional profile title carried by single-profile share links (built from a
+  // saved VK TURN profile). Empty in legacy / full-settings exports; the
+  // importer synthesizes a title when this is empty. The referenced transport
+  // (WG or AWG sub-config) travels in the same Config alongside this Turn.
+  string title = 23;
+  // Multi-profile library for the VK TURN backend (mirrors Xray). The active
+  // profile is projected onto the flat fields above at runtime.
+  string active_profile_id = 24;
+  repeated TurnProfile profiles = 25;
+  optional bool merge_only = 26;
+  // Семейство браузерного отпечатка для HTTP+TLS-имитации relay'ем:
+  // "auto" | "chrome" | "edge" | "safari" | "firefox". Пусто / "auto" - relay
+  // выбирает случайный профиль на сессию; остальные фиксируют одно семейство.
+  string browser_fingerprint = 27;
+}
+
+message TurnProfile {
+  string id = 1;
+  string title = 2;
+  // "wg" | "awg" - which transport the VK TURN proxy runs over.
+  string transport_kind = 3;
+  // Reference (by id) to the WireGuardProfile / AmneziaProfile that carries the
+  // transport. The referenced profile travels in the same Config's wg.profiles /
+  // awg.profiles - this is NOT an embedded copy.
+  string transport_profile_id = 4;
+  string vk_turn_endpoint = 5;
+  // Per-profile VK TURN proxy settings (threads/wrap/dns/...). The inner Turn is
+  // never populated with its own profiles.
+  Turn config = 6;
+  string subscription_id = 7;
+  string subscription_title = 8;
+  // "account" | "anonymous" - UI "Use VK ID" toggle. Not carried by the inner
+  // Turn message, so it lives here directly.
+  string vk_auth_mode = 9;
+  // "auto" | "udp" | "doh" - UI "DNS resolver" list (shared VK TURN / WB Stream
+  // setting). Not carried by the inner Turn message.
+  string dns_mode = 10;
+  // Managed profile: the wg/awg transport is provisioned dynamically by the node
+  // over the DTLS PROVISION exchange rather than referenced via
+  // transport_profile_id. The app calls AppControl.Provision with the fields
+  // below and applies the returned config; the editor shows the wg/awg fields
+  // read-only.
+  bool wg_provisioned = 11;
+  string provision_client_id = 12;
+  bytes provision_token = 13;
+  // Настройками этого профиля распоряжается сервер, а не человек. Профиль из
+  // подписки это выданный доступ, а не личный конфиг: тумблер, случайно
+  // задетый пальцем, ломает связь, и человек идёт не в настройки разбираться,
+  // а писать "у вас не работает". Поля такого профиля в редакторе заблокированы,
+  // а значения приезжают сверху и обновляются вместе с подпиской.
+  // Значения едут в config: когда в инфраструктуре звонков что-то меняется,
+  // чинится это сменой настройки в подписке, а не выкаткой новой версии
+  // приложения и ожиданием, пока все обновятся.
+  bool managed_settings = 14;
+}
+
+enum WrapKeyDelivery {
+  WRAP_KEY_DELIVERY_UNSPECIFIED = 0;  // default = IN_BAND
+  WRAP_KEY_DELIVERY_IN_BAND = 1;      // send wrap_key_proposal in SessionHello
+  WRAP_KEY_DELIVERY_OFF = 2;          // never send; server must have preset
+}
+
+enum WrapMode {
+  WRAP_MODE_UNSPECIFIED = 0;
+  WRAP_MODE_OFF = 1;
+  WRAP_MODE_PREFERRED = 2;
+  WRAP_MODE_REQUIRED = 3;
+}
+
+enum WrapCipher {
+  WRAP_CIPHER_UNSPECIFIED = 0;
+  WRAP_CIPHER_NONE = 1;
+  // SRTP-mimicry AEAD wire format
+  // ([12B RTP header | 12B nonce | AEAD ciphertext | 16B tag]).
+  // VK TURN forwards SRTP-shaped ChannelData on its fast path; plain
+  // stream-cipher wraps are dropped by the content filter.
+  WRAP_CIPHER_SRTP_AES_256_GCM = 2;
+  WRAP_CIPHER_SRTP_CHACHA20_POLY1305 = 3;
 }
 
 enum TurnSessionMode {
@@ -84,10 +282,35 @@ enum TurnSessionMode {
   TURN_SESSION_MODE_MUX = 3;
 }
 
+enum ProxyRuntimeMode {
+  PROXY_RUNTIME_MODE_UNSPECIFIED = 0;
+  PROXY_RUNTIME_MODE_VPN = 1;
+  PROXY_RUNTIME_MODE_PROXY = 2;
+}
+
 message WireGuard {
   Interface iface = 1;
   Peer peer = 2;
   Endpoint endpoint = 3;
+  // Optional profile title carried by single-profile share links (built from a
+  // saved WireGuard profile). Empty in legacy / full-settings exports; the
+  // importer synthesizes a title when this is empty.
+  string title = 4;
+  // Multi-profile library for the standalone WireGuard backend (mirrors Xray).
+  // The active profile is projected onto the flat fields above at runtime.
+  string active_profile_id = 5;
+  repeated WireGuardProfile profiles = 6;
+  optional bool merge_only = 7;
+}
+
+message WireGuardProfile {
+  string id = 1;
+  string title = 2;
+  Interface iface = 3;
+  Peer peer = 4;
+  Endpoint endpoint = 5;
+  string subscription_id = 6;
+  string subscription_title = 7;
 }
 
 message Interface {
@@ -114,8 +337,34 @@ message Xray {
 }
 
 message AppRouting {
+  // bypass поле унаследовано от старой версии: true -> BYPASS, false -> WHITELIST.
+  // Используется только для миграции и совместимости со старыми экспортами.
+  // Новые клиенты должны выставлять mode и соответствующий *_packages.
   optional bool bypass = 1;
+  // Унаследованный единый список пакетов. При импорте кладётся в bypass_packages
+  // или whitelist_packages в зависимости от mode/bypass.
   repeated string packages = 2;
+  AppRoutingMode mode = 3;
+  repeated string bypass_packages = 4;
+  repeated string whitelist_packages = 5;
+}
+
+enum AppRoutingMode {
+  APP_ROUTING_MODE_UNSPECIFIED = 0;
+  APP_ROUTING_MODE_OFF = 1;
+  // BYPASS excludes the selected apps at the Android VpnService layer
+  // (addDisallowedApplication). XBYPASS keeps them inside the tunnel and diverts
+  // them to direct at the xray-core gVisor level (closes the unknown-UID leak);
+  // it falls back to plain BYPASS where the gVisor path is unavailable. Both
+  // share the bypass_packages list.
+  APP_ROUTING_MODE_BYPASS = 2;
+  APP_ROUTING_MODE_WHITELIST = 3;
+  APP_ROUTING_MODE_XBYPASS = 4;
+  // XWHITELIST is the inverse of XBYPASS: it keeps every app inside the tunnel
+  // but tunnels only the selected apps and diverts the rest to direct at the
+  // xray-core gVisor level. It falls back to plain WHITELIST where the gVisor
+  // path is unavailable. Shares the whitelist_packages list with WHITELIST.
+  APP_ROUTING_MODE_XWHITELIST = 5;
 }
 
 message XrayRouting {
@@ -171,7 +420,10 @@ message VlessProfile {
 
 message XraySettings {
   optional bool allow_lan = 1;
-  optional bool allow_insecure = 2;
+  // Ядро больше не принимает allowInsecure и замены ему не даёт, поэтому
+  // приложение поле не читает и не пишет. Номер занят навсегда: старые ссылки
+  // всё ещё могут его нести
+  optional bool allow_insecure = 2 [deprecated = true];
   optional uint32 local_proxy_port = 3;
   string remote_dns = 4;
   string direct_dns = 5;
@@ -184,10 +436,196 @@ message XraySettings {
   string local_proxy_password = 12;
   optional bool restart_on_network_change = 13;
   XrayTransportMode transport_mode = 14;
+  ProxyRuntimeMode runtime_mode = 15;
+  string local_proxy_listen_address = 16;
+  optional bool http_proxy_enabled = 17;
+  optional bool http_proxy_auth_enabled = 18;
+  string http_proxy_username = 19;
+  string http_proxy_password = 20;
+  optional uint32 http_proxy_port = 21;
+  string http_proxy_listen_address = 22;
+  // Способ wake-fast-path проверки после ACTION_SCREEN_ON/USER_PRESENT.
+  // PROCESS - дешёвая проверка XrayBridge.isRunning() + tunFd alive без сети,
+  // дефолт. HTTP_PROBE - старое поведение, GET к 1.1.1.1 через VPN с таймаутом
+  // 7.5s; полезно если нужна сетевая валидация end-to-end. UNSPECIFIED ≡ PROCESS.
+  WakeProbeMode wake_probe_mode = 23;
+}
+
+enum WakeProbeMode {
+  WAKE_PROBE_MODE_UNSPECIFIED = 0;
+  WAKE_PROBE_MODE_PROCESS = 1;
+  WAKE_PROBE_MODE_HTTP_PROBE = 2;
 }
 
 enum XrayTransportMode {
   XRAY_TRANSPORT_MODE_UNSPECIFIED = 0;
   XRAY_TRANSPORT_MODE_DIRECT = 1;
   XRAY_TRANSPORT_MODE_VK_TURN_TCP = 2;
+}
+
+message Xposed {
+  optional bool enabled = 1;
+  optional bool all_apps = 2;
+  optional bool native_hook_enabled = 3;
+  // Tag 4 (inline_hooks_enabled) is reserved: shadowhook backend was removed.
+  reserved 4;
+  reserved "inline_hooks_enabled";
+  optional bool hide_vpn_apps = 5;
+  optional bool hide_from_dumpsys = 6;
+  XposedProcfsHookMode procfs_hook_mode = 7;
+  XposedIcmpSpoofingMode icmp_spoofing_mode = 8;
+  repeated string target_packages = 9;
+  repeated string hidden_vpn_packages = 10;
+}
+
+enum XposedProcfsHookMode {
+  XPOSED_PROCFS_HOOK_MODE_UNSPECIFIED = 0;
+  XPOSED_PROCFS_HOOK_MODE_DISABLED = 1;
+  XPOSED_PROCFS_HOOK_MODE_FILTER = 2;
+  XPOSED_PROCFS_HOOK_MODE_NO_ACCESS = 3;
+  XPOSED_PROCFS_HOOK_MODE_FILE_NOT_FOUND = 4;
+}
+
+enum XposedIcmpSpoofingMode {
+  XPOSED_ICMP_SPOOFING_MODE_UNSPECIFIED = 0;
+  XPOSED_ICMP_SPOOFING_MODE_DISABLED = 1;
+  XPOSED_ICMP_SPOOFING_MODE_PING_NOT_FOUND = 2;
+  XPOSED_ICMP_SPOOFING_MODE_EMPTY_RESPONSE = 3;
+}
+
+message RootSettings {
+  optional bool enabled = 1;
+  optional bool kernel_wireguard = 2;
+  optional bool xray_tproxy_mode = 3;
+  string wg_interface_name = 4;
+  // Tag 5 (split_tunnel_lockdown) is reserved: lockdown is unconditional now.
+  reserved 5;
+  reserved "split_tunnel_lockdown";
+}
+
+message AppPreferences {
+  ThemeMode theme_mode = 1;
+  optional bool auto_start_on_boot = 2;
+  DnsMode dns_mode = 3;
+}
+
+enum ThemeMode {
+  THEME_MODE_UNSPECIFIED = 0;
+  THEME_MODE_LIGHT = 1;
+  THEME_MODE_DARK = 2;
+  THEME_MODE_SYSTEM = 3;
+}
+
+enum DnsMode {
+  DNS_MODE_UNSPECIFIED = 0;
+  DNS_MODE_AUTO = 1;
+  DNS_MODE_UDP = 2;
+  DNS_MODE_DOH = 3;
+}
+
+message SubscriptionHwid {
+  optional bool enabled = 1;
+  optional bool manual_enabled = 2;
+  string value = 3;
+  string device_os = 4;
+  string ver_os = 5;
+  string device_model = 6;
+}
+
+message Sharing {
+  optional bool auto_start_on_boot = 1;
+  repeated string last_active_types = 2;
+  string upstream_interface = 3;
+  string fallback_upstream_interface = 4;
+  SharingMasqueradeMode masquerade_mode = 5;
+  optional bool disable_ipv6 = 6;
+  optional bool dhcp_workaround = 7;
+  SharingWifiLock wifi_lock = 8;
+  optional bool repeater_safe_mode = 9;
+  optional bool temp_hotspot_use_system = 10;
+  SharingIpMonitorMode ip_monitor_mode = 11;
+}
+
+enum SharingMasqueradeMode {
+  SHARING_MASQUERADE_MODE_UNSPECIFIED = 0;
+  SHARING_MASQUERADE_MODE_NONE = 1;
+  SHARING_MASQUERADE_MODE_SIMPLE = 2;
+  SHARING_MASQUERADE_MODE_NETD = 3;
+}
+
+enum SharingWifiLock {
+  SHARING_WIFI_LOCK_UNSPECIFIED = 0;
+  SHARING_WIFI_LOCK_SYSTEM = 1;
+  SHARING_WIFI_LOCK_FULL = 2;
+  SHARING_WIFI_LOCK_HIGH_PERF = 3;
+  SHARING_WIFI_LOCK_LOW_LATENCY = 4;
+}
+
+enum SharingIpMonitorMode {
+  SHARING_IP_MONITOR_MODE_UNSPECIFIED = 0;
+  SHARING_IP_MONITOR_MODE_NETLINK = 1;
+  SHARING_IP_MONITOR_MODE_NETLINK_ROOT = 2;
+  SHARING_IP_MONITOR_MODE_POLL = 3;
+  SHARING_IP_MONITOR_MODE_POLL_ROOT = 4;
+}
+
+message ByeDpi {
+  optional bool auto_start_with_xray = 1;
+  optional bool use_command_settings = 2;
+  string proxy_ip = 3;
+  optional uint32 proxy_port = 4;
+  optional bool proxy_auth_enabled = 5;
+  string proxy_username = 6;
+  string proxy_password = 7;
+  optional uint32 max_connections = 8;
+  optional uint32 buffer_size = 9;
+  optional bool no_domain = 10;
+  optional bool tcp_fast_open = 11;
+  ByeDpiHostsMode hosts_mode = 12;
+  string hosts_blacklist = 13;
+  string hosts_whitelist = 14;
+  optional uint32 default_ttl = 15;
+  ByeDpiDesyncMethod desync_method = 16;
+  optional uint32 split_position = 17;
+  optional bool split_at_host = 18;
+  optional bool drop_sack = 19;
+  optional uint32 fake_ttl = 20;
+  optional uint32 fake_offset = 21;
+  string fake_sni = 22;
+  string oob_data = 23;
+  optional bool desync_http = 24;
+  optional bool desync_https = 25;
+  optional bool desync_udp = 26;
+  optional bool host_mixed_case = 27;
+  optional bool domain_mixed_case = 28;
+  optional bool host_remove_spaces = 29;
+  optional bool tlsrec_enabled = 30;
+  optional uint32 tlsrec_position = 31;
+  optional bool tlsrec_at_sni = 32;
+  optional uint32 udp_fake_count = 33;
+  string cmd_args = 34;
+  optional uint32 proxytest_delay = 35;
+  optional uint32 proxytest_requests = 36;
+  optional uint32 proxytest_limit = 37;
+  optional uint32 proxytest_timeout = 38;
+  string proxytest_sni = 39;
+  optional bool proxytest_use_custom_strategies = 40;
+  string proxytest_custom_strategies = 41;
+}
+
+enum ByeDpiHostsMode {
+  BYE_DPI_HOSTS_MODE_UNSPECIFIED = 0;
+  BYE_DPI_HOSTS_MODE_DISABLE = 1;
+  BYE_DPI_HOSTS_MODE_BLACKLIST = 2;
+  BYE_DPI_HOSTS_MODE_WHITELIST = 3;
+}
+
+enum ByeDpiDesyncMethod {
+  BYE_DPI_DESYNC_METHOD_UNSPECIFIED = 0;
+  BYE_DPI_DESYNC_METHOD_NONE = 1;
+  BYE_DPI_DESYNC_METHOD_SPLIT = 2;
+  BYE_DPI_DESYNC_METHOD_DISORDER = 3;
+  BYE_DPI_DESYNC_METHOD_FAKE = 4;
+  BYE_DPI_DESYNC_METHOD_OOB = 5;
+  BYE_DPI_DESYNC_METHOD_DISOOB = 6;
 }

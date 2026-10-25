@@ -32,29 +32,42 @@ const (
 	ConfigType_CONFIG_TYPE_APP_ROUTING  ConfigType = 5
 	ConfigType_CONFIG_TYPE_XRAY_ROUTING ConfigType = 6
 	ConfigType_CONFIG_TYPE_WB_STREAM    ConfigType = 7
+	ConfigType_CONFIG_TYPE_XPOSED       ConfigType = 8
+	ConfigType_CONFIG_TYPE_GUARDIAN     ConfigType = 9
+	// Single VK TURN profile share link: carries Turn (with title + tunnel_mode)
+	// plus the referenced transport sub-config (wg OR awg) embedded in the same
+	// Config so the importer can fully reconstruct the profile on a device where
+	// the original transport id does not exist.
+	ConfigType_CONFIG_TYPE_VK_TURN_PROFILE ConfigType = 10
 )
 
 // Enum value maps for ConfigType.
 var (
 	ConfigType_name = map[int32]string{
-		0: "CONFIG_TYPE_UNSPECIFIED",
-		1: "CONFIG_TYPE_VK",
-		2: "CONFIG_TYPE_XRAY",
-		3: "CONFIG_TYPE_AMNEZIAWG",
-		4: "CONFIG_TYPE_ALL",
-		5: "CONFIG_TYPE_APP_ROUTING",
-		6: "CONFIG_TYPE_XRAY_ROUTING",
-		7: "CONFIG_TYPE_WB_STREAM",
+		0:  "CONFIG_TYPE_UNSPECIFIED",
+		1:  "CONFIG_TYPE_VK",
+		2:  "CONFIG_TYPE_XRAY",
+		3:  "CONFIG_TYPE_AMNEZIAWG",
+		4:  "CONFIG_TYPE_ALL",
+		5:  "CONFIG_TYPE_APP_ROUTING",
+		6:  "CONFIG_TYPE_XRAY_ROUTING",
+		7:  "CONFIG_TYPE_WB_STREAM",
+		8:  "CONFIG_TYPE_XPOSED",
+		9:  "CONFIG_TYPE_GUARDIAN",
+		10: "CONFIG_TYPE_VK_TURN_PROFILE",
 	}
 	ConfigType_value = map[string]int32{
-		"CONFIG_TYPE_UNSPECIFIED":  0,
-		"CONFIG_TYPE_VK":           1,
-		"CONFIG_TYPE_XRAY":         2,
-		"CONFIG_TYPE_AMNEZIAWG":    3,
-		"CONFIG_TYPE_ALL":          4,
-		"CONFIG_TYPE_APP_ROUTING":  5,
-		"CONFIG_TYPE_XRAY_ROUTING": 6,
-		"CONFIG_TYPE_WB_STREAM":    7,
+		"CONFIG_TYPE_UNSPECIFIED":     0,
+		"CONFIG_TYPE_VK":              1,
+		"CONFIG_TYPE_XRAY":            2,
+		"CONFIG_TYPE_AMNEZIAWG":       3,
+		"CONFIG_TYPE_ALL":             4,
+		"CONFIG_TYPE_APP_ROUTING":     5,
+		"CONFIG_TYPE_XRAY_ROUTING":    6,
+		"CONFIG_TYPE_WB_STREAM":       7,
+		"CONFIG_TYPE_XPOSED":          8,
+		"CONFIG_TYPE_GUARDIAN":        9,
+		"CONFIG_TYPE_VK_TURN_PROFILE": 10,
 	}
 )
 
@@ -85,16 +98,79 @@ func (ConfigType) EnumDescriptor() ([]byte, []int) {
 	return file_wingsv_proto_rawDescGZIP(), []int{0}
 }
 
+type GuardianSyncMode int32
+
+const (
+	GuardianSyncMode_GUARDIAN_SYNC_MODE_UNSPECIFIED     GuardianSyncMode = 0
+	GuardianSyncMode_GUARDIAN_SYNC_MODE_ALWAYS          GuardianSyncMode = 1
+	GuardianSyncMode_GUARDIAN_SYNC_MODE_PERIODIC        GuardianSyncMode = 2
+	GuardianSyncMode_GUARDIAN_SYNC_MODE_FOREGROUND_ONLY GuardianSyncMode = 3
+)
+
+// Enum value maps for GuardianSyncMode.
+var (
+	GuardianSyncMode_name = map[int32]string{
+		0: "GUARDIAN_SYNC_MODE_UNSPECIFIED",
+		1: "GUARDIAN_SYNC_MODE_ALWAYS",
+		2: "GUARDIAN_SYNC_MODE_PERIODIC",
+		3: "GUARDIAN_SYNC_MODE_FOREGROUND_ONLY",
+	}
+	GuardianSyncMode_value = map[string]int32{
+		"GUARDIAN_SYNC_MODE_UNSPECIFIED":     0,
+		"GUARDIAN_SYNC_MODE_ALWAYS":          1,
+		"GUARDIAN_SYNC_MODE_PERIODIC":        2,
+		"GUARDIAN_SYNC_MODE_FOREGROUND_ONLY": 3,
+	}
+)
+
+func (x GuardianSyncMode) Enum() *GuardianSyncMode {
+	p := new(GuardianSyncMode)
+	*p = x
+	return p
+}
+
+func (x GuardianSyncMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (GuardianSyncMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[1].Descriptor()
+}
+
+func (GuardianSyncMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[1]
+}
+
+func (x GuardianSyncMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use GuardianSyncMode.Descriptor instead.
+func (GuardianSyncMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{1}
+}
+
+// BackendType - top-level выбор пользователя. Legacy-значения
+// BACKEND_TYPE_VK_TURN_WIREGUARD / BACKEND_TYPE_AMNEZIAWG /
+// BACKEND_TYPE_AMNEZIAWG_PLAIN остаются для совместимости со старыми
+// конфигами и читателями; новые конфиги используют BACKEND_TYPE_VK_TURN
+// + Turn.tunnel_mode и BACKEND_TYPE_AMNEZIAWG_PLAIN → BACKEND_TYPE_AMNEZIAWG
+// (без подтипа). Маппинг см. в Android BackendType.fromProto / WingsImportParser.
 type BackendType int32
 
 const (
-	BackendType_BACKEND_TYPE_UNSPECIFIED       BackendType = 0
-	BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD BackendType = 1
+	BackendType_BACKEND_TYPE_UNSPECIFIED BackendType = 0
+	// Deprecated: Marked as deprecated in wingsv.proto.
+	BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD BackendType = 1 // legacy alias for VK_TURN + WG
 	BackendType_BACKEND_TYPE_XRAY              BackendType = 2
-	BackendType_BACKEND_TYPE_AMNEZIAWG         BackendType = 3
-	BackendType_BACKEND_TYPE_WIREGUARD         BackendType = 4
-	BackendType_BACKEND_TYPE_AMNEZIAWG_PLAIN   BackendType = 5
-	BackendType_BACKEND_TYPE_WB_STREAM         BackendType = 6
+	// Deprecated: Marked as deprecated in wingsv.proto.
+	BackendType_BACKEND_TYPE_AMNEZIAWG BackendType = 3 // legacy alias for VK_TURN + AWG
+	BackendType_BACKEND_TYPE_WIREGUARD BackendType = 4
+	// Deprecated: Marked as deprecated in wingsv.proto.
+	BackendType_BACKEND_TYPE_AMNEZIAWG_PLAIN BackendType = 5 // legacy alias for top-level AmneziaWG
+	BackendType_BACKEND_TYPE_WB_STREAM       BackendType = 6
+	BackendType_BACKEND_TYPE_VK_TURN         BackendType = 7 // top-level "VK TURN"; реальный туннель - по Turn.tunnel_mode
+	BackendType_BACKEND_TYPE_AMNEZIAWG_TL    BackendType = 8 // top-level "AmneziaWG" (заменяет AMNEZIAWG_PLAIN)
 )
 
 // Enum value maps for BackendType.
@@ -107,6 +183,8 @@ var (
 		4: "BACKEND_TYPE_WIREGUARD",
 		5: "BACKEND_TYPE_AMNEZIAWG_PLAIN",
 		6: "BACKEND_TYPE_WB_STREAM",
+		7: "BACKEND_TYPE_VK_TURN",
+		8: "BACKEND_TYPE_AMNEZIAWG_TL",
 	}
 	BackendType_value = map[string]int32{
 		"BACKEND_TYPE_UNSPECIFIED":       0,
@@ -116,6 +194,8 @@ var (
 		"BACKEND_TYPE_WIREGUARD":         4,
 		"BACKEND_TYPE_AMNEZIAWG_PLAIN":   5,
 		"BACKEND_TYPE_WB_STREAM":         6,
+		"BACKEND_TYPE_VK_TURN":           7,
+		"BACKEND_TYPE_AMNEZIAWG_TL":      8,
 	}
 )
 
@@ -130,11 +210,11 @@ func (x BackendType) String() string {
 }
 
 func (BackendType) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[1].Descriptor()
+	return file_wingsv_proto_enumTypes[2].Descriptor()
 }
 
 func (BackendType) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[1]
+	return &file_wingsv_proto_enumTypes[2]
 }
 
 func (x BackendType) Number() protoreflect.EnumNumber {
@@ -143,7 +223,217 @@ func (x BackendType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use BackendType.Descriptor instead.
 func (BackendType) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{1}
+	return file_wingsv_proto_rawDescGZIP(), []int{2}
+}
+
+// TunnelMode - какой тип туннеля поднимать внутри backend-обёртки.
+// Применимо к BACKEND_TYPE_VK_TURN (Turn.tunnel_mode) и BACKEND_TYPE_WB_STREAM
+// (WbStream.tunnel_mode). Для top-level WIREGUARD / AMNEZIAWG_TL / XRAY значение
+// игнорируется - тип туннеля жёстко задан backend'ом.
+type TunnelMode int32
+
+const (
+	TunnelMode_TUNNEL_MODE_UNSPECIFIED TunnelMode = 0
+	TunnelMode_TUNNEL_MODE_WIREGUARD   TunnelMode = 1
+	TunnelMode_TUNNEL_MODE_AMNEZIAWG   TunnelMode = 2
+)
+
+// Enum value maps for TunnelMode.
+var (
+	TunnelMode_name = map[int32]string{
+		0: "TUNNEL_MODE_UNSPECIFIED",
+		1: "TUNNEL_MODE_WIREGUARD",
+		2: "TUNNEL_MODE_AMNEZIAWG",
+	}
+	TunnelMode_value = map[string]int32{
+		"TUNNEL_MODE_UNSPECIFIED": 0,
+		"TUNNEL_MODE_WIREGUARD":   1,
+		"TUNNEL_MODE_AMNEZIAWG":   2,
+	}
+)
+
+func (x TunnelMode) Enum() *TunnelMode {
+	p := new(TunnelMode)
+	*p = x
+	return p
+}
+
+func (x TunnelMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TunnelMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[3].Descriptor()
+}
+
+func (TunnelMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[3]
+}
+
+func (x TunnelMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TunnelMode.Descriptor instead.
+func (TunnelMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{3}
+}
+
+type WrapKeyDelivery int32
+
+const (
+	WrapKeyDelivery_WRAP_KEY_DELIVERY_UNSPECIFIED WrapKeyDelivery = 0 // default = IN_BAND
+	WrapKeyDelivery_WRAP_KEY_DELIVERY_IN_BAND     WrapKeyDelivery = 1 // send wrap_key_proposal in SessionHello
+	WrapKeyDelivery_WRAP_KEY_DELIVERY_OFF         WrapKeyDelivery = 2 // never send; server must have preset
+)
+
+// Enum value maps for WrapKeyDelivery.
+var (
+	WrapKeyDelivery_name = map[int32]string{
+		0: "WRAP_KEY_DELIVERY_UNSPECIFIED",
+		1: "WRAP_KEY_DELIVERY_IN_BAND",
+		2: "WRAP_KEY_DELIVERY_OFF",
+	}
+	WrapKeyDelivery_value = map[string]int32{
+		"WRAP_KEY_DELIVERY_UNSPECIFIED": 0,
+		"WRAP_KEY_DELIVERY_IN_BAND":     1,
+		"WRAP_KEY_DELIVERY_OFF":         2,
+	}
+)
+
+func (x WrapKeyDelivery) Enum() *WrapKeyDelivery {
+	p := new(WrapKeyDelivery)
+	*p = x
+	return p
+}
+
+func (x WrapKeyDelivery) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WrapKeyDelivery) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[4].Descriptor()
+}
+
+func (WrapKeyDelivery) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[4]
+}
+
+func (x WrapKeyDelivery) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WrapKeyDelivery.Descriptor instead.
+func (WrapKeyDelivery) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{4}
+}
+
+type WrapMode int32
+
+const (
+	WrapMode_WRAP_MODE_UNSPECIFIED WrapMode = 0
+	WrapMode_WRAP_MODE_OFF         WrapMode = 1
+	WrapMode_WRAP_MODE_PREFERRED   WrapMode = 2
+	WrapMode_WRAP_MODE_REQUIRED    WrapMode = 3
+)
+
+// Enum value maps for WrapMode.
+var (
+	WrapMode_name = map[int32]string{
+		0: "WRAP_MODE_UNSPECIFIED",
+		1: "WRAP_MODE_OFF",
+		2: "WRAP_MODE_PREFERRED",
+		3: "WRAP_MODE_REQUIRED",
+	}
+	WrapMode_value = map[string]int32{
+		"WRAP_MODE_UNSPECIFIED": 0,
+		"WRAP_MODE_OFF":         1,
+		"WRAP_MODE_PREFERRED":   2,
+		"WRAP_MODE_REQUIRED":    3,
+	}
+)
+
+func (x WrapMode) Enum() *WrapMode {
+	p := new(WrapMode)
+	*p = x
+	return p
+}
+
+func (x WrapMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WrapMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[5].Descriptor()
+}
+
+func (WrapMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[5]
+}
+
+func (x WrapMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WrapMode.Descriptor instead.
+func (WrapMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{5}
+}
+
+type WrapCipher int32
+
+const (
+	WrapCipher_WRAP_CIPHER_UNSPECIFIED WrapCipher = 0
+	WrapCipher_WRAP_CIPHER_NONE        WrapCipher = 1
+	// SRTP-mimicry AEAD wire format
+	// ([12B RTP header | 12B nonce | AEAD ciphertext | 16B tag]).
+	// VK TURN forwards SRTP-shaped ChannelData on its fast path; plain
+	// stream-cipher wraps are dropped by the content filter.
+	WrapCipher_WRAP_CIPHER_SRTP_AES_256_GCM       WrapCipher = 2
+	WrapCipher_WRAP_CIPHER_SRTP_CHACHA20_POLY1305 WrapCipher = 3
+)
+
+// Enum value maps for WrapCipher.
+var (
+	WrapCipher_name = map[int32]string{
+		0: "WRAP_CIPHER_UNSPECIFIED",
+		1: "WRAP_CIPHER_NONE",
+		2: "WRAP_CIPHER_SRTP_AES_256_GCM",
+		3: "WRAP_CIPHER_SRTP_CHACHA20_POLY1305",
+	}
+	WrapCipher_value = map[string]int32{
+		"WRAP_CIPHER_UNSPECIFIED":            0,
+		"WRAP_CIPHER_NONE":                   1,
+		"WRAP_CIPHER_SRTP_AES_256_GCM":       2,
+		"WRAP_CIPHER_SRTP_CHACHA20_POLY1305": 3,
+	}
+)
+
+func (x WrapCipher) Enum() *WrapCipher {
+	p := new(WrapCipher)
+	*p = x
+	return p
+}
+
+func (x WrapCipher) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WrapCipher) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[6].Descriptor()
+}
+
+func (WrapCipher) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[6]
+}
+
+func (x WrapCipher) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WrapCipher.Descriptor instead.
+func (WrapCipher) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{6}
 }
 
 type TurnSessionMode int32
@@ -182,11 +472,11 @@ func (x TurnSessionMode) String() string {
 }
 
 func (TurnSessionMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[2].Descriptor()
+	return file_wingsv_proto_enumTypes[7].Descriptor()
 }
 
 func (TurnSessionMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[2]
+	return &file_wingsv_proto_enumTypes[7]
 }
 
 func (x TurnSessionMode) Number() protoreflect.EnumNumber {
@@ -195,7 +485,123 @@ func (x TurnSessionMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use TurnSessionMode.Descriptor instead.
 func (TurnSessionMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{2}
+	return file_wingsv_proto_rawDescGZIP(), []int{7}
+}
+
+type ProxyRuntimeMode int32
+
+const (
+	ProxyRuntimeMode_PROXY_RUNTIME_MODE_UNSPECIFIED ProxyRuntimeMode = 0
+	ProxyRuntimeMode_PROXY_RUNTIME_MODE_VPN         ProxyRuntimeMode = 1
+	ProxyRuntimeMode_PROXY_RUNTIME_MODE_PROXY       ProxyRuntimeMode = 2
+)
+
+// Enum value maps for ProxyRuntimeMode.
+var (
+	ProxyRuntimeMode_name = map[int32]string{
+		0: "PROXY_RUNTIME_MODE_UNSPECIFIED",
+		1: "PROXY_RUNTIME_MODE_VPN",
+		2: "PROXY_RUNTIME_MODE_PROXY",
+	}
+	ProxyRuntimeMode_value = map[string]int32{
+		"PROXY_RUNTIME_MODE_UNSPECIFIED": 0,
+		"PROXY_RUNTIME_MODE_VPN":         1,
+		"PROXY_RUNTIME_MODE_PROXY":       2,
+	}
+)
+
+func (x ProxyRuntimeMode) Enum() *ProxyRuntimeMode {
+	p := new(ProxyRuntimeMode)
+	*p = x
+	return p
+}
+
+func (x ProxyRuntimeMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ProxyRuntimeMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[8].Descriptor()
+}
+
+func (ProxyRuntimeMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[8]
+}
+
+func (x ProxyRuntimeMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ProxyRuntimeMode.Descriptor instead.
+func (ProxyRuntimeMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{8}
+}
+
+type AppRoutingMode int32
+
+const (
+	AppRoutingMode_APP_ROUTING_MODE_UNSPECIFIED AppRoutingMode = 0
+	AppRoutingMode_APP_ROUTING_MODE_OFF         AppRoutingMode = 1
+	// BYPASS excludes the selected apps at the Android VpnService layer
+	// (addDisallowedApplication). XBYPASS keeps them inside the tunnel and diverts
+	// them to direct at the xray-core gVisor level (closes the unknown-UID leak);
+	// it falls back to plain BYPASS where the gVisor path is unavailable. Both
+	// share the bypass_packages list.
+	AppRoutingMode_APP_ROUTING_MODE_BYPASS    AppRoutingMode = 2
+	AppRoutingMode_APP_ROUTING_MODE_WHITELIST AppRoutingMode = 3
+	AppRoutingMode_APP_ROUTING_MODE_XBYPASS   AppRoutingMode = 4
+	// XWHITELIST is the inverse of XBYPASS: it keeps every app inside the tunnel
+	// but tunnels only the selected apps and diverts the rest to direct at the
+	// xray-core gVisor level. It falls back to plain WHITELIST where the gVisor
+	// path is unavailable. Shares the whitelist_packages list with WHITELIST.
+	AppRoutingMode_APP_ROUTING_MODE_XWHITELIST AppRoutingMode = 5
+)
+
+// Enum value maps for AppRoutingMode.
+var (
+	AppRoutingMode_name = map[int32]string{
+		0: "APP_ROUTING_MODE_UNSPECIFIED",
+		1: "APP_ROUTING_MODE_OFF",
+		2: "APP_ROUTING_MODE_BYPASS",
+		3: "APP_ROUTING_MODE_WHITELIST",
+		4: "APP_ROUTING_MODE_XBYPASS",
+		5: "APP_ROUTING_MODE_XWHITELIST",
+	}
+	AppRoutingMode_value = map[string]int32{
+		"APP_ROUTING_MODE_UNSPECIFIED": 0,
+		"APP_ROUTING_MODE_OFF":         1,
+		"APP_ROUTING_MODE_BYPASS":      2,
+		"APP_ROUTING_MODE_WHITELIST":   3,
+		"APP_ROUTING_MODE_XBYPASS":     4,
+		"APP_ROUTING_MODE_XWHITELIST":  5,
+	}
+)
+
+func (x AppRoutingMode) Enum() *AppRoutingMode {
+	p := new(AppRoutingMode)
+	*p = x
+	return p
+}
+
+func (x AppRoutingMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AppRoutingMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[9].Descriptor()
+}
+
+func (AppRoutingMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[9]
+}
+
+func (x AppRoutingMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AppRoutingMode.Descriptor instead.
+func (AppRoutingMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{9}
 }
 
 type XrayRoutingMatchType int32
@@ -240,11 +646,11 @@ func (x XrayRoutingMatchType) String() string {
 }
 
 func (XrayRoutingMatchType) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[3].Descriptor()
+	return file_wingsv_proto_enumTypes[10].Descriptor()
 }
 
 func (XrayRoutingMatchType) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[3]
+	return &file_wingsv_proto_enumTypes[10]
 }
 
 func (x XrayRoutingMatchType) Number() protoreflect.EnumNumber {
@@ -253,7 +659,7 @@ func (x XrayRoutingMatchType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use XrayRoutingMatchType.Descriptor instead.
 func (XrayRoutingMatchType) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{3}
+	return file_wingsv_proto_rawDescGZIP(), []int{10}
 }
 
 type XrayRoutingAction int32
@@ -292,11 +698,11 @@ func (x XrayRoutingAction) String() string {
 }
 
 func (XrayRoutingAction) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[4].Descriptor()
+	return file_wingsv_proto_enumTypes[11].Descriptor()
 }
 
 func (XrayRoutingAction) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[4]
+	return &file_wingsv_proto_enumTypes[11]
 }
 
 func (x XrayRoutingAction) Number() protoreflect.EnumNumber {
@@ -305,7 +711,56 @@ func (x XrayRoutingAction) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use XrayRoutingAction.Descriptor instead.
 func (XrayRoutingAction) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{4}
+	return file_wingsv_proto_rawDescGZIP(), []int{11}
+}
+
+type WakeProbeMode int32
+
+const (
+	WakeProbeMode_WAKE_PROBE_MODE_UNSPECIFIED WakeProbeMode = 0
+	WakeProbeMode_WAKE_PROBE_MODE_PROCESS     WakeProbeMode = 1
+	WakeProbeMode_WAKE_PROBE_MODE_HTTP_PROBE  WakeProbeMode = 2
+)
+
+// Enum value maps for WakeProbeMode.
+var (
+	WakeProbeMode_name = map[int32]string{
+		0: "WAKE_PROBE_MODE_UNSPECIFIED",
+		1: "WAKE_PROBE_MODE_PROCESS",
+		2: "WAKE_PROBE_MODE_HTTP_PROBE",
+	}
+	WakeProbeMode_value = map[string]int32{
+		"WAKE_PROBE_MODE_UNSPECIFIED": 0,
+		"WAKE_PROBE_MODE_PROCESS":     1,
+		"WAKE_PROBE_MODE_HTTP_PROBE":  2,
+	}
+)
+
+func (x WakeProbeMode) Enum() *WakeProbeMode {
+	p := new(WakeProbeMode)
+	*p = x
+	return p
+}
+
+func (x WakeProbeMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WakeProbeMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[12].Descriptor()
+}
+
+func (WakeProbeMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[12]
+}
+
+func (x WakeProbeMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WakeProbeMode.Descriptor instead.
+func (WakeProbeMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{12}
 }
 
 type XrayTransportMode int32
@@ -341,11 +796,11 @@ func (x XrayTransportMode) String() string {
 }
 
 func (XrayTransportMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[5].Descriptor()
+	return file_wingsv_proto_enumTypes[13].Descriptor()
 }
 
 func (XrayTransportMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[5]
+	return &file_wingsv_proto_enumTypes[13]
 }
 
 func (x XrayTransportMode) Number() protoreflect.EnumNumber {
@@ -354,20 +809,519 @@ func (x XrayTransportMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use XrayTransportMode.Descriptor instead.
 func (XrayTransportMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{5}
+	return file_wingsv_proto_rawDescGZIP(), []int{13}
+}
+
+type XposedProcfsHookMode int32
+
+const (
+	XposedProcfsHookMode_XPOSED_PROCFS_HOOK_MODE_UNSPECIFIED    XposedProcfsHookMode = 0
+	XposedProcfsHookMode_XPOSED_PROCFS_HOOK_MODE_DISABLED       XposedProcfsHookMode = 1
+	XposedProcfsHookMode_XPOSED_PROCFS_HOOK_MODE_FILTER         XposedProcfsHookMode = 2
+	XposedProcfsHookMode_XPOSED_PROCFS_HOOK_MODE_NO_ACCESS      XposedProcfsHookMode = 3
+	XposedProcfsHookMode_XPOSED_PROCFS_HOOK_MODE_FILE_NOT_FOUND XposedProcfsHookMode = 4
+)
+
+// Enum value maps for XposedProcfsHookMode.
+var (
+	XposedProcfsHookMode_name = map[int32]string{
+		0: "XPOSED_PROCFS_HOOK_MODE_UNSPECIFIED",
+		1: "XPOSED_PROCFS_HOOK_MODE_DISABLED",
+		2: "XPOSED_PROCFS_HOOK_MODE_FILTER",
+		3: "XPOSED_PROCFS_HOOK_MODE_NO_ACCESS",
+		4: "XPOSED_PROCFS_HOOK_MODE_FILE_NOT_FOUND",
+	}
+	XposedProcfsHookMode_value = map[string]int32{
+		"XPOSED_PROCFS_HOOK_MODE_UNSPECIFIED":    0,
+		"XPOSED_PROCFS_HOOK_MODE_DISABLED":       1,
+		"XPOSED_PROCFS_HOOK_MODE_FILTER":         2,
+		"XPOSED_PROCFS_HOOK_MODE_NO_ACCESS":      3,
+		"XPOSED_PROCFS_HOOK_MODE_FILE_NOT_FOUND": 4,
+	}
+)
+
+func (x XposedProcfsHookMode) Enum() *XposedProcfsHookMode {
+	p := new(XposedProcfsHookMode)
+	*p = x
+	return p
+}
+
+func (x XposedProcfsHookMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (XposedProcfsHookMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[14].Descriptor()
+}
+
+func (XposedProcfsHookMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[14]
+}
+
+func (x XposedProcfsHookMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use XposedProcfsHookMode.Descriptor instead.
+func (XposedProcfsHookMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{14}
+}
+
+type XposedIcmpSpoofingMode int32
+
+const (
+	XposedIcmpSpoofingMode_XPOSED_ICMP_SPOOFING_MODE_UNSPECIFIED    XposedIcmpSpoofingMode = 0
+	XposedIcmpSpoofingMode_XPOSED_ICMP_SPOOFING_MODE_DISABLED       XposedIcmpSpoofingMode = 1
+	XposedIcmpSpoofingMode_XPOSED_ICMP_SPOOFING_MODE_PING_NOT_FOUND XposedIcmpSpoofingMode = 2
+	XposedIcmpSpoofingMode_XPOSED_ICMP_SPOOFING_MODE_EMPTY_RESPONSE XposedIcmpSpoofingMode = 3
+)
+
+// Enum value maps for XposedIcmpSpoofingMode.
+var (
+	XposedIcmpSpoofingMode_name = map[int32]string{
+		0: "XPOSED_ICMP_SPOOFING_MODE_UNSPECIFIED",
+		1: "XPOSED_ICMP_SPOOFING_MODE_DISABLED",
+		2: "XPOSED_ICMP_SPOOFING_MODE_PING_NOT_FOUND",
+		3: "XPOSED_ICMP_SPOOFING_MODE_EMPTY_RESPONSE",
+	}
+	XposedIcmpSpoofingMode_value = map[string]int32{
+		"XPOSED_ICMP_SPOOFING_MODE_UNSPECIFIED":    0,
+		"XPOSED_ICMP_SPOOFING_MODE_DISABLED":       1,
+		"XPOSED_ICMP_SPOOFING_MODE_PING_NOT_FOUND": 2,
+		"XPOSED_ICMP_SPOOFING_MODE_EMPTY_RESPONSE": 3,
+	}
+)
+
+func (x XposedIcmpSpoofingMode) Enum() *XposedIcmpSpoofingMode {
+	p := new(XposedIcmpSpoofingMode)
+	*p = x
+	return p
+}
+
+func (x XposedIcmpSpoofingMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (XposedIcmpSpoofingMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[15].Descriptor()
+}
+
+func (XposedIcmpSpoofingMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[15]
+}
+
+func (x XposedIcmpSpoofingMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use XposedIcmpSpoofingMode.Descriptor instead.
+func (XposedIcmpSpoofingMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{15}
+}
+
+type ThemeMode int32
+
+const (
+	ThemeMode_THEME_MODE_UNSPECIFIED ThemeMode = 0
+	ThemeMode_THEME_MODE_LIGHT       ThemeMode = 1
+	ThemeMode_THEME_MODE_DARK        ThemeMode = 2
+	ThemeMode_THEME_MODE_SYSTEM      ThemeMode = 3
+)
+
+// Enum value maps for ThemeMode.
+var (
+	ThemeMode_name = map[int32]string{
+		0: "THEME_MODE_UNSPECIFIED",
+		1: "THEME_MODE_LIGHT",
+		2: "THEME_MODE_DARK",
+		3: "THEME_MODE_SYSTEM",
+	}
+	ThemeMode_value = map[string]int32{
+		"THEME_MODE_UNSPECIFIED": 0,
+		"THEME_MODE_LIGHT":       1,
+		"THEME_MODE_DARK":        2,
+		"THEME_MODE_SYSTEM":      3,
+	}
+)
+
+func (x ThemeMode) Enum() *ThemeMode {
+	p := new(ThemeMode)
+	*p = x
+	return p
+}
+
+func (x ThemeMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ThemeMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[16].Descriptor()
+}
+
+func (ThemeMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[16]
+}
+
+func (x ThemeMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ThemeMode.Descriptor instead.
+func (ThemeMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{16}
+}
+
+type DnsMode int32
+
+const (
+	DnsMode_DNS_MODE_UNSPECIFIED DnsMode = 0
+	DnsMode_DNS_MODE_AUTO        DnsMode = 1
+	DnsMode_DNS_MODE_UDP         DnsMode = 2
+	DnsMode_DNS_MODE_DOH         DnsMode = 3
+)
+
+// Enum value maps for DnsMode.
+var (
+	DnsMode_name = map[int32]string{
+		0: "DNS_MODE_UNSPECIFIED",
+		1: "DNS_MODE_AUTO",
+		2: "DNS_MODE_UDP",
+		3: "DNS_MODE_DOH",
+	}
+	DnsMode_value = map[string]int32{
+		"DNS_MODE_UNSPECIFIED": 0,
+		"DNS_MODE_AUTO":        1,
+		"DNS_MODE_UDP":         2,
+		"DNS_MODE_DOH":         3,
+	}
+)
+
+func (x DnsMode) Enum() *DnsMode {
+	p := new(DnsMode)
+	*p = x
+	return p
+}
+
+func (x DnsMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DnsMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[17].Descriptor()
+}
+
+func (DnsMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[17]
+}
+
+func (x DnsMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DnsMode.Descriptor instead.
+func (DnsMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{17}
+}
+
+type SharingMasqueradeMode int32
+
+const (
+	SharingMasqueradeMode_SHARING_MASQUERADE_MODE_UNSPECIFIED SharingMasqueradeMode = 0
+	SharingMasqueradeMode_SHARING_MASQUERADE_MODE_NONE        SharingMasqueradeMode = 1
+	SharingMasqueradeMode_SHARING_MASQUERADE_MODE_SIMPLE      SharingMasqueradeMode = 2
+	SharingMasqueradeMode_SHARING_MASQUERADE_MODE_NETD        SharingMasqueradeMode = 3
+)
+
+// Enum value maps for SharingMasqueradeMode.
+var (
+	SharingMasqueradeMode_name = map[int32]string{
+		0: "SHARING_MASQUERADE_MODE_UNSPECIFIED",
+		1: "SHARING_MASQUERADE_MODE_NONE",
+		2: "SHARING_MASQUERADE_MODE_SIMPLE",
+		3: "SHARING_MASQUERADE_MODE_NETD",
+	}
+	SharingMasqueradeMode_value = map[string]int32{
+		"SHARING_MASQUERADE_MODE_UNSPECIFIED": 0,
+		"SHARING_MASQUERADE_MODE_NONE":        1,
+		"SHARING_MASQUERADE_MODE_SIMPLE":      2,
+		"SHARING_MASQUERADE_MODE_NETD":        3,
+	}
+)
+
+func (x SharingMasqueradeMode) Enum() *SharingMasqueradeMode {
+	p := new(SharingMasqueradeMode)
+	*p = x
+	return p
+}
+
+func (x SharingMasqueradeMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SharingMasqueradeMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[18].Descriptor()
+}
+
+func (SharingMasqueradeMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[18]
+}
+
+func (x SharingMasqueradeMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SharingMasqueradeMode.Descriptor instead.
+func (SharingMasqueradeMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{18}
+}
+
+type SharingWifiLock int32
+
+const (
+	SharingWifiLock_SHARING_WIFI_LOCK_UNSPECIFIED SharingWifiLock = 0
+	SharingWifiLock_SHARING_WIFI_LOCK_SYSTEM      SharingWifiLock = 1
+	SharingWifiLock_SHARING_WIFI_LOCK_FULL        SharingWifiLock = 2
+	SharingWifiLock_SHARING_WIFI_LOCK_HIGH_PERF   SharingWifiLock = 3
+	SharingWifiLock_SHARING_WIFI_LOCK_LOW_LATENCY SharingWifiLock = 4
+)
+
+// Enum value maps for SharingWifiLock.
+var (
+	SharingWifiLock_name = map[int32]string{
+		0: "SHARING_WIFI_LOCK_UNSPECIFIED",
+		1: "SHARING_WIFI_LOCK_SYSTEM",
+		2: "SHARING_WIFI_LOCK_FULL",
+		3: "SHARING_WIFI_LOCK_HIGH_PERF",
+		4: "SHARING_WIFI_LOCK_LOW_LATENCY",
+	}
+	SharingWifiLock_value = map[string]int32{
+		"SHARING_WIFI_LOCK_UNSPECIFIED": 0,
+		"SHARING_WIFI_LOCK_SYSTEM":      1,
+		"SHARING_WIFI_LOCK_FULL":        2,
+		"SHARING_WIFI_LOCK_HIGH_PERF":   3,
+		"SHARING_WIFI_LOCK_LOW_LATENCY": 4,
+	}
+)
+
+func (x SharingWifiLock) Enum() *SharingWifiLock {
+	p := new(SharingWifiLock)
+	*p = x
+	return p
+}
+
+func (x SharingWifiLock) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SharingWifiLock) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[19].Descriptor()
+}
+
+func (SharingWifiLock) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[19]
+}
+
+func (x SharingWifiLock) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SharingWifiLock.Descriptor instead.
+func (SharingWifiLock) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{19}
+}
+
+type SharingIpMonitorMode int32
+
+const (
+	SharingIpMonitorMode_SHARING_IP_MONITOR_MODE_UNSPECIFIED  SharingIpMonitorMode = 0
+	SharingIpMonitorMode_SHARING_IP_MONITOR_MODE_NETLINK      SharingIpMonitorMode = 1
+	SharingIpMonitorMode_SHARING_IP_MONITOR_MODE_NETLINK_ROOT SharingIpMonitorMode = 2
+	SharingIpMonitorMode_SHARING_IP_MONITOR_MODE_POLL         SharingIpMonitorMode = 3
+	SharingIpMonitorMode_SHARING_IP_MONITOR_MODE_POLL_ROOT    SharingIpMonitorMode = 4
+)
+
+// Enum value maps for SharingIpMonitorMode.
+var (
+	SharingIpMonitorMode_name = map[int32]string{
+		0: "SHARING_IP_MONITOR_MODE_UNSPECIFIED",
+		1: "SHARING_IP_MONITOR_MODE_NETLINK",
+		2: "SHARING_IP_MONITOR_MODE_NETLINK_ROOT",
+		3: "SHARING_IP_MONITOR_MODE_POLL",
+		4: "SHARING_IP_MONITOR_MODE_POLL_ROOT",
+	}
+	SharingIpMonitorMode_value = map[string]int32{
+		"SHARING_IP_MONITOR_MODE_UNSPECIFIED":  0,
+		"SHARING_IP_MONITOR_MODE_NETLINK":      1,
+		"SHARING_IP_MONITOR_MODE_NETLINK_ROOT": 2,
+		"SHARING_IP_MONITOR_MODE_POLL":         3,
+		"SHARING_IP_MONITOR_MODE_POLL_ROOT":    4,
+	}
+)
+
+func (x SharingIpMonitorMode) Enum() *SharingIpMonitorMode {
+	p := new(SharingIpMonitorMode)
+	*p = x
+	return p
+}
+
+func (x SharingIpMonitorMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SharingIpMonitorMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[20].Descriptor()
+}
+
+func (SharingIpMonitorMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[20]
+}
+
+func (x SharingIpMonitorMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SharingIpMonitorMode.Descriptor instead.
+func (SharingIpMonitorMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{20}
+}
+
+type ByeDpiHostsMode int32
+
+const (
+	ByeDpiHostsMode_BYE_DPI_HOSTS_MODE_UNSPECIFIED ByeDpiHostsMode = 0
+	ByeDpiHostsMode_BYE_DPI_HOSTS_MODE_DISABLE     ByeDpiHostsMode = 1
+	ByeDpiHostsMode_BYE_DPI_HOSTS_MODE_BLACKLIST   ByeDpiHostsMode = 2
+	ByeDpiHostsMode_BYE_DPI_HOSTS_MODE_WHITELIST   ByeDpiHostsMode = 3
+)
+
+// Enum value maps for ByeDpiHostsMode.
+var (
+	ByeDpiHostsMode_name = map[int32]string{
+		0: "BYE_DPI_HOSTS_MODE_UNSPECIFIED",
+		1: "BYE_DPI_HOSTS_MODE_DISABLE",
+		2: "BYE_DPI_HOSTS_MODE_BLACKLIST",
+		3: "BYE_DPI_HOSTS_MODE_WHITELIST",
+	}
+	ByeDpiHostsMode_value = map[string]int32{
+		"BYE_DPI_HOSTS_MODE_UNSPECIFIED": 0,
+		"BYE_DPI_HOSTS_MODE_DISABLE":     1,
+		"BYE_DPI_HOSTS_MODE_BLACKLIST":   2,
+		"BYE_DPI_HOSTS_MODE_WHITELIST":   3,
+	}
+)
+
+func (x ByeDpiHostsMode) Enum() *ByeDpiHostsMode {
+	p := new(ByeDpiHostsMode)
+	*p = x
+	return p
+}
+
+func (x ByeDpiHostsMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ByeDpiHostsMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[21].Descriptor()
+}
+
+func (ByeDpiHostsMode) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[21]
+}
+
+func (x ByeDpiHostsMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ByeDpiHostsMode.Descriptor instead.
+func (ByeDpiHostsMode) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{21}
+}
+
+type ByeDpiDesyncMethod int32
+
+const (
+	ByeDpiDesyncMethod_BYE_DPI_DESYNC_METHOD_UNSPECIFIED ByeDpiDesyncMethod = 0
+	ByeDpiDesyncMethod_BYE_DPI_DESYNC_METHOD_NONE        ByeDpiDesyncMethod = 1
+	ByeDpiDesyncMethod_BYE_DPI_DESYNC_METHOD_SPLIT       ByeDpiDesyncMethod = 2
+	ByeDpiDesyncMethod_BYE_DPI_DESYNC_METHOD_DISORDER    ByeDpiDesyncMethod = 3
+	ByeDpiDesyncMethod_BYE_DPI_DESYNC_METHOD_FAKE        ByeDpiDesyncMethod = 4
+	ByeDpiDesyncMethod_BYE_DPI_DESYNC_METHOD_OOB         ByeDpiDesyncMethod = 5
+	ByeDpiDesyncMethod_BYE_DPI_DESYNC_METHOD_DISOOB      ByeDpiDesyncMethod = 6
+)
+
+// Enum value maps for ByeDpiDesyncMethod.
+var (
+	ByeDpiDesyncMethod_name = map[int32]string{
+		0: "BYE_DPI_DESYNC_METHOD_UNSPECIFIED",
+		1: "BYE_DPI_DESYNC_METHOD_NONE",
+		2: "BYE_DPI_DESYNC_METHOD_SPLIT",
+		3: "BYE_DPI_DESYNC_METHOD_DISORDER",
+		4: "BYE_DPI_DESYNC_METHOD_FAKE",
+		5: "BYE_DPI_DESYNC_METHOD_OOB",
+		6: "BYE_DPI_DESYNC_METHOD_DISOOB",
+	}
+	ByeDpiDesyncMethod_value = map[string]int32{
+		"BYE_DPI_DESYNC_METHOD_UNSPECIFIED": 0,
+		"BYE_DPI_DESYNC_METHOD_NONE":        1,
+		"BYE_DPI_DESYNC_METHOD_SPLIT":       2,
+		"BYE_DPI_DESYNC_METHOD_DISORDER":    3,
+		"BYE_DPI_DESYNC_METHOD_FAKE":        4,
+		"BYE_DPI_DESYNC_METHOD_OOB":         5,
+		"BYE_DPI_DESYNC_METHOD_DISOOB":      6,
+	}
+)
+
+func (x ByeDpiDesyncMethod) Enum() *ByeDpiDesyncMethod {
+	p := new(ByeDpiDesyncMethod)
+	*p = x
+	return p
+}
+
+func (x ByeDpiDesyncMethod) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ByeDpiDesyncMethod) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[22].Descriptor()
+}
+
+func (ByeDpiDesyncMethod) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[22]
+}
+
+func (x ByeDpiDesyncMethod) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ByeDpiDesyncMethod.Descriptor instead.
+func (ByeDpiDesyncMethod) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{22}
 }
 
 type Config struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ver           uint32                 `protobuf:"varint,1,opt,name=ver,proto3" json:"ver,omitempty"`
-	Type          ConfigType             `protobuf:"varint,2,opt,name=type,proto3,enum=wingsv.ConfigType" json:"type,omitempty"`
-	Turn          *Turn                  `protobuf:"bytes,3,opt,name=turn,proto3" json:"turn,omitempty"`
-	Wg            *WireGuard             `protobuf:"bytes,4,opt,name=wg,proto3" json:"wg,omitempty"`
-	Backend       BackendType            `protobuf:"varint,5,opt,name=backend,proto3,enum=wingsv.BackendType" json:"backend,omitempty"`
-	Xray          *Xray                  `protobuf:"bytes,6,opt,name=xray,proto3" json:"xray,omitempty"`
-	Awg           *AmneziaWG             `protobuf:"bytes,7,opt,name=awg,proto3" json:"awg,omitempty"`
-	AppRouting    *AppRouting            `protobuf:"bytes,8,opt,name=app_routing,json=appRouting,proto3" json:"app_routing,omitempty"`
-	WbStream      *WbStream              `protobuf:"bytes,9,opt,name=wb_stream,json=wbStream,proto3" json:"wb_stream,omitempty"`
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Ver              uint32                 `protobuf:"varint,1,opt,name=ver,proto3" json:"ver,omitempty"`
+	Type             ConfigType             `protobuf:"varint,2,opt,name=type,proto3,enum=wingsv.ConfigType" json:"type,omitempty"`
+	Turn             *Turn                  `protobuf:"bytes,3,opt,name=turn,proto3" json:"turn,omitempty"`
+	Wg               *WireGuard             `protobuf:"bytes,4,opt,name=wg,proto3" json:"wg,omitempty"`
+	Backend          BackendType            `protobuf:"varint,5,opt,name=backend,proto3,enum=wingsv.BackendType" json:"backend,omitempty"`
+	Xray             *Xray                  `protobuf:"bytes,6,opt,name=xray,proto3" json:"xray,omitempty"`
+	Awg              *AmneziaWG             `protobuf:"bytes,7,opt,name=awg,proto3" json:"awg,omitempty"`
+	AppRouting       *AppRouting            `protobuf:"bytes,8,opt,name=app_routing,json=appRouting,proto3" json:"app_routing,omitempty"`
+	WbStream         *WbStream              `protobuf:"bytes,9,opt,name=wb_stream,json=wbStream,proto3" json:"wb_stream,omitempty"`
+	Xposed           *Xposed                `protobuf:"bytes,10,opt,name=xposed,proto3" json:"xposed,omitempty"`
+	Root             *RootSettings          `protobuf:"bytes,11,opt,name=root,proto3" json:"root,omitempty"`
+	AppPreferences   *AppPreferences        `protobuf:"bytes,12,opt,name=app_preferences,json=appPreferences,proto3" json:"app_preferences,omitempty"`
+	SubscriptionHwid *SubscriptionHwid      `protobuf:"bytes,13,opt,name=subscription_hwid,json=subscriptionHwid,proto3" json:"subscription_hwid,omitempty"`
+	Sharing          *Sharing               `protobuf:"bytes,14,opt,name=sharing,proto3" json:"sharing,omitempty"`
+	ByeDpi           *ByeDpi                `protobuf:"bytes,15,opt,name=bye_dpi,json=byeDpi,proto3" json:"bye_dpi,omitempty"`
+	Guardian         *Guardian              `protobuf:"bytes,16,opt,name=guardian,proto3" json:"guardian,omitempty"`
+	// Монотонно растущая ревизия конфига, выставляется панелью при
+	// UpsertClientConfig. Клиент сохраняет её при успешном apply и шлёт
+	// обратно в ClientHello.last_applied_config_version - сервер на welcome
+	// решает, нужен ли вообще ConfigPush, и тем самым не «перезатирает»
+	// только что отредактированные админом поля на reconnect-гонке.
+	ConfigVersion uint64 `protobuf:"varint,17,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -465,6 +1419,188 @@ func (x *Config) GetWbStream() *WbStream {
 	return nil
 }
 
+func (x *Config) GetXposed() *Xposed {
+	if x != nil {
+		return x.Xposed
+	}
+	return nil
+}
+
+func (x *Config) GetRoot() *RootSettings {
+	if x != nil {
+		return x.Root
+	}
+	return nil
+}
+
+func (x *Config) GetAppPreferences() *AppPreferences {
+	if x != nil {
+		return x.AppPreferences
+	}
+	return nil
+}
+
+func (x *Config) GetSubscriptionHwid() *SubscriptionHwid {
+	if x != nil {
+		return x.SubscriptionHwid
+	}
+	return nil
+}
+
+func (x *Config) GetSharing() *Sharing {
+	if x != nil {
+		return x.Sharing
+	}
+	return nil
+}
+
+func (x *Config) GetByeDpi() *ByeDpi {
+	if x != nil {
+		return x.ByeDpi
+	}
+	return nil
+}
+
+func (x *Config) GetGuardian() *Guardian {
+	if x != nil {
+		return x.Guardian
+	}
+	return nil
+}
+
+func (x *Config) GetConfigVersion() uint64 {
+	if x != nil {
+		return x.ConfigVersion
+	}
+	return 0
+}
+
+type Guardian struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	WsUrl                   string                 `protobuf:"bytes,1,opt,name=ws_url,json=wsUrl,proto3" json:"ws_url,omitempty"`
+	ClientId                string                 `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	ClientToken             []byte                 `protobuf:"bytes,3,opt,name=client_token,json=clientToken,proto3" json:"client_token,omitempty"`
+	ClientName              string                 `protobuf:"bytes,4,opt,name=client_name,json=clientName,proto3" json:"client_name,omitempty"`
+	SyncMode                GuardianSyncMode       `protobuf:"varint,5,opt,name=sync_mode,json=syncMode,proto3,enum=wingsv.GuardianSyncMode" json:"sync_mode,omitempty"`
+	PeriodicIntervalMinutes uint32                 `protobuf:"varint,6,opt,name=periodic_interval_minutes,json=periodicIntervalMinutes,proto3" json:"periodic_interval_minutes,omitempty"`
+	// Admin (panel operator) who issued this config push. WINGS V renders the
+	// import confirmation card with the admin's identity: admin_username is
+	// shown verbatim; the client derives the avatar URL as
+	// {ws_url base}/api/admin/avatars/{admin_id}.png?v={admin_avatar_version}.
+	AdminUsername      string `protobuf:"bytes,7,opt,name=admin_username,json=adminUsername,proto3" json:"admin_username,omitempty"`
+	AdminId            int64  `protobuf:"varint,8,opt,name=admin_id,json=adminId,proto3" json:"admin_id,omitempty"`
+	AdminAvatarVersion int64  `protobuf:"varint,9,opt,name=admin_avatar_version,json=adminAvatarVersion,proto3" json:"admin_avatar_version,omitempty"`
+	// SPKI pins the app must accept for the panel's control-plane TLS: raw 32-byte
+	// SHA-512/256 of the panel CA's SubjectPublicKeyInfo. Set when the panel has no
+	// publicly trusted certificate, which is the only way a domain-less deployment
+	// reachable by bare IP can be verified at all. Empty means verify against the
+	// system trust store. Multiple entries allow CA rotation with overlap. This
+	// never applies to the VK TURN DTLS relay.
+	ServerCaPinsSha512_256 [][]byte `protobuf:"bytes,11,rep,name=server_ca_pins_sha512_256,json=serverCaPinsSha512256,proto3" json:"server_ca_pins_sha512_256,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *Guardian) Reset() {
+	*x = Guardian{}
+	mi := &file_wingsv_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Guardian) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Guardian) ProtoMessage() {}
+
+func (x *Guardian) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Guardian.ProtoReflect.Descriptor instead.
+func (*Guardian) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Guardian) GetWsUrl() string {
+	if x != nil {
+		return x.WsUrl
+	}
+	return ""
+}
+
+func (x *Guardian) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+func (x *Guardian) GetClientToken() []byte {
+	if x != nil {
+		return x.ClientToken
+	}
+	return nil
+}
+
+func (x *Guardian) GetClientName() string {
+	if x != nil {
+		return x.ClientName
+	}
+	return ""
+}
+
+func (x *Guardian) GetSyncMode() GuardianSyncMode {
+	if x != nil {
+		return x.SyncMode
+	}
+	return GuardianSyncMode_GUARDIAN_SYNC_MODE_UNSPECIFIED
+}
+
+func (x *Guardian) GetPeriodicIntervalMinutes() uint32 {
+	if x != nil {
+		return x.PeriodicIntervalMinutes
+	}
+	return 0
+}
+
+func (x *Guardian) GetAdminUsername() string {
+	if x != nil {
+		return x.AdminUsername
+	}
+	return ""
+}
+
+func (x *Guardian) GetAdminId() int64 {
+	if x != nil {
+		return x.AdminId
+	}
+	return 0
+}
+
+func (x *Guardian) GetAdminAvatarVersion() int64 {
+	if x != nil {
+		return x.AdminAvatarVersion
+	}
+	return 0
+}
+
+func (x *Guardian) GetServerCaPinsSha512_256() [][]byte {
+	if x != nil {
+		return x.ServerCaPinsSha512_256
+	}
+	return nil
+}
+
 type WbStream struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	RoomId            string                 `protobuf:"bytes,1,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
@@ -472,13 +1608,17 @@ type WbStream struct {
 	E2EEnabled        bool                   `protobuf:"varint,3,opt,name=e2e_enabled,json=e2eEnabled,proto3" json:"e2e_enabled,omitempty"`
 	E2ESecret         []byte                 `protobuf:"bytes,4,opt,name=e2e_secret,json=e2eSecret,proto3" json:"e2e_secret,omitempty"`
 	DisplayName       string                 `protobuf:"bytes,5,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	RoomCount         *uint32                `protobuf:"varint,6,opt,name=room_count,json=roomCount,proto3,oneof" json:"room_count,omitempty"`
+	// Какой туннель пускать поверх WB Stream userspace-прокси: WG или AWG.
+	// UNSPECIFIED трактуется как WIREGUARD (поведение до введения поля).
+	TunnelMode    TunnelMode `protobuf:"varint,7,opt,name=tunnel_mode,json=tunnelMode,proto3,enum=wingsv.TunnelMode" json:"tunnel_mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WbStream) Reset() {
 	*x = WbStream{}
-	mi := &file_wingsv_proto_msgTypes[1]
+	mi := &file_wingsv_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -490,7 +1630,7 @@ func (x *WbStream) String() string {
 func (*WbStream) ProtoMessage() {}
 
 func (x *WbStream) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[1]
+	mi := &file_wingsv_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -503,7 +1643,7 @@ func (x *WbStream) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WbStream.ProtoReflect.Descriptor instead.
 func (*WbStream) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{1}
+	return file_wingsv_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *WbStream) GetRoomId() string {
@@ -541,16 +1681,39 @@ func (x *WbStream) GetDisplayName() string {
 	return ""
 }
 
+func (x *WbStream) GetRoomCount() uint32 {
+	if x != nil && x.RoomCount != nil {
+		return *x.RoomCount
+	}
+	return 0
+}
+
+func (x *WbStream) GetTunnelMode() TunnelMode {
+	if x != nil {
+		return x.TunnelMode
+	}
+	return TunnelMode_TUNNEL_MODE_UNSPECIFIED
+}
+
 type AmneziaWG struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	AwgQuickConfig string                 `protobuf:"bytes,1,opt,name=awg_quick_config,json=awgQuickConfig,proto3" json:"awg_quick_config,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Optional profile title carried by single-profile share links (built from a
+	// saved AmneziaWG profile). Empty in legacy / full-settings exports; the
+	// importer synthesizes a title when this is empty.
+	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// Multi-profile library for the standalone AmneziaWG backend (mirrors Xray).
+	// The active profile is projected onto the flat field above at runtime.
+	ActiveProfileId string            `protobuf:"bytes,3,opt,name=active_profile_id,json=activeProfileId,proto3" json:"active_profile_id,omitempty"`
+	Profiles        []*AmneziaProfile `protobuf:"bytes,4,rep,name=profiles,proto3" json:"profiles,omitempty"`
+	MergeOnly       *bool             `protobuf:"varint,5,opt,name=merge_only,json=mergeOnly,proto3,oneof" json:"merge_only,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *AmneziaWG) Reset() {
 	*x = AmneziaWG{}
-	mi := &file_wingsv_proto_msgTypes[2]
+	mi := &file_wingsv_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -562,7 +1725,7 @@ func (x *AmneziaWG) String() string {
 func (*AmneziaWG) ProtoMessage() {}
 
 func (x *AmneziaWG) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[2]
+	mi := &file_wingsv_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -575,12 +1738,116 @@ func (x *AmneziaWG) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AmneziaWG.ProtoReflect.Descriptor instead.
 func (*AmneziaWG) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{2}
+	return file_wingsv_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *AmneziaWG) GetAwgQuickConfig() string {
 	if x != nil {
 		return x.AwgQuickConfig
+	}
+	return ""
+}
+
+func (x *AmneziaWG) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *AmneziaWG) GetActiveProfileId() string {
+	if x != nil {
+		return x.ActiveProfileId
+	}
+	return ""
+}
+
+func (x *AmneziaWG) GetProfiles() []*AmneziaProfile {
+	if x != nil {
+		return x.Profiles
+	}
+	return nil
+}
+
+func (x *AmneziaWG) GetMergeOnly() bool {
+	if x != nil && x.MergeOnly != nil {
+		return *x.MergeOnly
+	}
+	return false
+}
+
+type AmneziaProfile struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title             string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	AwgQuickConfig    string                 `protobuf:"bytes,3,opt,name=awg_quick_config,json=awgQuickConfig,proto3" json:"awg_quick_config,omitempty"`
+	SubscriptionId    string                 `protobuf:"bytes,4,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
+	SubscriptionTitle string                 `protobuf:"bytes,5,opt,name=subscription_title,json=subscriptionTitle,proto3" json:"subscription_title,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *AmneziaProfile) Reset() {
+	*x = AmneziaProfile{}
+	mi := &file_wingsv_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AmneziaProfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AmneziaProfile) ProtoMessage() {}
+
+func (x *AmneziaProfile) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AmneziaProfile.ProtoReflect.Descriptor instead.
+func (*AmneziaProfile) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *AmneziaProfile) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AmneziaProfile) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *AmneziaProfile) GetAwgQuickConfig() string {
+	if x != nil {
+		return x.AwgQuickConfig
+	}
+	return ""
+}
+
+func (x *AmneziaProfile) GetSubscriptionId() string {
+	if x != nil {
+		return x.SubscriptionId
+	}
+	return ""
+}
+
+func (x *AmneziaProfile) GetSubscriptionTitle() string {
+	if x != nil {
+		return x.SubscriptionTitle
 	}
 	return ""
 }
@@ -595,7 +1862,7 @@ type Endpoint struct {
 
 func (x *Endpoint) Reset() {
 	*x = Endpoint{}
-	mi := &file_wingsv_proto_msgTypes[3]
+	mi := &file_wingsv_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -607,7 +1874,7 @@ func (x *Endpoint) String() string {
 func (*Endpoint) ProtoMessage() {}
 
 func (x *Endpoint) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[3]
+	mi := &file_wingsv_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -620,7 +1887,7 @@ func (x *Endpoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Endpoint.ProtoReflect.Descriptor instead.
 func (*Endpoint) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{3}
+	return file_wingsv_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Endpoint) GetHost() string {
@@ -647,7 +1914,7 @@ type Cidr struct {
 
 func (x *Cidr) Reset() {
 	*x = Cidr{}
-	mi := &file_wingsv_proto_msgTypes[4]
+	mi := &file_wingsv_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -659,7 +1926,7 @@ func (x *Cidr) String() string {
 func (*Cidr) ProtoMessage() {}
 
 func (x *Cidr) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[4]
+	mi := &file_wingsv_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -672,7 +1939,7 @@ func (x *Cidr) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Cidr.ProtoReflect.Descriptor instead.
 func (*Cidr) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{4}
+	return file_wingsv_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Cidr) GetAddr() []byte {
@@ -690,26 +1957,69 @@ func (x *Cidr) GetPrefix() uint32 {
 }
 
 type Turn struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Endpoint       *Endpoint              `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	Link           string                 `protobuf:"bytes,2,opt,name=link,proto3" json:"link,omitempty"`
-	Threads        *uint32                `protobuf:"varint,3,opt,name=threads,proto3,oneof" json:"threads,omitempty"`
-	UseUdp         *bool                  `protobuf:"varint,4,opt,name=use_udp,json=useUdp,proto3,oneof" json:"use_udp,omitempty"`
-	NoObfuscation  *bool                  `protobuf:"varint,5,opt,name=no_obfuscation,json=noObfuscation,proto3,oneof" json:"no_obfuscation,omitempty"`
-	LocalEndpoint  *Endpoint              `protobuf:"bytes,6,opt,name=local_endpoint,json=localEndpoint,proto3" json:"local_endpoint,omitempty"`
-	Host           string                 `protobuf:"bytes,7,opt,name=host,proto3" json:"host,omitempty"`
-	Port           *uint32                `protobuf:"varint,8,opt,name=port,proto3,oneof" json:"port,omitempty"`
-	SessionMode    TurnSessionMode        `protobuf:"varint,9,opt,name=session_mode,json=sessionMode,proto3,enum=wingsv.TurnSessionMode" json:"session_mode,omitempty"`
-	Links          []string               `protobuf:"bytes,10,rep,name=links,proto3" json:"links,omitempty"`
-	LinkSecondary  string                 `protobuf:"bytes,11,opt,name=link_secondary,json=linkSecondary,proto3" json:"link_secondary,omitempty"`
-	CredsGroupSize *uint32                `protobuf:"varint,12,opt,name=creds_group_size,json=credsGroupSize,proto3,oneof" json:"creds_group_size,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Endpoint               *Endpoint              `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	Link                   string                 `protobuf:"bytes,2,opt,name=link,proto3" json:"link,omitempty"`
+	Threads                *uint32                `protobuf:"varint,3,opt,name=threads,proto3,oneof" json:"threads,omitempty"`
+	UseUdp                 *bool                  `protobuf:"varint,4,opt,name=use_udp,json=useUdp,proto3,oneof" json:"use_udp,omitempty"`
+	NoObfuscation          *bool                  `protobuf:"varint,5,opt,name=no_obfuscation,json=noObfuscation,proto3,oneof" json:"no_obfuscation,omitempty"`
+	LocalEndpoint          *Endpoint              `protobuf:"bytes,6,opt,name=local_endpoint,json=localEndpoint,proto3" json:"local_endpoint,omitempty"`
+	Host                   string                 `protobuf:"bytes,7,opt,name=host,proto3" json:"host,omitempty"`
+	Port                   *uint32                `protobuf:"varint,8,opt,name=port,proto3,oneof" json:"port,omitempty"`
+	SessionMode            TurnSessionMode        `protobuf:"varint,9,opt,name=session_mode,json=sessionMode,proto3,enum=wingsv.TurnSessionMode" json:"session_mode,omitempty"`
+	Links                  []string               `protobuf:"bytes,10,rep,name=links,proto3" json:"links,omitempty"`
+	LinkSecondary          string                 `protobuf:"bytes,11,opt,name=link_secondary,json=linkSecondary,proto3" json:"link_secondary,omitempty"`
+	CredsGroupSize         *uint32                `protobuf:"varint,12,opt,name=creds_group_size,json=credsGroupSize,proto3,oneof" json:"creds_group_size,omitempty"`
+	ManualCaptcha          *bool                  `protobuf:"varint,13,opt,name=manual_captcha,json=manualCaptcha,proto3,oneof" json:"manual_captcha,omitempty"`
+	CaptchaAutoSolver      string                 `protobuf:"bytes,14,opt,name=captcha_auto_solver,json=captchaAutoSolver,proto3" json:"captcha_auto_solver,omitempty"`
+	RestartOnNetworkChange *bool                  `protobuf:"varint,15,opt,name=restart_on_network_change,json=restartOnNetworkChange,proto3,oneof" json:"restart_on_network_change,omitempty"`
+	RuntimeMode            ProxyRuntimeMode       `protobuf:"varint,16,opt,name=runtime_mode,json=runtimeMode,proto3,enum=wingsv.ProxyRuntimeMode" json:"runtime_mode,omitempty"`
+	// Пользовательские DNS-резолверы, ставятся ПЕРЕД встроенным (yandex →
+	// google → cloudflare). Каждая запись - одна строка в формате URL:
+	//
+	//	https://dns.example/dns-query  (DoH)
+	//	udp://77.88.8.8:53             (plain UDP/53; порт необязателен)
+	//	77.88.8.8                      (то же самое, plain UDP/53)
+	//
+	// Записи без ответа на bootstrap-резолюции просто отбрасываются;
+	// в любом случае встроенный список остаётся как fallback.
+	UserDns []string `protobuf:"bytes,17,rep,name=user_dns,json=userDns,proto3" json:"user_dns,omitempty"`
+	// Какой туннель пускать поверх VK TURN userspace-прокси: WG или AWG.
+	// UNSPECIFIED трактуется как WIREGUARD (поведение до введения поля).
+	TunnelMode TunnelMode `protobuf:"varint,18,opt,name=tunnel_mode,json=tunnelMode,proto3,enum=wingsv.TunnelMode" json:"tunnel_mode,omitempty"`
+	// Режим WRAP per-packet obfuscation. UNSPECIFIED ≡ PREFERRED.
+	WrapMode WrapMode `protobuf:"varint,19,opt,name=wrap_mode,json=wrapMode,proto3,enum=wingsv.WrapMode" json:"wrap_mode,omitempty"`
+	// Pre-shared ключ для WRAP (32 байта для AES-256-CTR/ChaCha20-XOR).
+	// Пустое поле = клиент сгенерирует случайный ключ при первом запуске.
+	WrapKey []byte `protobuf:"bytes,20,opt,name=wrap_key,json=wrapKey,proto3" json:"wrap_key,omitempty"`
+	// Список разрешённых шифров в порядке предпочтения (первый - наиболее
+	// желательный). Пустой ≡ [AES_256_CTR].
+	WrapCiphers []WrapCipher `protobuf:"varint,21,rep,packed,name=wrap_ciphers,json=wrapCiphers,proto3,enum=wingsv.WrapCipher" json:"wrap_ciphers,omitempty"`
+	// Передавать wrap_key in-band через mu/v1 SessionHello.
+	// По умолчанию (UNSPECIFIED) - true. ON_FALSE отключает передачу
+	// (сервер обязан иметь preset).
+	WrapKeyDelivery WrapKeyDelivery `protobuf:"varint,22,opt,name=wrap_key_delivery,json=wrapKeyDelivery,proto3,enum=wingsv.WrapKeyDelivery" json:"wrap_key_delivery,omitempty"`
+	// Optional profile title carried by single-profile share links (built from a
+	// saved VK TURN profile). Empty in legacy / full-settings exports; the
+	// importer synthesizes a title when this is empty. The referenced transport
+	// (WG or AWG sub-config) travels in the same Config alongside this Turn.
+	Title string `protobuf:"bytes,23,opt,name=title,proto3" json:"title,omitempty"`
+	// Multi-profile library for the VK TURN backend (mirrors Xray). The active
+	// profile is projected onto the flat fields above at runtime.
+	ActiveProfileId string         `protobuf:"bytes,24,opt,name=active_profile_id,json=activeProfileId,proto3" json:"active_profile_id,omitempty"`
+	Profiles        []*TurnProfile `protobuf:"bytes,25,rep,name=profiles,proto3" json:"profiles,omitempty"`
+	MergeOnly       *bool          `protobuf:"varint,26,opt,name=merge_only,json=mergeOnly,proto3,oneof" json:"merge_only,omitempty"`
+	// Семейство браузерного отпечатка для HTTP+TLS-имитации relay'ем:
+	// "auto" | "chrome" | "edge" | "safari" | "firefox". Пусто / "auto" - relay
+	// выбирает случайный профиль на сессию; остальные фиксируют одно семейство.
+	BrowserFingerprint string `protobuf:"bytes,27,opt,name=browser_fingerprint,json=browserFingerprint,proto3" json:"browser_fingerprint,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *Turn) Reset() {
 	*x = Turn{}
-	mi := &file_wingsv_proto_msgTypes[5]
+	mi := &file_wingsv_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -721,7 +2031,7 @@ func (x *Turn) String() string {
 func (*Turn) ProtoMessage() {}
 
 func (x *Turn) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[5]
+	mi := &file_wingsv_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -734,7 +2044,7 @@ func (x *Turn) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Turn.ProtoReflect.Descriptor instead.
 func (*Turn) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{5}
+	return file_wingsv_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Turn) GetEndpoint() *Endpoint {
@@ -821,18 +2131,303 @@ func (x *Turn) GetCredsGroupSize() uint32 {
 	return 0
 }
 
+func (x *Turn) GetManualCaptcha() bool {
+	if x != nil && x.ManualCaptcha != nil {
+		return *x.ManualCaptcha
+	}
+	return false
+}
+
+func (x *Turn) GetCaptchaAutoSolver() string {
+	if x != nil {
+		return x.CaptchaAutoSolver
+	}
+	return ""
+}
+
+func (x *Turn) GetRestartOnNetworkChange() bool {
+	if x != nil && x.RestartOnNetworkChange != nil {
+		return *x.RestartOnNetworkChange
+	}
+	return false
+}
+
+func (x *Turn) GetRuntimeMode() ProxyRuntimeMode {
+	if x != nil {
+		return x.RuntimeMode
+	}
+	return ProxyRuntimeMode_PROXY_RUNTIME_MODE_UNSPECIFIED
+}
+
+func (x *Turn) GetUserDns() []string {
+	if x != nil {
+		return x.UserDns
+	}
+	return nil
+}
+
+func (x *Turn) GetTunnelMode() TunnelMode {
+	if x != nil {
+		return x.TunnelMode
+	}
+	return TunnelMode_TUNNEL_MODE_UNSPECIFIED
+}
+
+func (x *Turn) GetWrapMode() WrapMode {
+	if x != nil {
+		return x.WrapMode
+	}
+	return WrapMode_WRAP_MODE_UNSPECIFIED
+}
+
+func (x *Turn) GetWrapKey() []byte {
+	if x != nil {
+		return x.WrapKey
+	}
+	return nil
+}
+
+func (x *Turn) GetWrapCiphers() []WrapCipher {
+	if x != nil {
+		return x.WrapCiphers
+	}
+	return nil
+}
+
+func (x *Turn) GetWrapKeyDelivery() WrapKeyDelivery {
+	if x != nil {
+		return x.WrapKeyDelivery
+	}
+	return WrapKeyDelivery_WRAP_KEY_DELIVERY_UNSPECIFIED
+}
+
+func (x *Turn) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Turn) GetActiveProfileId() string {
+	if x != nil {
+		return x.ActiveProfileId
+	}
+	return ""
+}
+
+func (x *Turn) GetProfiles() []*TurnProfile {
+	if x != nil {
+		return x.Profiles
+	}
+	return nil
+}
+
+func (x *Turn) GetMergeOnly() bool {
+	if x != nil && x.MergeOnly != nil {
+		return *x.MergeOnly
+	}
+	return false
+}
+
+func (x *Turn) GetBrowserFingerprint() string {
+	if x != nil {
+		return x.BrowserFingerprint
+	}
+	return ""
+}
+
+type TurnProfile struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// "wg" | "awg" - which transport the VK TURN proxy runs over.
+	TransportKind string `protobuf:"bytes,3,opt,name=transport_kind,json=transportKind,proto3" json:"transport_kind,omitempty"`
+	// Reference (by id) to the WireGuardProfile / AmneziaProfile that carries the
+	// transport. The referenced profile travels in the same Config's wg.profiles /
+	// awg.profiles - this is NOT an embedded copy.
+	TransportProfileId string `protobuf:"bytes,4,opt,name=transport_profile_id,json=transportProfileId,proto3" json:"transport_profile_id,omitempty"`
+	VkTurnEndpoint     string `protobuf:"bytes,5,opt,name=vk_turn_endpoint,json=vkTurnEndpoint,proto3" json:"vk_turn_endpoint,omitempty"`
+	// Per-profile VK TURN proxy settings (threads/wrap/dns/...). The inner Turn is
+	// never populated with its own profiles.
+	Config            *Turn  `protobuf:"bytes,6,opt,name=config,proto3" json:"config,omitempty"`
+	SubscriptionId    string `protobuf:"bytes,7,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
+	SubscriptionTitle string `protobuf:"bytes,8,opt,name=subscription_title,json=subscriptionTitle,proto3" json:"subscription_title,omitempty"`
+	// "account" | "anonymous" - UI "Use VK ID" toggle. Not carried by the inner
+	// Turn message, so it lives here directly.
+	VkAuthMode string `protobuf:"bytes,9,opt,name=vk_auth_mode,json=vkAuthMode,proto3" json:"vk_auth_mode,omitempty"`
+	// "auto" | "udp" | "doh" - UI "DNS resolver" list (shared VK TURN / WB Stream
+	// setting). Not carried by the inner Turn message.
+	DnsMode string `protobuf:"bytes,10,opt,name=dns_mode,json=dnsMode,proto3" json:"dns_mode,omitempty"`
+	// Managed profile: the wg/awg transport is provisioned dynamically by the node
+	// over the DTLS PROVISION exchange rather than referenced via
+	// transport_profile_id. The app calls AppControl.Provision with the fields
+	// below and applies the returned config; the editor shows the wg/awg fields
+	// read-only.
+	WgProvisioned     bool   `protobuf:"varint,11,opt,name=wg_provisioned,json=wgProvisioned,proto3" json:"wg_provisioned,omitempty"`
+	ProvisionClientId string `protobuf:"bytes,12,opt,name=provision_client_id,json=provisionClientId,proto3" json:"provision_client_id,omitempty"`
+	ProvisionToken    []byte `protobuf:"bytes,13,opt,name=provision_token,json=provisionToken,proto3" json:"provision_token,omitempty"`
+	// Настройками этого профиля распоряжается сервер, а не человек. Профиль из
+	// подписки это выданный доступ, а не личный конфиг: тумблер, случайно
+	// задетый пальцем, ломает связь, и человек идёт не в настройки разбираться,
+	// а писать "у вас не работает". Поля такого профиля в редакторе заблокированы,
+	// а значения приезжают сверху и обновляются вместе с подпиской.
+	// Значения едут в config: когда в инфраструктуре звонков что-то меняется,
+	// чинится это сменой настройки в подписке, а не выкаткой новой версии
+	// приложения и ожиданием, пока все обновятся.
+	ManagedSettings bool `protobuf:"varint,14,opt,name=managed_settings,json=managedSettings,proto3" json:"managed_settings,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *TurnProfile) Reset() {
+	*x = TurnProfile{}
+	mi := &file_wingsv_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TurnProfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TurnProfile) ProtoMessage() {}
+
+func (x *TurnProfile) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TurnProfile.ProtoReflect.Descriptor instead.
+func (*TurnProfile) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *TurnProfile) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetTransportKind() string {
+	if x != nil {
+		return x.TransportKind
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetTransportProfileId() string {
+	if x != nil {
+		return x.TransportProfileId
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetVkTurnEndpoint() string {
+	if x != nil {
+		return x.VkTurnEndpoint
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetConfig() *Turn {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
+func (x *TurnProfile) GetSubscriptionId() string {
+	if x != nil {
+		return x.SubscriptionId
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetSubscriptionTitle() string {
+	if x != nil {
+		return x.SubscriptionTitle
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetVkAuthMode() string {
+	if x != nil {
+		return x.VkAuthMode
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetDnsMode() string {
+	if x != nil {
+		return x.DnsMode
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetWgProvisioned() bool {
+	if x != nil {
+		return x.WgProvisioned
+	}
+	return false
+}
+
+func (x *TurnProfile) GetProvisionClientId() string {
+	if x != nil {
+		return x.ProvisionClientId
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetProvisionToken() []byte {
+	if x != nil {
+		return x.ProvisionToken
+	}
+	return nil
+}
+
+func (x *TurnProfile) GetManagedSettings() bool {
+	if x != nil {
+		return x.ManagedSettings
+	}
+	return false
+}
+
 type WireGuard struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Iface         *Interface             `protobuf:"bytes,1,opt,name=iface,proto3" json:"iface,omitempty"`
-	Peer          *Peer                  `protobuf:"bytes,2,opt,name=peer,proto3" json:"peer,omitempty"`
-	Endpoint      *Endpoint              `protobuf:"bytes,3,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Iface    *Interface             `protobuf:"bytes,1,opt,name=iface,proto3" json:"iface,omitempty"`
+	Peer     *Peer                  `protobuf:"bytes,2,opt,name=peer,proto3" json:"peer,omitempty"`
+	Endpoint *Endpoint              `protobuf:"bytes,3,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	// Optional profile title carried by single-profile share links (built from a
+	// saved WireGuard profile). Empty in legacy / full-settings exports; the
+	// importer synthesizes a title when this is empty.
+	Title string `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	// Multi-profile library for the standalone WireGuard backend (mirrors Xray).
+	// The active profile is projected onto the flat fields above at runtime.
+	ActiveProfileId string              `protobuf:"bytes,5,opt,name=active_profile_id,json=activeProfileId,proto3" json:"active_profile_id,omitempty"`
+	Profiles        []*WireGuardProfile `protobuf:"bytes,6,rep,name=profiles,proto3" json:"profiles,omitempty"`
+	MergeOnly       *bool               `protobuf:"varint,7,opt,name=merge_only,json=mergeOnly,proto3,oneof" json:"merge_only,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *WireGuard) Reset() {
 	*x = WireGuard{}
-	mi := &file_wingsv_proto_msgTypes[6]
+	mi := &file_wingsv_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -844,7 +2439,7 @@ func (x *WireGuard) String() string {
 func (*WireGuard) ProtoMessage() {}
 
 func (x *WireGuard) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[6]
+	mi := &file_wingsv_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -857,7 +2452,7 @@ func (x *WireGuard) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WireGuard.ProtoReflect.Descriptor instead.
 func (*WireGuard) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{6}
+	return file_wingsv_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *WireGuard) GetIface() *Interface {
@@ -881,6 +2476,126 @@ func (x *WireGuard) GetEndpoint() *Endpoint {
 	return nil
 }
 
+func (x *WireGuard) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *WireGuard) GetActiveProfileId() string {
+	if x != nil {
+		return x.ActiveProfileId
+	}
+	return ""
+}
+
+func (x *WireGuard) GetProfiles() []*WireGuardProfile {
+	if x != nil {
+		return x.Profiles
+	}
+	return nil
+}
+
+func (x *WireGuard) GetMergeOnly() bool {
+	if x != nil && x.MergeOnly != nil {
+		return *x.MergeOnly
+	}
+	return false
+}
+
+type WireGuardProfile struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title             string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Iface             *Interface             `protobuf:"bytes,3,opt,name=iface,proto3" json:"iface,omitempty"`
+	Peer              *Peer                  `protobuf:"bytes,4,opt,name=peer,proto3" json:"peer,omitempty"`
+	Endpoint          *Endpoint              `protobuf:"bytes,5,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	SubscriptionId    string                 `protobuf:"bytes,6,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
+	SubscriptionTitle string                 `protobuf:"bytes,7,opt,name=subscription_title,json=subscriptionTitle,proto3" json:"subscription_title,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *WireGuardProfile) Reset() {
+	*x = WireGuardProfile{}
+	mi := &file_wingsv_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WireGuardProfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WireGuardProfile) ProtoMessage() {}
+
+func (x *WireGuardProfile) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WireGuardProfile.ProtoReflect.Descriptor instead.
+func (*WireGuardProfile) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *WireGuardProfile) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *WireGuardProfile) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *WireGuardProfile) GetIface() *Interface {
+	if x != nil {
+		return x.Iface
+	}
+	return nil
+}
+
+func (x *WireGuardProfile) GetPeer() *Peer {
+	if x != nil {
+		return x.Peer
+	}
+	return nil
+}
+
+func (x *WireGuardProfile) GetEndpoint() *Endpoint {
+	if x != nil {
+		return x.Endpoint
+	}
+	return nil
+}
+
+func (x *WireGuardProfile) GetSubscriptionId() string {
+	if x != nil {
+		return x.SubscriptionId
+	}
+	return ""
+}
+
+func (x *WireGuardProfile) GetSubscriptionTitle() string {
+	if x != nil {
+		return x.SubscriptionTitle
+	}
+	return ""
+}
+
 type Interface struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PrivateKey    []byte                 `protobuf:"bytes,1,opt,name=private_key,json=privateKey,proto3" json:"private_key,omitempty"`
@@ -893,7 +2608,7 @@ type Interface struct {
 
 func (x *Interface) Reset() {
 	*x = Interface{}
-	mi := &file_wingsv_proto_msgTypes[7]
+	mi := &file_wingsv_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -905,7 +2620,7 @@ func (x *Interface) String() string {
 func (*Interface) ProtoMessage() {}
 
 func (x *Interface) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[7]
+	mi := &file_wingsv_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -918,7 +2633,7 @@ func (x *Interface) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Interface.ProtoReflect.Descriptor instead.
 func (*Interface) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{7}
+	return file_wingsv_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Interface) GetPrivateKey() []byte {
@@ -960,7 +2675,7 @@ type Peer struct {
 
 func (x *Peer) Reset() {
 	*x = Peer{}
-	mi := &file_wingsv_proto_msgTypes[8]
+	mi := &file_wingsv_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -972,7 +2687,7 @@ func (x *Peer) String() string {
 func (*Peer) ProtoMessage() {}
 
 func (x *Peer) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[8]
+	mi := &file_wingsv_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -985,7 +2700,7 @@ func (x *Peer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Peer.ProtoReflect.Descriptor instead.
 func (*Peer) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{8}
+	return file_wingsv_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Peer) GetPublicKey() []byte {
@@ -1024,7 +2739,7 @@ type Xray struct {
 
 func (x *Xray) Reset() {
 	*x = Xray{}
-	mi := &file_wingsv_proto_msgTypes[9]
+	mi := &file_wingsv_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1036,7 +2751,7 @@ func (x *Xray) String() string {
 func (*Xray) ProtoMessage() {}
 
 func (x *Xray) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[9]
+	mi := &file_wingsv_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1049,7 +2764,7 @@ func (x *Xray) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Xray.ProtoReflect.Descriptor instead.
 func (*Xray) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{9}
+	return file_wingsv_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Xray) GetActiveProfileId() string {
@@ -1102,16 +2817,24 @@ func (x *Xray) GetRouting() *XrayRouting {
 }
 
 type AppRouting struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Bypass        *bool                  `protobuf:"varint,1,opt,name=bypass,proto3,oneof" json:"bypass,omitempty"`
-	Packages      []string               `protobuf:"bytes,2,rep,name=packages,proto3" json:"packages,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// bypass поле унаследовано от старой версии: true -> BYPASS, false -> WHITELIST.
+	// Используется только для миграции и совместимости со старыми экспортами.
+	// Новые клиенты должны выставлять mode и соответствующий *_packages.
+	Bypass *bool `protobuf:"varint,1,opt,name=bypass,proto3,oneof" json:"bypass,omitempty"`
+	// Унаследованный единый список пакетов. При импорте кладётся в bypass_packages
+	// или whitelist_packages в зависимости от mode/bypass.
+	Packages          []string       `protobuf:"bytes,2,rep,name=packages,proto3" json:"packages,omitempty"`
+	Mode              AppRoutingMode `protobuf:"varint,3,opt,name=mode,proto3,enum=wingsv.AppRoutingMode" json:"mode,omitempty"`
+	BypassPackages    []string       `protobuf:"bytes,4,rep,name=bypass_packages,json=bypassPackages,proto3" json:"bypass_packages,omitempty"`
+	WhitelistPackages []string       `protobuf:"bytes,5,rep,name=whitelist_packages,json=whitelistPackages,proto3" json:"whitelist_packages,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *AppRouting) Reset() {
 	*x = AppRouting{}
-	mi := &file_wingsv_proto_msgTypes[10]
+	mi := &file_wingsv_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1123,7 +2846,7 @@ func (x *AppRouting) String() string {
 func (*AppRouting) ProtoMessage() {}
 
 func (x *AppRouting) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[10]
+	mi := &file_wingsv_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1136,7 +2859,7 @@ func (x *AppRouting) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppRouting.ProtoReflect.Descriptor instead.
 func (*AppRouting) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{10}
+	return file_wingsv_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *AppRouting) GetBypass() bool {
@@ -1153,6 +2876,27 @@ func (x *AppRouting) GetPackages() []string {
 	return nil
 }
 
+func (x *AppRouting) GetMode() AppRoutingMode {
+	if x != nil {
+		return x.Mode
+	}
+	return AppRoutingMode_APP_ROUTING_MODE_UNSPECIFIED
+}
+
+func (x *AppRouting) GetBypassPackages() []string {
+	if x != nil {
+		return x.BypassPackages
+	}
+	return nil
+}
+
+func (x *AppRouting) GetWhitelistPackages() []string {
+	if x != nil {
+		return x.WhitelistPackages
+	}
+	return nil
+}
+
 type XrayRouting struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Rules         []*XrayRoutingRule     `protobuf:"bytes,1,rep,name=rules,proto3" json:"rules,omitempty"`
@@ -1164,7 +2908,7 @@ type XrayRouting struct {
 
 func (x *XrayRouting) Reset() {
 	*x = XrayRouting{}
-	mi := &file_wingsv_proto_msgTypes[11]
+	mi := &file_wingsv_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1176,7 +2920,7 @@ func (x *XrayRouting) String() string {
 func (*XrayRouting) ProtoMessage() {}
 
 func (x *XrayRouting) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[11]
+	mi := &file_wingsv_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1189,7 +2933,7 @@ func (x *XrayRouting) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use XrayRouting.ProtoReflect.Descriptor instead.
 func (*XrayRouting) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{11}
+	return file_wingsv_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *XrayRouting) GetRules() []*XrayRoutingRule {
@@ -1226,7 +2970,7 @@ type XrayRoutingRule struct {
 
 func (x *XrayRoutingRule) Reset() {
 	*x = XrayRoutingRule{}
-	mi := &file_wingsv_proto_msgTypes[12]
+	mi := &file_wingsv_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1238,7 +2982,7 @@ func (x *XrayRoutingRule) String() string {
 func (*XrayRoutingRule) ProtoMessage() {}
 
 func (x *XrayRoutingRule) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[12]
+	mi := &file_wingsv_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1251,7 +2995,7 @@ func (x *XrayRoutingRule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use XrayRoutingRule.ProtoReflect.Descriptor instead.
 func (*XrayRoutingRule) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{12}
+	return file_wingsv_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *XrayRoutingRule) GetId() string {
@@ -1305,7 +3049,7 @@ type Subscription struct {
 
 func (x *Subscription) Reset() {
 	*x = Subscription{}
-	mi := &file_wingsv_proto_msgTypes[13]
+	mi := &file_wingsv_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1317,7 +3061,7 @@ func (x *Subscription) String() string {
 func (*Subscription) ProtoMessage() {}
 
 func (x *Subscription) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[13]
+	mi := &file_wingsv_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1330,7 +3074,7 @@ func (x *Subscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Subscription.ProtoReflect.Descriptor instead.
 func (*Subscription) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{13}
+	return file_wingsv_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *Subscription) GetId() string {
@@ -1404,7 +3148,7 @@ type VlessProfile struct {
 
 func (x *VlessProfile) Reset() {
 	*x = VlessProfile{}
-	mi := &file_wingsv_proto_msgTypes[14]
+	mi := &file_wingsv_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1416,7 +3160,7 @@ func (x *VlessProfile) String() string {
 func (*VlessProfile) ProtoMessage() {}
 
 func (x *VlessProfile) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[14]
+	mi := &file_wingsv_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1429,7 +3173,7 @@ func (x *VlessProfile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VlessProfile.ProtoReflect.Descriptor instead.
 func (*VlessProfile) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{14}
+	return file_wingsv_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *VlessProfile) GetId() string {
@@ -1482,28 +3226,46 @@ func (x *VlessProfile) GetPort() uint32 {
 }
 
 type XraySettings struct {
-	state                  protoimpl.MessageState `protogen:"open.v1"`
-	AllowLan               *bool                  `protobuf:"varint,1,opt,name=allow_lan,json=allowLan,proto3,oneof" json:"allow_lan,omitempty"`
-	AllowInsecure          *bool                  `protobuf:"varint,2,opt,name=allow_insecure,json=allowInsecure,proto3,oneof" json:"allow_insecure,omitempty"`
-	LocalProxyPort         *uint32                `protobuf:"varint,3,opt,name=local_proxy_port,json=localProxyPort,proto3,oneof" json:"local_proxy_port,omitempty"`
-	RemoteDns              string                 `protobuf:"bytes,4,opt,name=remote_dns,json=remoteDns,proto3" json:"remote_dns,omitempty"`
-	DirectDns              string                 `protobuf:"bytes,5,opt,name=direct_dns,json=directDns,proto3" json:"direct_dns,omitempty"`
-	Ipv6                   *bool                  `protobuf:"varint,6,opt,name=ipv6,proto3,oneof" json:"ipv6,omitempty"`
-	SniffingEnabled        *bool                  `protobuf:"varint,7,opt,name=sniffing_enabled,json=sniffingEnabled,proto3,oneof" json:"sniffing_enabled,omitempty"`
-	ProxyQuicEnabled       *bool                  `protobuf:"varint,8,opt,name=proxy_quic_enabled,json=proxyQuicEnabled,proto3,oneof" json:"proxy_quic_enabled,omitempty"`
-	LocalProxyEnabled      *bool                  `protobuf:"varint,9,opt,name=local_proxy_enabled,json=localProxyEnabled,proto3,oneof" json:"local_proxy_enabled,omitempty"`
-	LocalProxyAuthEnabled  *bool                  `protobuf:"varint,10,opt,name=local_proxy_auth_enabled,json=localProxyAuthEnabled,proto3,oneof" json:"local_proxy_auth_enabled,omitempty"`
-	LocalProxyUsername     string                 `protobuf:"bytes,11,opt,name=local_proxy_username,json=localProxyUsername,proto3" json:"local_proxy_username,omitempty"`
-	LocalProxyPassword     string                 `protobuf:"bytes,12,opt,name=local_proxy_password,json=localProxyPassword,proto3" json:"local_proxy_password,omitempty"`
-	RestartOnNetworkChange *bool                  `protobuf:"varint,13,opt,name=restart_on_network_change,json=restartOnNetworkChange,proto3,oneof" json:"restart_on_network_change,omitempty"`
-	TransportMode          XrayTransportMode      `protobuf:"varint,14,opt,name=transport_mode,json=transportMode,proto3,enum=wingsv.XrayTransportMode" json:"transport_mode,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	AllowLan *bool                  `protobuf:"varint,1,opt,name=allow_lan,json=allowLan,proto3,oneof" json:"allow_lan,omitempty"`
+	// Ядро больше не принимает allowInsecure и замены ему не даёт, поэтому
+	// приложение поле не читает и не пишет. Номер занят навсегда: старые ссылки
+	// всё ещё могут его нести
+	//
+	// Deprecated: Marked as deprecated in wingsv.proto.
+	AllowInsecure           *bool             `protobuf:"varint,2,opt,name=allow_insecure,json=allowInsecure,proto3,oneof" json:"allow_insecure,omitempty"`
+	LocalProxyPort          *uint32           `protobuf:"varint,3,opt,name=local_proxy_port,json=localProxyPort,proto3,oneof" json:"local_proxy_port,omitempty"`
+	RemoteDns               string            `protobuf:"bytes,4,opt,name=remote_dns,json=remoteDns,proto3" json:"remote_dns,omitempty"`
+	DirectDns               string            `protobuf:"bytes,5,opt,name=direct_dns,json=directDns,proto3" json:"direct_dns,omitempty"`
+	Ipv6                    *bool             `protobuf:"varint,6,opt,name=ipv6,proto3,oneof" json:"ipv6,omitempty"`
+	SniffingEnabled         *bool             `protobuf:"varint,7,opt,name=sniffing_enabled,json=sniffingEnabled,proto3,oneof" json:"sniffing_enabled,omitempty"`
+	ProxyQuicEnabled        *bool             `protobuf:"varint,8,opt,name=proxy_quic_enabled,json=proxyQuicEnabled,proto3,oneof" json:"proxy_quic_enabled,omitempty"`
+	LocalProxyEnabled       *bool             `protobuf:"varint,9,opt,name=local_proxy_enabled,json=localProxyEnabled,proto3,oneof" json:"local_proxy_enabled,omitempty"`
+	LocalProxyAuthEnabled   *bool             `protobuf:"varint,10,opt,name=local_proxy_auth_enabled,json=localProxyAuthEnabled,proto3,oneof" json:"local_proxy_auth_enabled,omitempty"`
+	LocalProxyUsername      string            `protobuf:"bytes,11,opt,name=local_proxy_username,json=localProxyUsername,proto3" json:"local_proxy_username,omitempty"`
+	LocalProxyPassword      string            `protobuf:"bytes,12,opt,name=local_proxy_password,json=localProxyPassword,proto3" json:"local_proxy_password,omitempty"`
+	RestartOnNetworkChange  *bool             `protobuf:"varint,13,opt,name=restart_on_network_change,json=restartOnNetworkChange,proto3,oneof" json:"restart_on_network_change,omitempty"`
+	TransportMode           XrayTransportMode `protobuf:"varint,14,opt,name=transport_mode,json=transportMode,proto3,enum=wingsv.XrayTransportMode" json:"transport_mode,omitempty"`
+	RuntimeMode             ProxyRuntimeMode  `protobuf:"varint,15,opt,name=runtime_mode,json=runtimeMode,proto3,enum=wingsv.ProxyRuntimeMode" json:"runtime_mode,omitempty"`
+	LocalProxyListenAddress string            `protobuf:"bytes,16,opt,name=local_proxy_listen_address,json=localProxyListenAddress,proto3" json:"local_proxy_listen_address,omitempty"`
+	HttpProxyEnabled        *bool             `protobuf:"varint,17,opt,name=http_proxy_enabled,json=httpProxyEnabled,proto3,oneof" json:"http_proxy_enabled,omitempty"`
+	HttpProxyAuthEnabled    *bool             `protobuf:"varint,18,opt,name=http_proxy_auth_enabled,json=httpProxyAuthEnabled,proto3,oneof" json:"http_proxy_auth_enabled,omitempty"`
+	HttpProxyUsername       string            `protobuf:"bytes,19,opt,name=http_proxy_username,json=httpProxyUsername,proto3" json:"http_proxy_username,omitempty"`
+	HttpProxyPassword       string            `protobuf:"bytes,20,opt,name=http_proxy_password,json=httpProxyPassword,proto3" json:"http_proxy_password,omitempty"`
+	HttpProxyPort           *uint32           `protobuf:"varint,21,opt,name=http_proxy_port,json=httpProxyPort,proto3,oneof" json:"http_proxy_port,omitempty"`
+	HttpProxyListenAddress  string            `protobuf:"bytes,22,opt,name=http_proxy_listen_address,json=httpProxyListenAddress,proto3" json:"http_proxy_listen_address,omitempty"`
+	// Способ wake-fast-path проверки после ACTION_SCREEN_ON/USER_PRESENT.
+	// PROCESS - дешёвая проверка XrayBridge.isRunning() + tunFd alive без сети,
+	// дефолт. HTTP_PROBE - старое поведение, GET к 1.1.1.1 через VPN с таймаутом
+	// 7.5s; полезно если нужна сетевая валидация end-to-end. UNSPECIFIED ≡ PROCESS.
+	WakeProbeMode WakeProbeMode `protobuf:"varint,23,opt,name=wake_probe_mode,json=wakeProbeMode,proto3,enum=wingsv.WakeProbeMode" json:"wake_probe_mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *XraySettings) Reset() {
 	*x = XraySettings{}
-	mi := &file_wingsv_proto_msgTypes[15]
+	mi := &file_wingsv_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1515,7 +3277,7 @@ func (x *XraySettings) String() string {
 func (*XraySettings) ProtoMessage() {}
 
 func (x *XraySettings) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[15]
+	mi := &file_wingsv_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1528,7 +3290,7 @@ func (x *XraySettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use XraySettings.ProtoReflect.Descriptor instead.
 func (*XraySettings) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{15}
+	return file_wingsv_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *XraySettings) GetAllowLan() bool {
@@ -1538,6 +3300,7 @@ func (x *XraySettings) GetAllowLan() bool {
 	return false
 }
 
+// Deprecated: Marked as deprecated in wingsv.proto.
 func (x *XraySettings) GetAllowInsecure() bool {
 	if x != nil && x.AllowInsecure != nil {
 		return *x.AllowInsecure
@@ -1629,11 +3392,882 @@ func (x *XraySettings) GetTransportMode() XrayTransportMode {
 	return XrayTransportMode_XRAY_TRANSPORT_MODE_UNSPECIFIED
 }
 
+func (x *XraySettings) GetRuntimeMode() ProxyRuntimeMode {
+	if x != nil {
+		return x.RuntimeMode
+	}
+	return ProxyRuntimeMode_PROXY_RUNTIME_MODE_UNSPECIFIED
+}
+
+func (x *XraySettings) GetLocalProxyListenAddress() string {
+	if x != nil {
+		return x.LocalProxyListenAddress
+	}
+	return ""
+}
+
+func (x *XraySettings) GetHttpProxyEnabled() bool {
+	if x != nil && x.HttpProxyEnabled != nil {
+		return *x.HttpProxyEnabled
+	}
+	return false
+}
+
+func (x *XraySettings) GetHttpProxyAuthEnabled() bool {
+	if x != nil && x.HttpProxyAuthEnabled != nil {
+		return *x.HttpProxyAuthEnabled
+	}
+	return false
+}
+
+func (x *XraySettings) GetHttpProxyUsername() string {
+	if x != nil {
+		return x.HttpProxyUsername
+	}
+	return ""
+}
+
+func (x *XraySettings) GetHttpProxyPassword() string {
+	if x != nil {
+		return x.HttpProxyPassword
+	}
+	return ""
+}
+
+func (x *XraySettings) GetHttpProxyPort() uint32 {
+	if x != nil && x.HttpProxyPort != nil {
+		return *x.HttpProxyPort
+	}
+	return 0
+}
+
+func (x *XraySettings) GetHttpProxyListenAddress() string {
+	if x != nil {
+		return x.HttpProxyListenAddress
+	}
+	return ""
+}
+
+func (x *XraySettings) GetWakeProbeMode() WakeProbeMode {
+	if x != nil {
+		return x.WakeProbeMode
+	}
+	return WakeProbeMode_WAKE_PROBE_MODE_UNSPECIFIED
+}
+
+type Xposed struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Enabled           *bool                  `protobuf:"varint,1,opt,name=enabled,proto3,oneof" json:"enabled,omitempty"`
+	AllApps           *bool                  `protobuf:"varint,2,opt,name=all_apps,json=allApps,proto3,oneof" json:"all_apps,omitempty"`
+	NativeHookEnabled *bool                  `protobuf:"varint,3,opt,name=native_hook_enabled,json=nativeHookEnabled,proto3,oneof" json:"native_hook_enabled,omitempty"`
+	HideVpnApps       *bool                  `protobuf:"varint,5,opt,name=hide_vpn_apps,json=hideVpnApps,proto3,oneof" json:"hide_vpn_apps,omitempty"`
+	HideFromDumpsys   *bool                  `protobuf:"varint,6,opt,name=hide_from_dumpsys,json=hideFromDumpsys,proto3,oneof" json:"hide_from_dumpsys,omitempty"`
+	ProcfsHookMode    XposedProcfsHookMode   `protobuf:"varint,7,opt,name=procfs_hook_mode,json=procfsHookMode,proto3,enum=wingsv.XposedProcfsHookMode" json:"procfs_hook_mode,omitempty"`
+	IcmpSpoofingMode  XposedIcmpSpoofingMode `protobuf:"varint,8,opt,name=icmp_spoofing_mode,json=icmpSpoofingMode,proto3,enum=wingsv.XposedIcmpSpoofingMode" json:"icmp_spoofing_mode,omitempty"`
+	TargetPackages    []string               `protobuf:"bytes,9,rep,name=target_packages,json=targetPackages,proto3" json:"target_packages,omitempty"`
+	HiddenVpnPackages []string               `protobuf:"bytes,10,rep,name=hidden_vpn_packages,json=hiddenVpnPackages,proto3" json:"hidden_vpn_packages,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *Xposed) Reset() {
+	*x = Xposed{}
+	mi := &file_wingsv_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Xposed) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Xposed) ProtoMessage() {}
+
+func (x *Xposed) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Xposed.ProtoReflect.Descriptor instead.
+func (*Xposed) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *Xposed) GetEnabled() bool {
+	if x != nil && x.Enabled != nil {
+		return *x.Enabled
+	}
+	return false
+}
+
+func (x *Xposed) GetAllApps() bool {
+	if x != nil && x.AllApps != nil {
+		return *x.AllApps
+	}
+	return false
+}
+
+func (x *Xposed) GetNativeHookEnabled() bool {
+	if x != nil && x.NativeHookEnabled != nil {
+		return *x.NativeHookEnabled
+	}
+	return false
+}
+
+func (x *Xposed) GetHideVpnApps() bool {
+	if x != nil && x.HideVpnApps != nil {
+		return *x.HideVpnApps
+	}
+	return false
+}
+
+func (x *Xposed) GetHideFromDumpsys() bool {
+	if x != nil && x.HideFromDumpsys != nil {
+		return *x.HideFromDumpsys
+	}
+	return false
+}
+
+func (x *Xposed) GetProcfsHookMode() XposedProcfsHookMode {
+	if x != nil {
+		return x.ProcfsHookMode
+	}
+	return XposedProcfsHookMode_XPOSED_PROCFS_HOOK_MODE_UNSPECIFIED
+}
+
+func (x *Xposed) GetIcmpSpoofingMode() XposedIcmpSpoofingMode {
+	if x != nil {
+		return x.IcmpSpoofingMode
+	}
+	return XposedIcmpSpoofingMode_XPOSED_ICMP_SPOOFING_MODE_UNSPECIFIED
+}
+
+func (x *Xposed) GetTargetPackages() []string {
+	if x != nil {
+		return x.TargetPackages
+	}
+	return nil
+}
+
+func (x *Xposed) GetHiddenVpnPackages() []string {
+	if x != nil {
+		return x.HiddenVpnPackages
+	}
+	return nil
+}
+
+type RootSettings struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Enabled         *bool                  `protobuf:"varint,1,opt,name=enabled,proto3,oneof" json:"enabled,omitempty"`
+	KernelWireguard *bool                  `protobuf:"varint,2,opt,name=kernel_wireguard,json=kernelWireguard,proto3,oneof" json:"kernel_wireguard,omitempty"`
+	XrayTproxyMode  *bool                  `protobuf:"varint,3,opt,name=xray_tproxy_mode,json=xrayTproxyMode,proto3,oneof" json:"xray_tproxy_mode,omitempty"`
+	WgInterfaceName string                 `protobuf:"bytes,4,opt,name=wg_interface_name,json=wgInterfaceName,proto3" json:"wg_interface_name,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *RootSettings) Reset() {
+	*x = RootSettings{}
+	mi := &file_wingsv_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RootSettings) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RootSettings) ProtoMessage() {}
+
+func (x *RootSettings) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RootSettings.ProtoReflect.Descriptor instead.
+func (*RootSettings) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *RootSettings) GetEnabled() bool {
+	if x != nil && x.Enabled != nil {
+		return *x.Enabled
+	}
+	return false
+}
+
+func (x *RootSettings) GetKernelWireguard() bool {
+	if x != nil && x.KernelWireguard != nil {
+		return *x.KernelWireguard
+	}
+	return false
+}
+
+func (x *RootSettings) GetXrayTproxyMode() bool {
+	if x != nil && x.XrayTproxyMode != nil {
+		return *x.XrayTproxyMode
+	}
+	return false
+}
+
+func (x *RootSettings) GetWgInterfaceName() string {
+	if x != nil {
+		return x.WgInterfaceName
+	}
+	return ""
+}
+
+type AppPreferences struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	ThemeMode       ThemeMode              `protobuf:"varint,1,opt,name=theme_mode,json=themeMode,proto3,enum=wingsv.ThemeMode" json:"theme_mode,omitempty"`
+	AutoStartOnBoot *bool                  `protobuf:"varint,2,opt,name=auto_start_on_boot,json=autoStartOnBoot,proto3,oneof" json:"auto_start_on_boot,omitempty"`
+	DnsMode         DnsMode                `protobuf:"varint,3,opt,name=dns_mode,json=dnsMode,proto3,enum=wingsv.DnsMode" json:"dns_mode,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *AppPreferences) Reset() {
+	*x = AppPreferences{}
+	mi := &file_wingsv_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AppPreferences) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AppPreferences) ProtoMessage() {}
+
+func (x *AppPreferences) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AppPreferences.ProtoReflect.Descriptor instead.
+func (*AppPreferences) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *AppPreferences) GetThemeMode() ThemeMode {
+	if x != nil {
+		return x.ThemeMode
+	}
+	return ThemeMode_THEME_MODE_UNSPECIFIED
+}
+
+func (x *AppPreferences) GetAutoStartOnBoot() bool {
+	if x != nil && x.AutoStartOnBoot != nil {
+		return *x.AutoStartOnBoot
+	}
+	return false
+}
+
+func (x *AppPreferences) GetDnsMode() DnsMode {
+	if x != nil {
+		return x.DnsMode
+	}
+	return DnsMode_DNS_MODE_UNSPECIFIED
+}
+
+type SubscriptionHwid struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enabled       *bool                  `protobuf:"varint,1,opt,name=enabled,proto3,oneof" json:"enabled,omitempty"`
+	ManualEnabled *bool                  `protobuf:"varint,2,opt,name=manual_enabled,json=manualEnabled,proto3,oneof" json:"manual_enabled,omitempty"`
+	Value         string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	DeviceOs      string                 `protobuf:"bytes,4,opt,name=device_os,json=deviceOs,proto3" json:"device_os,omitempty"`
+	VerOs         string                 `protobuf:"bytes,5,opt,name=ver_os,json=verOs,proto3" json:"ver_os,omitempty"`
+	DeviceModel   string                 `protobuf:"bytes,6,opt,name=device_model,json=deviceModel,proto3" json:"device_model,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubscriptionHwid) Reset() {
+	*x = SubscriptionHwid{}
+	mi := &file_wingsv_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubscriptionHwid) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubscriptionHwid) ProtoMessage() {}
+
+func (x *SubscriptionHwid) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubscriptionHwid.ProtoReflect.Descriptor instead.
+func (*SubscriptionHwid) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *SubscriptionHwid) GetEnabled() bool {
+	if x != nil && x.Enabled != nil {
+		return *x.Enabled
+	}
+	return false
+}
+
+func (x *SubscriptionHwid) GetManualEnabled() bool {
+	if x != nil && x.ManualEnabled != nil {
+		return *x.ManualEnabled
+	}
+	return false
+}
+
+func (x *SubscriptionHwid) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *SubscriptionHwid) GetDeviceOs() string {
+	if x != nil {
+		return x.DeviceOs
+	}
+	return ""
+}
+
+func (x *SubscriptionHwid) GetVerOs() string {
+	if x != nil {
+		return x.VerOs
+	}
+	return ""
+}
+
+func (x *SubscriptionHwid) GetDeviceModel() string {
+	if x != nil {
+		return x.DeviceModel
+	}
+	return ""
+}
+
+type Sharing struct {
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	AutoStartOnBoot           *bool                  `protobuf:"varint,1,opt,name=auto_start_on_boot,json=autoStartOnBoot,proto3,oneof" json:"auto_start_on_boot,omitempty"`
+	LastActiveTypes           []string               `protobuf:"bytes,2,rep,name=last_active_types,json=lastActiveTypes,proto3" json:"last_active_types,omitempty"`
+	UpstreamInterface         string                 `protobuf:"bytes,3,opt,name=upstream_interface,json=upstreamInterface,proto3" json:"upstream_interface,omitempty"`
+	FallbackUpstreamInterface string                 `protobuf:"bytes,4,opt,name=fallback_upstream_interface,json=fallbackUpstreamInterface,proto3" json:"fallback_upstream_interface,omitempty"`
+	MasqueradeMode            SharingMasqueradeMode  `protobuf:"varint,5,opt,name=masquerade_mode,json=masqueradeMode,proto3,enum=wingsv.SharingMasqueradeMode" json:"masquerade_mode,omitempty"`
+	DisableIpv6               *bool                  `protobuf:"varint,6,opt,name=disable_ipv6,json=disableIpv6,proto3,oneof" json:"disable_ipv6,omitempty"`
+	DhcpWorkaround            *bool                  `protobuf:"varint,7,opt,name=dhcp_workaround,json=dhcpWorkaround,proto3,oneof" json:"dhcp_workaround,omitempty"`
+	WifiLock                  SharingWifiLock        `protobuf:"varint,8,opt,name=wifi_lock,json=wifiLock,proto3,enum=wingsv.SharingWifiLock" json:"wifi_lock,omitempty"`
+	RepeaterSafeMode          *bool                  `protobuf:"varint,9,opt,name=repeater_safe_mode,json=repeaterSafeMode,proto3,oneof" json:"repeater_safe_mode,omitempty"`
+	TempHotspotUseSystem      *bool                  `protobuf:"varint,10,opt,name=temp_hotspot_use_system,json=tempHotspotUseSystem,proto3,oneof" json:"temp_hotspot_use_system,omitempty"`
+	IpMonitorMode             SharingIpMonitorMode   `protobuf:"varint,11,opt,name=ip_monitor_mode,json=ipMonitorMode,proto3,enum=wingsv.SharingIpMonitorMode" json:"ip_monitor_mode,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *Sharing) Reset() {
+	*x = Sharing{}
+	mi := &file_wingsv_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Sharing) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Sharing) ProtoMessage() {}
+
+func (x *Sharing) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Sharing.ProtoReflect.Descriptor instead.
+func (*Sharing) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *Sharing) GetAutoStartOnBoot() bool {
+	if x != nil && x.AutoStartOnBoot != nil {
+		return *x.AutoStartOnBoot
+	}
+	return false
+}
+
+func (x *Sharing) GetLastActiveTypes() []string {
+	if x != nil {
+		return x.LastActiveTypes
+	}
+	return nil
+}
+
+func (x *Sharing) GetUpstreamInterface() string {
+	if x != nil {
+		return x.UpstreamInterface
+	}
+	return ""
+}
+
+func (x *Sharing) GetFallbackUpstreamInterface() string {
+	if x != nil {
+		return x.FallbackUpstreamInterface
+	}
+	return ""
+}
+
+func (x *Sharing) GetMasqueradeMode() SharingMasqueradeMode {
+	if x != nil {
+		return x.MasqueradeMode
+	}
+	return SharingMasqueradeMode_SHARING_MASQUERADE_MODE_UNSPECIFIED
+}
+
+func (x *Sharing) GetDisableIpv6() bool {
+	if x != nil && x.DisableIpv6 != nil {
+		return *x.DisableIpv6
+	}
+	return false
+}
+
+func (x *Sharing) GetDhcpWorkaround() bool {
+	if x != nil && x.DhcpWorkaround != nil {
+		return *x.DhcpWorkaround
+	}
+	return false
+}
+
+func (x *Sharing) GetWifiLock() SharingWifiLock {
+	if x != nil {
+		return x.WifiLock
+	}
+	return SharingWifiLock_SHARING_WIFI_LOCK_UNSPECIFIED
+}
+
+func (x *Sharing) GetRepeaterSafeMode() bool {
+	if x != nil && x.RepeaterSafeMode != nil {
+		return *x.RepeaterSafeMode
+	}
+	return false
+}
+
+func (x *Sharing) GetTempHotspotUseSystem() bool {
+	if x != nil && x.TempHotspotUseSystem != nil {
+		return *x.TempHotspotUseSystem
+	}
+	return false
+}
+
+func (x *Sharing) GetIpMonitorMode() SharingIpMonitorMode {
+	if x != nil {
+		return x.IpMonitorMode
+	}
+	return SharingIpMonitorMode_SHARING_IP_MONITOR_MODE_UNSPECIFIED
+}
+
+type ByeDpi struct {
+	state                        protoimpl.MessageState `protogen:"open.v1"`
+	AutoStartWithXray            *bool                  `protobuf:"varint,1,opt,name=auto_start_with_xray,json=autoStartWithXray,proto3,oneof" json:"auto_start_with_xray,omitempty"`
+	UseCommandSettings           *bool                  `protobuf:"varint,2,opt,name=use_command_settings,json=useCommandSettings,proto3,oneof" json:"use_command_settings,omitempty"`
+	ProxyIp                      string                 `protobuf:"bytes,3,opt,name=proxy_ip,json=proxyIp,proto3" json:"proxy_ip,omitempty"`
+	ProxyPort                    *uint32                `protobuf:"varint,4,opt,name=proxy_port,json=proxyPort,proto3,oneof" json:"proxy_port,omitempty"`
+	ProxyAuthEnabled             *bool                  `protobuf:"varint,5,opt,name=proxy_auth_enabled,json=proxyAuthEnabled,proto3,oneof" json:"proxy_auth_enabled,omitempty"`
+	ProxyUsername                string                 `protobuf:"bytes,6,opt,name=proxy_username,json=proxyUsername,proto3" json:"proxy_username,omitempty"`
+	ProxyPassword                string                 `protobuf:"bytes,7,opt,name=proxy_password,json=proxyPassword,proto3" json:"proxy_password,omitempty"`
+	MaxConnections               *uint32                `protobuf:"varint,8,opt,name=max_connections,json=maxConnections,proto3,oneof" json:"max_connections,omitempty"`
+	BufferSize                   *uint32                `protobuf:"varint,9,opt,name=buffer_size,json=bufferSize,proto3,oneof" json:"buffer_size,omitempty"`
+	NoDomain                     *bool                  `protobuf:"varint,10,opt,name=no_domain,json=noDomain,proto3,oneof" json:"no_domain,omitempty"`
+	TcpFastOpen                  *bool                  `protobuf:"varint,11,opt,name=tcp_fast_open,json=tcpFastOpen,proto3,oneof" json:"tcp_fast_open,omitempty"`
+	HostsMode                    ByeDpiHostsMode        `protobuf:"varint,12,opt,name=hosts_mode,json=hostsMode,proto3,enum=wingsv.ByeDpiHostsMode" json:"hosts_mode,omitempty"`
+	HostsBlacklist               string                 `protobuf:"bytes,13,opt,name=hosts_blacklist,json=hostsBlacklist,proto3" json:"hosts_blacklist,omitempty"`
+	HostsWhitelist               string                 `protobuf:"bytes,14,opt,name=hosts_whitelist,json=hostsWhitelist,proto3" json:"hosts_whitelist,omitempty"`
+	DefaultTtl                   *uint32                `protobuf:"varint,15,opt,name=default_ttl,json=defaultTtl,proto3,oneof" json:"default_ttl,omitempty"`
+	DesyncMethod                 ByeDpiDesyncMethod     `protobuf:"varint,16,opt,name=desync_method,json=desyncMethod,proto3,enum=wingsv.ByeDpiDesyncMethod" json:"desync_method,omitempty"`
+	SplitPosition                *uint32                `protobuf:"varint,17,opt,name=split_position,json=splitPosition,proto3,oneof" json:"split_position,omitempty"`
+	SplitAtHost                  *bool                  `protobuf:"varint,18,opt,name=split_at_host,json=splitAtHost,proto3,oneof" json:"split_at_host,omitempty"`
+	DropSack                     *bool                  `protobuf:"varint,19,opt,name=drop_sack,json=dropSack,proto3,oneof" json:"drop_sack,omitempty"`
+	FakeTtl                      *uint32                `protobuf:"varint,20,opt,name=fake_ttl,json=fakeTtl,proto3,oneof" json:"fake_ttl,omitempty"`
+	FakeOffset                   *uint32                `protobuf:"varint,21,opt,name=fake_offset,json=fakeOffset,proto3,oneof" json:"fake_offset,omitempty"`
+	FakeSni                      string                 `protobuf:"bytes,22,opt,name=fake_sni,json=fakeSni,proto3" json:"fake_sni,omitempty"`
+	OobData                      string                 `protobuf:"bytes,23,opt,name=oob_data,json=oobData,proto3" json:"oob_data,omitempty"`
+	DesyncHttp                   *bool                  `protobuf:"varint,24,opt,name=desync_http,json=desyncHttp,proto3,oneof" json:"desync_http,omitempty"`
+	DesyncHttps                  *bool                  `protobuf:"varint,25,opt,name=desync_https,json=desyncHttps,proto3,oneof" json:"desync_https,omitempty"`
+	DesyncUdp                    *bool                  `protobuf:"varint,26,opt,name=desync_udp,json=desyncUdp,proto3,oneof" json:"desync_udp,omitempty"`
+	HostMixedCase                *bool                  `protobuf:"varint,27,opt,name=host_mixed_case,json=hostMixedCase,proto3,oneof" json:"host_mixed_case,omitempty"`
+	DomainMixedCase              *bool                  `protobuf:"varint,28,opt,name=domain_mixed_case,json=domainMixedCase,proto3,oneof" json:"domain_mixed_case,omitempty"`
+	HostRemoveSpaces             *bool                  `protobuf:"varint,29,opt,name=host_remove_spaces,json=hostRemoveSpaces,proto3,oneof" json:"host_remove_spaces,omitempty"`
+	TlsrecEnabled                *bool                  `protobuf:"varint,30,opt,name=tlsrec_enabled,json=tlsrecEnabled,proto3,oneof" json:"tlsrec_enabled,omitempty"`
+	TlsrecPosition               *uint32                `protobuf:"varint,31,opt,name=tlsrec_position,json=tlsrecPosition,proto3,oneof" json:"tlsrec_position,omitempty"`
+	TlsrecAtSni                  *bool                  `protobuf:"varint,32,opt,name=tlsrec_at_sni,json=tlsrecAtSni,proto3,oneof" json:"tlsrec_at_sni,omitempty"`
+	UdpFakeCount                 *uint32                `protobuf:"varint,33,opt,name=udp_fake_count,json=udpFakeCount,proto3,oneof" json:"udp_fake_count,omitempty"`
+	CmdArgs                      string                 `protobuf:"bytes,34,opt,name=cmd_args,json=cmdArgs,proto3" json:"cmd_args,omitempty"`
+	ProxytestDelay               *uint32                `protobuf:"varint,35,opt,name=proxytest_delay,json=proxytestDelay,proto3,oneof" json:"proxytest_delay,omitempty"`
+	ProxytestRequests            *uint32                `protobuf:"varint,36,opt,name=proxytest_requests,json=proxytestRequests,proto3,oneof" json:"proxytest_requests,omitempty"`
+	ProxytestLimit               *uint32                `protobuf:"varint,37,opt,name=proxytest_limit,json=proxytestLimit,proto3,oneof" json:"proxytest_limit,omitempty"`
+	ProxytestTimeout             *uint32                `protobuf:"varint,38,opt,name=proxytest_timeout,json=proxytestTimeout,proto3,oneof" json:"proxytest_timeout,omitempty"`
+	ProxytestSni                 string                 `protobuf:"bytes,39,opt,name=proxytest_sni,json=proxytestSni,proto3" json:"proxytest_sni,omitempty"`
+	ProxytestUseCustomStrategies *bool                  `protobuf:"varint,40,opt,name=proxytest_use_custom_strategies,json=proxytestUseCustomStrategies,proto3,oneof" json:"proxytest_use_custom_strategies,omitempty"`
+	ProxytestCustomStrategies    string                 `protobuf:"bytes,41,opt,name=proxytest_custom_strategies,json=proxytestCustomStrategies,proto3" json:"proxytest_custom_strategies,omitempty"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
+}
+
+func (x *ByeDpi) Reset() {
+	*x = ByeDpi{}
+	mi := &file_wingsv_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ByeDpi) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ByeDpi) ProtoMessage() {}
+
+func (x *ByeDpi) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ByeDpi.ProtoReflect.Descriptor instead.
+func (*ByeDpi) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *ByeDpi) GetAutoStartWithXray() bool {
+	if x != nil && x.AutoStartWithXray != nil {
+		return *x.AutoStartWithXray
+	}
+	return false
+}
+
+func (x *ByeDpi) GetUseCommandSettings() bool {
+	if x != nil && x.UseCommandSettings != nil {
+		return *x.UseCommandSettings
+	}
+	return false
+}
+
+func (x *ByeDpi) GetProxyIp() string {
+	if x != nil {
+		return x.ProxyIp
+	}
+	return ""
+}
+
+func (x *ByeDpi) GetProxyPort() uint32 {
+	if x != nil && x.ProxyPort != nil {
+		return *x.ProxyPort
+	}
+	return 0
+}
+
+func (x *ByeDpi) GetProxyAuthEnabled() bool {
+	if x != nil && x.ProxyAuthEnabled != nil {
+		return *x.ProxyAuthEnabled
+	}
+	return false
+}
+
+func (x *ByeDpi) GetProxyUsername() string {
+	if x != nil {
+		return x.ProxyUsername
+	}
+	return ""
+}
+
+func (x *ByeDpi) GetProxyPassword() string {
+	if x != nil {
+		return x.ProxyPassword
+	}
+	return ""
+}
+
+func (x *ByeDpi) GetMaxConnections() uint32 {
+	if x != nil && x.MaxConnections != nil {
+		return *x.MaxConnections
+	}
+	return 0
+}
+
+func (x *ByeDpi) GetBufferSize() uint32 {
+	if x != nil && x.BufferSize != nil {
+		return *x.BufferSize
+	}
+	return 0
+}
+
+func (x *ByeDpi) GetNoDomain() bool {
+	if x != nil && x.NoDomain != nil {
+		return *x.NoDomain
+	}
+	return false
+}
+
+func (x *ByeDpi) GetTcpFastOpen() bool {
+	if x != nil && x.TcpFastOpen != nil {
+		return *x.TcpFastOpen
+	}
+	return false
+}
+
+func (x *ByeDpi) GetHostsMode() ByeDpiHostsMode {
+	if x != nil {
+		return x.HostsMode
+	}
+	return ByeDpiHostsMode_BYE_DPI_HOSTS_MODE_UNSPECIFIED
+}
+
+func (x *ByeDpi) GetHostsBlacklist() string {
+	if x != nil {
+		return x.HostsBlacklist
+	}
+	return ""
+}
+
+func (x *ByeDpi) GetHostsWhitelist() string {
+	if x != nil {
+		return x.HostsWhitelist
+	}
+	return ""
+}
+
+func (x *ByeDpi) GetDefaultTtl() uint32 {
+	if x != nil && x.DefaultTtl != nil {
+		return *x.DefaultTtl
+	}
+	return 0
+}
+
+func (x *ByeDpi) GetDesyncMethod() ByeDpiDesyncMethod {
+	if x != nil {
+		return x.DesyncMethod
+	}
+	return ByeDpiDesyncMethod_BYE_DPI_DESYNC_METHOD_UNSPECIFIED
+}
+
+func (x *ByeDpi) GetSplitPosition() uint32 {
+	if x != nil && x.SplitPosition != nil {
+		return *x.SplitPosition
+	}
+	return 0
+}
+
+func (x *ByeDpi) GetSplitAtHost() bool {
+	if x != nil && x.SplitAtHost != nil {
+		return *x.SplitAtHost
+	}
+	return false
+}
+
+func (x *ByeDpi) GetDropSack() bool {
+	if x != nil && x.DropSack != nil {
+		return *x.DropSack
+	}
+	return false
+}
+
+func (x *ByeDpi) GetFakeTtl() uint32 {
+	if x != nil && x.FakeTtl != nil {
+		return *x.FakeTtl
+	}
+	return 0
+}
+
+func (x *ByeDpi) GetFakeOffset() uint32 {
+	if x != nil && x.FakeOffset != nil {
+		return *x.FakeOffset
+	}
+	return 0
+}
+
+func (x *ByeDpi) GetFakeSni() string {
+	if x != nil {
+		return x.FakeSni
+	}
+	return ""
+}
+
+func (x *ByeDpi) GetOobData() string {
+	if x != nil {
+		return x.OobData
+	}
+	return ""
+}
+
+func (x *ByeDpi) GetDesyncHttp() bool {
+	if x != nil && x.DesyncHttp != nil {
+		return *x.DesyncHttp
+	}
+	return false
+}
+
+func (x *ByeDpi) GetDesyncHttps() bool {
+	if x != nil && x.DesyncHttps != nil {
+		return *x.DesyncHttps
+	}
+	return false
+}
+
+func (x *ByeDpi) GetDesyncUdp() bool {
+	if x != nil && x.DesyncUdp != nil {
+		return *x.DesyncUdp
+	}
+	return false
+}
+
+func (x *ByeDpi) GetHostMixedCase() bool {
+	if x != nil && x.HostMixedCase != nil {
+		return *x.HostMixedCase
+	}
+	return false
+}
+
+func (x *ByeDpi) GetDomainMixedCase() bool {
+	if x != nil && x.DomainMixedCase != nil {
+		return *x.DomainMixedCase
+	}
+	return false
+}
+
+func (x *ByeDpi) GetHostRemoveSpaces() bool {
+	if x != nil && x.HostRemoveSpaces != nil {
+		return *x.HostRemoveSpaces
+	}
+	return false
+}
+
+func (x *ByeDpi) GetTlsrecEnabled() bool {
+	if x != nil && x.TlsrecEnabled != nil {
+		return *x.TlsrecEnabled
+	}
+	return false
+}
+
+func (x *ByeDpi) GetTlsrecPosition() uint32 {
+	if x != nil && x.TlsrecPosition != nil {
+		return *x.TlsrecPosition
+	}
+	return 0
+}
+
+func (x *ByeDpi) GetTlsrecAtSni() bool {
+	if x != nil && x.TlsrecAtSni != nil {
+		return *x.TlsrecAtSni
+	}
+	return false
+}
+
+func (x *ByeDpi) GetUdpFakeCount() uint32 {
+	if x != nil && x.UdpFakeCount != nil {
+		return *x.UdpFakeCount
+	}
+	return 0
+}
+
+func (x *ByeDpi) GetCmdArgs() string {
+	if x != nil {
+		return x.CmdArgs
+	}
+	return ""
+}
+
+func (x *ByeDpi) GetProxytestDelay() uint32 {
+	if x != nil && x.ProxytestDelay != nil {
+		return *x.ProxytestDelay
+	}
+	return 0
+}
+
+func (x *ByeDpi) GetProxytestRequests() uint32 {
+	if x != nil && x.ProxytestRequests != nil {
+		return *x.ProxytestRequests
+	}
+	return 0
+}
+
+func (x *ByeDpi) GetProxytestLimit() uint32 {
+	if x != nil && x.ProxytestLimit != nil {
+		return *x.ProxytestLimit
+	}
+	return 0
+}
+
+func (x *ByeDpi) GetProxytestTimeout() uint32 {
+	if x != nil && x.ProxytestTimeout != nil {
+		return *x.ProxytestTimeout
+	}
+	return 0
+}
+
+func (x *ByeDpi) GetProxytestSni() string {
+	if x != nil {
+		return x.ProxytestSni
+	}
+	return ""
+}
+
+func (x *ByeDpi) GetProxytestUseCustomStrategies() bool {
+	if x != nil && x.ProxytestUseCustomStrategies != nil {
+		return *x.ProxytestUseCustomStrategies
+	}
+	return false
+}
+
+func (x *ByeDpi) GetProxytestCustomStrategies() string {
+	if x != nil {
+		return x.ProxytestCustomStrategies
+	}
+	return ""
+}
+
 var File_wingsv_proto protoreflect.FileDescriptor
 
 const file_wingsv_proto_rawDesc = "" +
 	"\n" +
-	"\fwingsv.proto\x12\x06wingsv\"\xe1\x02\n" +
+	"\fwingsv.proto\x12\x06wingsv\"\xe4\x05\n" +
 	"\x06Config\x12\x10\n" +
 	"\x03ver\x18\x01 \x01(\rR\x03ver\x12&\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x12.wingsv.ConfigTypeR\x04type\x12 \n" +
@@ -1644,7 +4278,29 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x03awg\x18\a \x01(\v2\x11.wingsv.AmneziaWGR\x03awg\x123\n" +
 	"\vapp_routing\x18\b \x01(\v2\x12.wingsv.AppRoutingR\n" +
 	"appRouting\x12-\n" +
-	"\twb_stream\x18\t \x01(\v2\x10.wingsv.WbStreamR\bwbStream\"\xb7\x01\n" +
+	"\twb_stream\x18\t \x01(\v2\x10.wingsv.WbStreamR\bwbStream\x12&\n" +
+	"\x06xposed\x18\n" +
+	" \x01(\v2\x0e.wingsv.XposedR\x06xposed\x12(\n" +
+	"\x04root\x18\v \x01(\v2\x14.wingsv.RootSettingsR\x04root\x12?\n" +
+	"\x0fapp_preferences\x18\f \x01(\v2\x16.wingsv.AppPreferencesR\x0eappPreferences\x12E\n" +
+	"\x11subscription_hwid\x18\r \x01(\v2\x18.wingsv.SubscriptionHwidR\x10subscriptionHwid\x12)\n" +
+	"\asharing\x18\x0e \x01(\v2\x0f.wingsv.SharingR\asharing\x12'\n" +
+	"\abye_dpi\x18\x0f \x01(\v2\x0e.wingsv.ByeDpiR\x06byeDpi\x12,\n" +
+	"\bguardian\x18\x10 \x01(\v2\x10.wingsv.GuardianR\bguardian\x12%\n" +
+	"\x0econfig_version\x18\x11 \x01(\x04R\rconfigVersion\"\xa9\x03\n" +
+	"\bGuardian\x12\x15\n" +
+	"\x06ws_url\x18\x01 \x01(\tR\x05wsUrl\x12\x1b\n" +
+	"\tclient_id\x18\x02 \x01(\tR\bclientId\x12!\n" +
+	"\fclient_token\x18\x03 \x01(\fR\vclientToken\x12\x1f\n" +
+	"\vclient_name\x18\x04 \x01(\tR\n" +
+	"clientName\x125\n" +
+	"\tsync_mode\x18\x05 \x01(\x0e2\x18.wingsv.GuardianSyncModeR\bsyncMode\x12:\n" +
+	"\x19periodic_interval_minutes\x18\x06 \x01(\rR\x17periodicIntervalMinutes\x12%\n" +
+	"\x0eadmin_username\x18\a \x01(\tR\radminUsername\x12\x19\n" +
+	"\badmin_id\x18\b \x01(\x03R\aadminId\x120\n" +
+	"\x14admin_avatar_version\x18\t \x01(\x03R\x12adminAvatarVersion\x128\n" +
+	"\x19server_ca_pins_sha512_256\x18\v \x03(\fR\x15serverCaPinsSha512256J\x04\b\n" +
+	"\x10\v\"\x9f\x02\n" +
 	"\bWbStream\x12\x17\n" +
 	"\aroom_id\x18\x01 \x01(\tR\x06roomId\x12/\n" +
 	"\x14exchange_via_vk_turn\x18\x02 \x01(\bR\x11exchangeViaVkTurn\x12\x1f\n" +
@@ -1652,15 +4308,32 @@ const file_wingsv_proto_rawDesc = "" +
 	"e2eEnabled\x12\x1d\n" +
 	"\n" +
 	"e2e_secret\x18\x04 \x01(\fR\te2eSecret\x12!\n" +
-	"\fdisplay_name\x18\x05 \x01(\tR\vdisplayName\"5\n" +
+	"\fdisplay_name\x18\x05 \x01(\tR\vdisplayName\x12\"\n" +
+	"\n" +
+	"room_count\x18\x06 \x01(\rH\x00R\troomCount\x88\x01\x01\x123\n" +
+	"\vtunnel_mode\x18\a \x01(\x0e2\x12.wingsv.TunnelModeR\n" +
+	"tunnelModeB\r\n" +
+	"\v_room_count\"\xde\x01\n" +
 	"\tAmneziaWG\x12(\n" +
-	"\x10awg_quick_config\x18\x01 \x01(\tR\x0eawgQuickConfig\"2\n" +
+	"\x10awg_quick_config\x18\x01 \x01(\tR\x0eawgQuickConfig\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12*\n" +
+	"\x11active_profile_id\x18\x03 \x01(\tR\x0factiveProfileId\x122\n" +
+	"\bprofiles\x18\x04 \x03(\v2\x16.wingsv.AmneziaProfileR\bprofiles\x12\"\n" +
+	"\n" +
+	"merge_only\x18\x05 \x01(\bH\x00R\tmergeOnly\x88\x01\x01B\r\n" +
+	"\v_merge_only\"\xb8\x01\n" +
+	"\x0eAmneziaProfile\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12(\n" +
+	"\x10awg_quick_config\x18\x03 \x01(\tR\x0eawgQuickConfig\x12'\n" +
+	"\x0fsubscription_id\x18\x04 \x01(\tR\x0esubscriptionId\x12-\n" +
+	"\x12subscription_title\x18\x05 \x01(\tR\x11subscriptionTitle\"2\n" +
 	"\bEndpoint\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\x12\x12\n" +
 	"\x04port\x18\x02 \x01(\rR\x04port\"2\n" +
 	"\x04Cidr\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\fR\x04addr\x12\x16\n" +
-	"\x06prefix\x18\x02 \x01(\rR\x06prefix\"\x88\x04\n" +
+	"\x06prefix\x18\x02 \x01(\rR\x06prefix\"\xff\t\n" +
 	"\x04Turn\x12,\n" +
 	"\bendpoint\x18\x01 \x01(\v2\x10.wingsv.EndpointR\bendpoint\x12\x12\n" +
 	"\x04link\x18\x02 \x01(\tR\x04link\x12\x1d\n" +
@@ -1674,18 +4347,69 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x05links\x18\n" +
 	" \x03(\tR\x05links\x12%\n" +
 	"\x0elink_secondary\x18\v \x01(\tR\rlinkSecondary\x12-\n" +
-	"\x10creds_group_size\x18\f \x01(\rH\x04R\x0ecredsGroupSize\x88\x01\x01B\n" +
+	"\x10creds_group_size\x18\f \x01(\rH\x04R\x0ecredsGroupSize\x88\x01\x01\x12*\n" +
+	"\x0emanual_captcha\x18\r \x01(\bH\x05R\rmanualCaptcha\x88\x01\x01\x12.\n" +
+	"\x13captcha_auto_solver\x18\x0e \x01(\tR\x11captchaAutoSolver\x12>\n" +
+	"\x19restart_on_network_change\x18\x0f \x01(\bH\x06R\x16restartOnNetworkChange\x88\x01\x01\x12;\n" +
+	"\fruntime_mode\x18\x10 \x01(\x0e2\x18.wingsv.ProxyRuntimeModeR\vruntimeMode\x12\x19\n" +
+	"\buser_dns\x18\x11 \x03(\tR\auserDns\x123\n" +
+	"\vtunnel_mode\x18\x12 \x01(\x0e2\x12.wingsv.TunnelModeR\n" +
+	"tunnelMode\x12-\n" +
+	"\twrap_mode\x18\x13 \x01(\x0e2\x10.wingsv.WrapModeR\bwrapMode\x12\x19\n" +
+	"\bwrap_key\x18\x14 \x01(\fR\awrapKey\x125\n" +
+	"\fwrap_ciphers\x18\x15 \x03(\x0e2\x12.wingsv.WrapCipherR\vwrapCiphers\x12C\n" +
+	"\x11wrap_key_delivery\x18\x16 \x01(\x0e2\x17.wingsv.WrapKeyDeliveryR\x0fwrapKeyDelivery\x12\x14\n" +
+	"\x05title\x18\x17 \x01(\tR\x05title\x12*\n" +
+	"\x11active_profile_id\x18\x18 \x01(\tR\x0factiveProfileId\x12/\n" +
+	"\bprofiles\x18\x19 \x03(\v2\x13.wingsv.TurnProfileR\bprofiles\x12\"\n" +
+	"\n" +
+	"merge_only\x18\x1a \x01(\bH\aR\tmergeOnly\x88\x01\x01\x12/\n" +
+	"\x13browser_fingerprint\x18\x1b \x01(\tR\x12browserFingerprintB\n" +
 	"\n" +
 	"\b_threadsB\n" +
 	"\n" +
 	"\b_use_udpB\x11\n" +
 	"\x0f_no_obfuscationB\a\n" +
 	"\x05_portB\x13\n" +
-	"\x11_creds_group_size\"\x84\x01\n" +
+	"\x11_creds_group_sizeB\x11\n" +
+	"\x0f_manual_captchaB\x1c\n" +
+	"\x1a_restart_on_network_changeB\r\n" +
+	"\v_merge_only\"\x9c\x04\n" +
+	"\vTurnProfile\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
+	"\x0etransport_kind\x18\x03 \x01(\tR\rtransportKind\x120\n" +
+	"\x14transport_profile_id\x18\x04 \x01(\tR\x12transportProfileId\x12(\n" +
+	"\x10vk_turn_endpoint\x18\x05 \x01(\tR\x0evkTurnEndpoint\x12$\n" +
+	"\x06config\x18\x06 \x01(\v2\f.wingsv.TurnR\x06config\x12'\n" +
+	"\x0fsubscription_id\x18\a \x01(\tR\x0esubscriptionId\x12-\n" +
+	"\x12subscription_title\x18\b \x01(\tR\x11subscriptionTitle\x12 \n" +
+	"\fvk_auth_mode\x18\t \x01(\tR\n" +
+	"vkAuthMode\x12\x19\n" +
+	"\bdns_mode\x18\n" +
+	" \x01(\tR\adnsMode\x12%\n" +
+	"\x0ewg_provisioned\x18\v \x01(\bR\rwgProvisioned\x12.\n" +
+	"\x13provision_client_id\x18\f \x01(\tR\x11provisionClientId\x12'\n" +
+	"\x0fprovision_token\x18\r \x01(\fR\x0eprovisionToken\x12)\n" +
+	"\x10managed_settings\x18\x0e \x01(\bR\x0fmanagedSettings\"\xaf\x02\n" +
 	"\tWireGuard\x12'\n" +
 	"\x05iface\x18\x01 \x01(\v2\x11.wingsv.InterfaceR\x05iface\x12 \n" +
 	"\x04peer\x18\x02 \x01(\v2\f.wingsv.PeerR\x04peer\x12,\n" +
-	"\bendpoint\x18\x03 \x01(\v2\x10.wingsv.EndpointR\bendpoint\"s\n" +
+	"\bendpoint\x18\x03 \x01(\v2\x10.wingsv.EndpointR\bendpoint\x12\x14\n" +
+	"\x05title\x18\x04 \x01(\tR\x05title\x12*\n" +
+	"\x11active_profile_id\x18\x05 \x01(\tR\x0factiveProfileId\x124\n" +
+	"\bprofiles\x18\x06 \x03(\v2\x18.wingsv.WireGuardProfileR\bprofiles\x12\"\n" +
+	"\n" +
+	"merge_only\x18\a \x01(\bH\x00R\tmergeOnly\x88\x01\x01B\r\n" +
+	"\v_merge_only\"\x89\x02\n" +
+	"\x10WireGuardProfile\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12'\n" +
+	"\x05iface\x18\x03 \x01(\v2\x11.wingsv.InterfaceR\x05iface\x12 \n" +
+	"\x04peer\x18\x04 \x01(\v2\f.wingsv.PeerR\x04peer\x12,\n" +
+	"\bendpoint\x18\x05 \x01(\v2\x10.wingsv.EndpointR\bendpoint\x12'\n" +
+	"\x0fsubscription_id\x18\x06 \x01(\tR\x0esubscriptionId\x12-\n" +
+	"\x12subscription_title\x18\a \x01(\tR\x11subscriptionTitle\"s\n" +
 	"\tInterface\x12\x1f\n" +
 	"\vprivate_key\x18\x01 \x01(\fR\n" +
 	"privateKey\x12\x14\n" +
@@ -1708,11 +4432,14 @@ const file_wingsv_proto_rawDesc = "" +
 	"\n" +
 	"merge_only\x18\x06 \x01(\bH\x00R\tmergeOnly\x88\x01\x01\x12-\n" +
 	"\arouting\x18\a \x01(\v2\x13.wingsv.XrayRoutingR\aroutingB\r\n" +
-	"\v_merge_only\"P\n" +
+	"\v_merge_only\"\xd4\x01\n" +
 	"\n" +
 	"AppRouting\x12\x1b\n" +
 	"\x06bypass\x18\x01 \x01(\bH\x00R\x06bypass\x88\x01\x01\x12\x1a\n" +
-	"\bpackages\x18\x02 \x03(\tR\bpackagesB\t\n" +
+	"\bpackages\x18\x02 \x03(\tR\bpackages\x12*\n" +
+	"\x04mode\x18\x03 \x01(\x0e2\x16.wingsv.AppRoutingModeR\x04mode\x12'\n" +
+	"\x0fbypass_packages\x18\x04 \x03(\tR\x0ebypassPackages\x12-\n" +
+	"\x12whitelist_packages\x18\x05 \x03(\tR\x11whitelistPackagesB\t\n" +
 	"\a_bypass\"z\n" +
 	"\vXrayRouting\x12-\n" +
 	"\x05rules\x18\x01 \x03(\v2\x17.wingsv.XrayRoutingRuleR\x05rules\x12\x1b\n" +
@@ -1751,10 +4478,10 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x12subscription_title\x18\x05 \x01(\tR\x11subscriptionTitle\x12\x18\n" +
 	"\aaddress\x18\x06 \x01(\tR\aaddress\x12\x17\n" +
 	"\x04port\x18\a \x01(\rH\x00R\x04port\x88\x01\x01B\a\n" +
-	"\x05_port\"\xdc\x06\n" +
+	"\x05_port\"\x97\v\n" +
 	"\fXraySettings\x12 \n" +
-	"\tallow_lan\x18\x01 \x01(\bH\x00R\ballowLan\x88\x01\x01\x12*\n" +
-	"\x0eallow_insecure\x18\x02 \x01(\bH\x01R\rallowInsecure\x88\x01\x01\x12-\n" +
+	"\tallow_lan\x18\x01 \x01(\bH\x00R\ballowLan\x88\x01\x01\x12.\n" +
+	"\x0eallow_insecure\x18\x02 \x01(\bB\x02\x18\x01H\x01R\rallowInsecure\x88\x01\x01\x12-\n" +
 	"\x10local_proxy_port\x18\x03 \x01(\rH\x02R\x0elocalProxyPort\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"remote_dns\x18\x04 \x01(\tR\tremoteDns\x12\x1d\n" +
@@ -1769,7 +4496,17 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x14local_proxy_username\x18\v \x01(\tR\x12localProxyUsername\x120\n" +
 	"\x14local_proxy_password\x18\f \x01(\tR\x12localProxyPassword\x12>\n" +
 	"\x19restart_on_network_change\x18\r \x01(\bH\bR\x16restartOnNetworkChange\x88\x01\x01\x12@\n" +
-	"\x0etransport_mode\x18\x0e \x01(\x0e2\x19.wingsv.XrayTransportModeR\rtransportModeB\f\n" +
+	"\x0etransport_mode\x18\x0e \x01(\x0e2\x19.wingsv.XrayTransportModeR\rtransportMode\x12;\n" +
+	"\fruntime_mode\x18\x0f \x01(\x0e2\x18.wingsv.ProxyRuntimeModeR\vruntimeMode\x12;\n" +
+	"\x1alocal_proxy_listen_address\x18\x10 \x01(\tR\x17localProxyListenAddress\x121\n" +
+	"\x12http_proxy_enabled\x18\x11 \x01(\bH\tR\x10httpProxyEnabled\x88\x01\x01\x12:\n" +
+	"\x17http_proxy_auth_enabled\x18\x12 \x01(\bH\n" +
+	"R\x14httpProxyAuthEnabled\x88\x01\x01\x12.\n" +
+	"\x13http_proxy_username\x18\x13 \x01(\tR\x11httpProxyUsername\x12.\n" +
+	"\x13http_proxy_password\x18\x14 \x01(\tR\x11httpProxyPassword\x12+\n" +
+	"\x0fhttp_proxy_port\x18\x15 \x01(\rH\vR\rhttpProxyPort\x88\x01\x01\x129\n" +
+	"\x19http_proxy_listen_address\x18\x16 \x01(\tR\x16httpProxyListenAddress\x12=\n" +
+	"\x0fwake_probe_mode\x18\x17 \x01(\x0e2\x15.wingsv.WakeProbeModeR\rwakeProbeModeB\f\n" +
 	"\n" +
 	"_allow_lanB\x11\n" +
 	"\x0f_allow_insecureB\x13\n" +
@@ -1779,7 +4516,152 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x13_proxy_quic_enabledB\x16\n" +
 	"\x14_local_proxy_enabledB\x1b\n" +
 	"\x19_local_proxy_auth_enabledB\x1c\n" +
-	"\x1a_restart_on_network_change*\xd9\x01\n" +
+	"\x1a_restart_on_network_changeB\x15\n" +
+	"\x13_http_proxy_enabledB\x1a\n" +
+	"\x18_http_proxy_auth_enabledB\x12\n" +
+	"\x10_http_proxy_port\"\xba\x04\n" +
+	"\x06Xposed\x12\x1d\n" +
+	"\aenabled\x18\x01 \x01(\bH\x00R\aenabled\x88\x01\x01\x12\x1e\n" +
+	"\ball_apps\x18\x02 \x01(\bH\x01R\aallApps\x88\x01\x01\x123\n" +
+	"\x13native_hook_enabled\x18\x03 \x01(\bH\x02R\x11nativeHookEnabled\x88\x01\x01\x12'\n" +
+	"\rhide_vpn_apps\x18\x05 \x01(\bH\x03R\vhideVpnApps\x88\x01\x01\x12/\n" +
+	"\x11hide_from_dumpsys\x18\x06 \x01(\bH\x04R\x0fhideFromDumpsys\x88\x01\x01\x12F\n" +
+	"\x10procfs_hook_mode\x18\a \x01(\x0e2\x1c.wingsv.XposedProcfsHookModeR\x0eprocfsHookMode\x12L\n" +
+	"\x12icmp_spoofing_mode\x18\b \x01(\x0e2\x1e.wingsv.XposedIcmpSpoofingModeR\x10icmpSpoofingMode\x12'\n" +
+	"\x0ftarget_packages\x18\t \x03(\tR\x0etargetPackages\x12.\n" +
+	"\x13hidden_vpn_packages\x18\n" +
+	" \x03(\tR\x11hiddenVpnPackagesB\n" +
+	"\n" +
+	"\b_enabledB\v\n" +
+	"\t_all_appsB\x16\n" +
+	"\x14_native_hook_enabledB\x10\n" +
+	"\x0e_hide_vpn_appsB\x14\n" +
+	"\x12_hide_from_dumpsysJ\x04\b\x04\x10\x05R\x14inline_hooks_enabled\"\x8b\x02\n" +
+	"\fRootSettings\x12\x1d\n" +
+	"\aenabled\x18\x01 \x01(\bH\x00R\aenabled\x88\x01\x01\x12.\n" +
+	"\x10kernel_wireguard\x18\x02 \x01(\bH\x01R\x0fkernelWireguard\x88\x01\x01\x12-\n" +
+	"\x10xray_tproxy_mode\x18\x03 \x01(\bH\x02R\x0exrayTproxyMode\x88\x01\x01\x12*\n" +
+	"\x11wg_interface_name\x18\x04 \x01(\tR\x0fwgInterfaceNameB\n" +
+	"\n" +
+	"\b_enabledB\x13\n" +
+	"\x11_kernel_wireguardB\x13\n" +
+	"\x11_xray_tproxy_modeJ\x04\b\x05\x10\x06R\x15split_tunnel_lockdown\"\xb7\x01\n" +
+	"\x0eAppPreferences\x120\n" +
+	"\n" +
+	"theme_mode\x18\x01 \x01(\x0e2\x11.wingsv.ThemeModeR\tthemeMode\x120\n" +
+	"\x12auto_start_on_boot\x18\x02 \x01(\bH\x00R\x0fautoStartOnBoot\x88\x01\x01\x12*\n" +
+	"\bdns_mode\x18\x03 \x01(\x0e2\x0f.wingsv.DnsModeR\adnsModeB\x15\n" +
+	"\x13_auto_start_on_boot\"\xe9\x01\n" +
+	"\x10SubscriptionHwid\x12\x1d\n" +
+	"\aenabled\x18\x01 \x01(\bH\x00R\aenabled\x88\x01\x01\x12*\n" +
+	"\x0emanual_enabled\x18\x02 \x01(\bH\x01R\rmanualEnabled\x88\x01\x01\x12\x14\n" +
+	"\x05value\x18\x03 \x01(\tR\x05value\x12\x1b\n" +
+	"\tdevice_os\x18\x04 \x01(\tR\bdeviceOs\x12\x15\n" +
+	"\x06ver_os\x18\x05 \x01(\tR\x05verOs\x12!\n" +
+	"\fdevice_model\x18\x06 \x01(\tR\vdeviceModelB\n" +
+	"\n" +
+	"\b_enabledB\x11\n" +
+	"\x0f_manual_enabled\"\xce\x05\n" +
+	"\aSharing\x120\n" +
+	"\x12auto_start_on_boot\x18\x01 \x01(\bH\x00R\x0fautoStartOnBoot\x88\x01\x01\x12*\n" +
+	"\x11last_active_types\x18\x02 \x03(\tR\x0flastActiveTypes\x12-\n" +
+	"\x12upstream_interface\x18\x03 \x01(\tR\x11upstreamInterface\x12>\n" +
+	"\x1bfallback_upstream_interface\x18\x04 \x01(\tR\x19fallbackUpstreamInterface\x12F\n" +
+	"\x0fmasquerade_mode\x18\x05 \x01(\x0e2\x1d.wingsv.SharingMasqueradeModeR\x0emasqueradeMode\x12&\n" +
+	"\fdisable_ipv6\x18\x06 \x01(\bH\x01R\vdisableIpv6\x88\x01\x01\x12,\n" +
+	"\x0fdhcp_workaround\x18\a \x01(\bH\x02R\x0edhcpWorkaround\x88\x01\x01\x124\n" +
+	"\twifi_lock\x18\b \x01(\x0e2\x17.wingsv.SharingWifiLockR\bwifiLock\x121\n" +
+	"\x12repeater_safe_mode\x18\t \x01(\bH\x03R\x10repeaterSafeMode\x88\x01\x01\x12:\n" +
+	"\x17temp_hotspot_use_system\x18\n" +
+	" \x01(\bH\x04R\x14tempHotspotUseSystem\x88\x01\x01\x12D\n" +
+	"\x0fip_monitor_mode\x18\v \x01(\x0e2\x1c.wingsv.SharingIpMonitorModeR\ripMonitorModeB\x15\n" +
+	"\x13_auto_start_on_bootB\x0f\n" +
+	"\r_disable_ipv6B\x12\n" +
+	"\x10_dhcp_workaroundB\x15\n" +
+	"\x13_repeater_safe_modeB\x1a\n" +
+	"\x18_temp_hotspot_use_system\"\xa9\x12\n" +
+	"\x06ByeDpi\x124\n" +
+	"\x14auto_start_with_xray\x18\x01 \x01(\bH\x00R\x11autoStartWithXray\x88\x01\x01\x125\n" +
+	"\x14use_command_settings\x18\x02 \x01(\bH\x01R\x12useCommandSettings\x88\x01\x01\x12\x19\n" +
+	"\bproxy_ip\x18\x03 \x01(\tR\aproxyIp\x12\"\n" +
+	"\n" +
+	"proxy_port\x18\x04 \x01(\rH\x02R\tproxyPort\x88\x01\x01\x121\n" +
+	"\x12proxy_auth_enabled\x18\x05 \x01(\bH\x03R\x10proxyAuthEnabled\x88\x01\x01\x12%\n" +
+	"\x0eproxy_username\x18\x06 \x01(\tR\rproxyUsername\x12%\n" +
+	"\x0eproxy_password\x18\a \x01(\tR\rproxyPassword\x12,\n" +
+	"\x0fmax_connections\x18\b \x01(\rH\x04R\x0emaxConnections\x88\x01\x01\x12$\n" +
+	"\vbuffer_size\x18\t \x01(\rH\x05R\n" +
+	"bufferSize\x88\x01\x01\x12 \n" +
+	"\tno_domain\x18\n" +
+	" \x01(\bH\x06R\bnoDomain\x88\x01\x01\x12'\n" +
+	"\rtcp_fast_open\x18\v \x01(\bH\aR\vtcpFastOpen\x88\x01\x01\x126\n" +
+	"\n" +
+	"hosts_mode\x18\f \x01(\x0e2\x17.wingsv.ByeDpiHostsModeR\thostsMode\x12'\n" +
+	"\x0fhosts_blacklist\x18\r \x01(\tR\x0ehostsBlacklist\x12'\n" +
+	"\x0fhosts_whitelist\x18\x0e \x01(\tR\x0ehostsWhitelist\x12$\n" +
+	"\vdefault_ttl\x18\x0f \x01(\rH\bR\n" +
+	"defaultTtl\x88\x01\x01\x12?\n" +
+	"\rdesync_method\x18\x10 \x01(\x0e2\x1a.wingsv.ByeDpiDesyncMethodR\fdesyncMethod\x12*\n" +
+	"\x0esplit_position\x18\x11 \x01(\rH\tR\rsplitPosition\x88\x01\x01\x12'\n" +
+	"\rsplit_at_host\x18\x12 \x01(\bH\n" +
+	"R\vsplitAtHost\x88\x01\x01\x12 \n" +
+	"\tdrop_sack\x18\x13 \x01(\bH\vR\bdropSack\x88\x01\x01\x12\x1e\n" +
+	"\bfake_ttl\x18\x14 \x01(\rH\fR\afakeTtl\x88\x01\x01\x12$\n" +
+	"\vfake_offset\x18\x15 \x01(\rH\rR\n" +
+	"fakeOffset\x88\x01\x01\x12\x19\n" +
+	"\bfake_sni\x18\x16 \x01(\tR\afakeSni\x12\x19\n" +
+	"\boob_data\x18\x17 \x01(\tR\aoobData\x12$\n" +
+	"\vdesync_http\x18\x18 \x01(\bH\x0eR\n" +
+	"desyncHttp\x88\x01\x01\x12&\n" +
+	"\fdesync_https\x18\x19 \x01(\bH\x0fR\vdesyncHttps\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"desync_udp\x18\x1a \x01(\bH\x10R\tdesyncUdp\x88\x01\x01\x12+\n" +
+	"\x0fhost_mixed_case\x18\x1b \x01(\bH\x11R\rhostMixedCase\x88\x01\x01\x12/\n" +
+	"\x11domain_mixed_case\x18\x1c \x01(\bH\x12R\x0fdomainMixedCase\x88\x01\x01\x121\n" +
+	"\x12host_remove_spaces\x18\x1d \x01(\bH\x13R\x10hostRemoveSpaces\x88\x01\x01\x12*\n" +
+	"\x0etlsrec_enabled\x18\x1e \x01(\bH\x14R\rtlsrecEnabled\x88\x01\x01\x12,\n" +
+	"\x0ftlsrec_position\x18\x1f \x01(\rH\x15R\x0etlsrecPosition\x88\x01\x01\x12'\n" +
+	"\rtlsrec_at_sni\x18  \x01(\bH\x16R\vtlsrecAtSni\x88\x01\x01\x12)\n" +
+	"\x0eudp_fake_count\x18! \x01(\rH\x17R\fudpFakeCount\x88\x01\x01\x12\x19\n" +
+	"\bcmd_args\x18\" \x01(\tR\acmdArgs\x12,\n" +
+	"\x0fproxytest_delay\x18# \x01(\rH\x18R\x0eproxytestDelay\x88\x01\x01\x122\n" +
+	"\x12proxytest_requests\x18$ \x01(\rH\x19R\x11proxytestRequests\x88\x01\x01\x12,\n" +
+	"\x0fproxytest_limit\x18% \x01(\rH\x1aR\x0eproxytestLimit\x88\x01\x01\x120\n" +
+	"\x11proxytest_timeout\x18& \x01(\rH\x1bR\x10proxytestTimeout\x88\x01\x01\x12#\n" +
+	"\rproxytest_sni\x18' \x01(\tR\fproxytestSni\x12J\n" +
+	"\x1fproxytest_use_custom_strategies\x18( \x01(\bH\x1cR\x1cproxytestUseCustomStrategies\x88\x01\x01\x12>\n" +
+	"\x1bproxytest_custom_strategies\x18) \x01(\tR\x19proxytestCustomStrategiesB\x17\n" +
+	"\x15_auto_start_with_xrayB\x17\n" +
+	"\x15_use_command_settingsB\r\n" +
+	"\v_proxy_portB\x15\n" +
+	"\x13_proxy_auth_enabledB\x12\n" +
+	"\x10_max_connectionsB\x0e\n" +
+	"\f_buffer_sizeB\f\n" +
+	"\n" +
+	"_no_domainB\x10\n" +
+	"\x0e_tcp_fast_openB\x0e\n" +
+	"\f_default_ttlB\x11\n" +
+	"\x0f_split_positionB\x10\n" +
+	"\x0e_split_at_hostB\f\n" +
+	"\n" +
+	"_drop_sackB\v\n" +
+	"\t_fake_ttlB\x0e\n" +
+	"\f_fake_offsetB\x0e\n" +
+	"\f_desync_httpB\x0f\n" +
+	"\r_desync_httpsB\r\n" +
+	"\v_desync_udpB\x12\n" +
+	"\x10_host_mixed_caseB\x14\n" +
+	"\x12_domain_mixed_caseB\x15\n" +
+	"\x13_host_remove_spacesB\x11\n" +
+	"\x0f_tlsrec_enabledB\x12\n" +
+	"\x10_tlsrec_positionB\x10\n" +
+	"\x0e_tlsrec_at_sniB\x11\n" +
+	"\x0f_udp_fake_countB\x12\n" +
+	"\x10_proxytest_delayB\x15\n" +
+	"\x13_proxytest_requestsB\x12\n" +
+	"\x10_proxytest_limitB\x14\n" +
+	"\x12_proxytest_timeoutB\"\n" +
+	" _proxytest_use_custom_strategies*\xac\x02\n" +
 	"\n" +
 	"ConfigType\x12\x1b\n" +
 	"\x17CONFIG_TYPE_UNSPECIFIED\x10\x00\x12\x12\n" +
@@ -1789,20 +4671,62 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x0fCONFIG_TYPE_ALL\x10\x04\x12\x1b\n" +
 	"\x17CONFIG_TYPE_APP_ROUTING\x10\x05\x12\x1c\n" +
 	"\x18CONFIG_TYPE_XRAY_ROUTING\x10\x06\x12\x19\n" +
-	"\x15CONFIG_TYPE_WB_STREAM\x10\a*\xdc\x01\n" +
+	"\x15CONFIG_TYPE_WB_STREAM\x10\a\x12\x16\n" +
+	"\x12CONFIG_TYPE_XPOSED\x10\b\x12\x18\n" +
+	"\x14CONFIG_TYPE_GUARDIAN\x10\t\x12\x1f\n" +
+	"\x1bCONFIG_TYPE_VK_TURN_PROFILE\x10\n" +
+	"*\x9e\x01\n" +
+	"\x10GuardianSyncMode\x12\"\n" +
+	"\x1eGUARDIAN_SYNC_MODE_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19GUARDIAN_SYNC_MODE_ALWAYS\x10\x01\x12\x1f\n" +
+	"\x1bGUARDIAN_SYNC_MODE_PERIODIC\x10\x02\x12&\n" +
+	"\"GUARDIAN_SYNC_MODE_FOREGROUND_ONLY\x10\x03*\xa1\x02\n" +
 	"\vBackendType\x12\x1c\n" +
-	"\x18BACKEND_TYPE_UNSPECIFIED\x10\x00\x12\"\n" +
-	"\x1eBACKEND_TYPE_VK_TURN_WIREGUARD\x10\x01\x12\x15\n" +
-	"\x11BACKEND_TYPE_XRAY\x10\x02\x12\x1a\n" +
-	"\x16BACKEND_TYPE_AMNEZIAWG\x10\x03\x12\x1a\n" +
-	"\x16BACKEND_TYPE_WIREGUARD\x10\x04\x12 \n" +
-	"\x1cBACKEND_TYPE_AMNEZIAWG_PLAIN\x10\x05\x12\x1a\n" +
-	"\x16BACKEND_TYPE_WB_STREAM\x10\x06*\x8b\x01\n" +
+	"\x18BACKEND_TYPE_UNSPECIFIED\x10\x00\x12&\n" +
+	"\x1eBACKEND_TYPE_VK_TURN_WIREGUARD\x10\x01\x1a\x02\b\x01\x12\x15\n" +
+	"\x11BACKEND_TYPE_XRAY\x10\x02\x12\x1e\n" +
+	"\x16BACKEND_TYPE_AMNEZIAWG\x10\x03\x1a\x02\b\x01\x12\x1a\n" +
+	"\x16BACKEND_TYPE_WIREGUARD\x10\x04\x12$\n" +
+	"\x1cBACKEND_TYPE_AMNEZIAWG_PLAIN\x10\x05\x1a\x02\b\x01\x12\x1a\n" +
+	"\x16BACKEND_TYPE_WB_STREAM\x10\x06\x12\x18\n" +
+	"\x14BACKEND_TYPE_VK_TURN\x10\a\x12\x1d\n" +
+	"\x19BACKEND_TYPE_AMNEZIAWG_TL\x10\b*_\n" +
+	"\n" +
+	"TunnelMode\x12\x1b\n" +
+	"\x17TUNNEL_MODE_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15TUNNEL_MODE_WIREGUARD\x10\x01\x12\x19\n" +
+	"\x15TUNNEL_MODE_AMNEZIAWG\x10\x02*n\n" +
+	"\x0fWrapKeyDelivery\x12!\n" +
+	"\x1dWRAP_KEY_DELIVERY_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19WRAP_KEY_DELIVERY_IN_BAND\x10\x01\x12\x19\n" +
+	"\x15WRAP_KEY_DELIVERY_OFF\x10\x02*i\n" +
+	"\bWrapMode\x12\x19\n" +
+	"\x15WRAP_MODE_UNSPECIFIED\x10\x00\x12\x11\n" +
+	"\rWRAP_MODE_OFF\x10\x01\x12\x17\n" +
+	"\x13WRAP_MODE_PREFERRED\x10\x02\x12\x16\n" +
+	"\x12WRAP_MODE_REQUIRED\x10\x03*\x89\x01\n" +
+	"\n" +
+	"WrapCipher\x12\x1b\n" +
+	"\x17WRAP_CIPHER_UNSPECIFIED\x10\x00\x12\x14\n" +
+	"\x10WRAP_CIPHER_NONE\x10\x01\x12 \n" +
+	"\x1cWRAP_CIPHER_SRTP_AES_256_GCM\x10\x02\x12&\n" +
+	"\"WRAP_CIPHER_SRTP_CHACHA20_POLY1305\x10\x03*\x8b\x01\n" +
 	"\x0fTurnSessionMode\x12!\n" +
 	"\x1dTURN_SESSION_MODE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16TURN_SESSION_MODE_AUTO\x10\x01\x12\x1e\n" +
 	"\x1aTURN_SESSION_MODE_MAINLINE\x10\x02\x12\x19\n" +
-	"\x15TURN_SESSION_MODE_MUX\x10\x03*\xcf\x01\n" +
+	"\x15TURN_SESSION_MODE_MUX\x10\x03*p\n" +
+	"\x10ProxyRuntimeMode\x12\"\n" +
+	"\x1ePROXY_RUNTIME_MODE_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16PROXY_RUNTIME_MODE_VPN\x10\x01\x12\x1c\n" +
+	"\x18PROXY_RUNTIME_MODE_PROXY\x10\x02*\xc8\x01\n" +
+	"\x0eAppRoutingMode\x12 \n" +
+	"\x1cAPP_ROUTING_MODE_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14APP_ROUTING_MODE_OFF\x10\x01\x12\x1b\n" +
+	"\x17APP_ROUTING_MODE_BYPASS\x10\x02\x12\x1e\n" +
+	"\x1aAPP_ROUTING_MODE_WHITELIST\x10\x03\x12\x1c\n" +
+	"\x18APP_ROUTING_MODE_XBYPASS\x10\x04\x12\x1f\n" +
+	"\x1bAPP_ROUTING_MODE_XWHITELIST\x10\x05*\xcf\x01\n" +
 	"\x14XrayRoutingMatchType\x12\"\n" +
 	"\x1eXRAY_ROUTING_MATCH_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18XRAY_ROUTING_MATCH_GEOIP\x10\x01\x12\x1e\n" +
@@ -1814,11 +4738,66 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x1fXRAY_ROUTING_ACTION_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19XRAY_ROUTING_ACTION_PROXY\x10\x01\x12\x1e\n" +
 	"\x1aXRAY_ROUTING_ACTION_DIRECT\x10\x02\x12\x1d\n" +
-	"\x19XRAY_ROUTING_ACTION_BLOCK\x10\x03*}\n" +
+	"\x19XRAY_ROUTING_ACTION_BLOCK\x10\x03*m\n" +
+	"\rWakeProbeMode\x12\x1f\n" +
+	"\x1bWAKE_PROBE_MODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17WAKE_PROBE_MODE_PROCESS\x10\x01\x12\x1e\n" +
+	"\x1aWAKE_PROBE_MODE_HTTP_PROBE\x10\x02*}\n" +
 	"\x11XrayTransportMode\x12#\n" +
 	"\x1fXRAY_TRANSPORT_MODE_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aXRAY_TRANSPORT_MODE_DIRECT\x10\x01\x12#\n" +
-	"\x1fXRAY_TRANSPORT_MODE_VK_TURN_TCP\x10\x02B^\n" +
+	"\x1fXRAY_TRANSPORT_MODE_VK_TURN_TCP\x10\x02*\xdc\x01\n" +
+	"\x14XposedProcfsHookMode\x12'\n" +
+	"#XPOSED_PROCFS_HOOK_MODE_UNSPECIFIED\x10\x00\x12$\n" +
+	" XPOSED_PROCFS_HOOK_MODE_DISABLED\x10\x01\x12\"\n" +
+	"\x1eXPOSED_PROCFS_HOOK_MODE_FILTER\x10\x02\x12%\n" +
+	"!XPOSED_PROCFS_HOOK_MODE_NO_ACCESS\x10\x03\x12*\n" +
+	"&XPOSED_PROCFS_HOOK_MODE_FILE_NOT_FOUND\x10\x04*\xc7\x01\n" +
+	"\x16XposedIcmpSpoofingMode\x12)\n" +
+	"%XPOSED_ICMP_SPOOFING_MODE_UNSPECIFIED\x10\x00\x12&\n" +
+	"\"XPOSED_ICMP_SPOOFING_MODE_DISABLED\x10\x01\x12,\n" +
+	"(XPOSED_ICMP_SPOOFING_MODE_PING_NOT_FOUND\x10\x02\x12,\n" +
+	"(XPOSED_ICMP_SPOOFING_MODE_EMPTY_RESPONSE\x10\x03*i\n" +
+	"\tThemeMode\x12\x1a\n" +
+	"\x16THEME_MODE_UNSPECIFIED\x10\x00\x12\x14\n" +
+	"\x10THEME_MODE_LIGHT\x10\x01\x12\x13\n" +
+	"\x0fTHEME_MODE_DARK\x10\x02\x12\x15\n" +
+	"\x11THEME_MODE_SYSTEM\x10\x03*Z\n" +
+	"\aDnsMode\x12\x18\n" +
+	"\x14DNS_MODE_UNSPECIFIED\x10\x00\x12\x11\n" +
+	"\rDNS_MODE_AUTO\x10\x01\x12\x10\n" +
+	"\fDNS_MODE_UDP\x10\x02\x12\x10\n" +
+	"\fDNS_MODE_DOH\x10\x03*\xa8\x01\n" +
+	"\x15SharingMasqueradeMode\x12'\n" +
+	"#SHARING_MASQUERADE_MODE_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cSHARING_MASQUERADE_MODE_NONE\x10\x01\x12\"\n" +
+	"\x1eSHARING_MASQUERADE_MODE_SIMPLE\x10\x02\x12 \n" +
+	"\x1cSHARING_MASQUERADE_MODE_NETD\x10\x03*\xb2\x01\n" +
+	"\x0fSharingWifiLock\x12!\n" +
+	"\x1dSHARING_WIFI_LOCK_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18SHARING_WIFI_LOCK_SYSTEM\x10\x01\x12\x1a\n" +
+	"\x16SHARING_WIFI_LOCK_FULL\x10\x02\x12\x1f\n" +
+	"\x1bSHARING_WIFI_LOCK_HIGH_PERF\x10\x03\x12!\n" +
+	"\x1dSHARING_WIFI_LOCK_LOW_LATENCY\x10\x04*\xd7\x01\n" +
+	"\x14SharingIpMonitorMode\x12'\n" +
+	"#SHARING_IP_MONITOR_MODE_UNSPECIFIED\x10\x00\x12#\n" +
+	"\x1fSHARING_IP_MONITOR_MODE_NETLINK\x10\x01\x12(\n" +
+	"$SHARING_IP_MONITOR_MODE_NETLINK_ROOT\x10\x02\x12 \n" +
+	"\x1cSHARING_IP_MONITOR_MODE_POLL\x10\x03\x12%\n" +
+	"!SHARING_IP_MONITOR_MODE_POLL_ROOT\x10\x04*\x99\x01\n" +
+	"\x0fByeDpiHostsMode\x12\"\n" +
+	"\x1eBYE_DPI_HOSTS_MODE_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aBYE_DPI_HOSTS_MODE_DISABLE\x10\x01\x12 \n" +
+	"\x1cBYE_DPI_HOSTS_MODE_BLACKLIST\x10\x02\x12 \n" +
+	"\x1cBYE_DPI_HOSTS_MODE_WHITELIST\x10\x03*\x81\x02\n" +
+	"\x12ByeDpiDesyncMethod\x12%\n" +
+	"!BYE_DPI_DESYNC_METHOD_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aBYE_DPI_DESYNC_METHOD_NONE\x10\x01\x12\x1f\n" +
+	"\x1bBYE_DPI_DESYNC_METHOD_SPLIT\x10\x02\x12\"\n" +
+	"\x1eBYE_DPI_DESYNC_METHOD_DISORDER\x10\x03\x12\x1e\n" +
+	"\x1aBYE_DPI_DESYNC_METHOD_FAKE\x10\x04\x12\x1d\n" +
+	"\x19BYE_DPI_DESYNC_METHOD_OOB\x10\x05\x12 \n" +
+	"\x1cBYE_DPI_DESYNC_METHOD_DISOOB\x10\x06B^\n" +
 	"\rwings.v.protoB\vWingsvProtoH\x03Z>github.com/mhsanaei/3x-ui/v3/internal/wingsv/proto;wingsvprotob\x06proto3"
 
 var (
@@ -1833,61 +4812,121 @@ func file_wingsv_proto_rawDescGZIP() []byte {
 	return file_wingsv_proto_rawDescData
 }
 
-var file_wingsv_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_wingsv_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_wingsv_proto_enumTypes = make([]protoimpl.EnumInfo, 23)
+var file_wingsv_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_wingsv_proto_goTypes = []any{
-	(ConfigType)(0),           // 0: wingsv.ConfigType
-	(BackendType)(0),          // 1: wingsv.BackendType
-	(TurnSessionMode)(0),      // 2: wingsv.TurnSessionMode
-	(XrayRoutingMatchType)(0), // 3: wingsv.XrayRoutingMatchType
-	(XrayRoutingAction)(0),    // 4: wingsv.XrayRoutingAction
-	(XrayTransportMode)(0),    // 5: wingsv.XrayTransportMode
-	(*Config)(nil),            // 6: wingsv.Config
-	(*WbStream)(nil),          // 7: wingsv.WbStream
-	(*AmneziaWG)(nil),         // 8: wingsv.AmneziaWG
-	(*Endpoint)(nil),          // 9: wingsv.Endpoint
-	(*Cidr)(nil),              // 10: wingsv.Cidr
-	(*Turn)(nil),              // 11: wingsv.Turn
-	(*WireGuard)(nil),         // 12: wingsv.WireGuard
-	(*Interface)(nil),         // 13: wingsv.Interface
-	(*Peer)(nil),              // 14: wingsv.Peer
-	(*Xray)(nil),              // 15: wingsv.Xray
-	(*AppRouting)(nil),        // 16: wingsv.AppRouting
-	(*XrayRouting)(nil),       // 17: wingsv.XrayRouting
-	(*XrayRoutingRule)(nil),   // 18: wingsv.XrayRoutingRule
-	(*Subscription)(nil),      // 19: wingsv.Subscription
-	(*VlessProfile)(nil),      // 20: wingsv.VlessProfile
-	(*XraySettings)(nil),      // 21: wingsv.XraySettings
+	(ConfigType)(0),             // 0: wingsv.ConfigType
+	(GuardianSyncMode)(0),       // 1: wingsv.GuardianSyncMode
+	(BackendType)(0),            // 2: wingsv.BackendType
+	(TunnelMode)(0),             // 3: wingsv.TunnelMode
+	(WrapKeyDelivery)(0),        // 4: wingsv.WrapKeyDelivery
+	(WrapMode)(0),               // 5: wingsv.WrapMode
+	(WrapCipher)(0),             // 6: wingsv.WrapCipher
+	(TurnSessionMode)(0),        // 7: wingsv.TurnSessionMode
+	(ProxyRuntimeMode)(0),       // 8: wingsv.ProxyRuntimeMode
+	(AppRoutingMode)(0),         // 9: wingsv.AppRoutingMode
+	(XrayRoutingMatchType)(0),   // 10: wingsv.XrayRoutingMatchType
+	(XrayRoutingAction)(0),      // 11: wingsv.XrayRoutingAction
+	(WakeProbeMode)(0),          // 12: wingsv.WakeProbeMode
+	(XrayTransportMode)(0),      // 13: wingsv.XrayTransportMode
+	(XposedProcfsHookMode)(0),   // 14: wingsv.XposedProcfsHookMode
+	(XposedIcmpSpoofingMode)(0), // 15: wingsv.XposedIcmpSpoofingMode
+	(ThemeMode)(0),              // 16: wingsv.ThemeMode
+	(DnsMode)(0),                // 17: wingsv.DnsMode
+	(SharingMasqueradeMode)(0),  // 18: wingsv.SharingMasqueradeMode
+	(SharingWifiLock)(0),        // 19: wingsv.SharingWifiLock
+	(SharingIpMonitorMode)(0),   // 20: wingsv.SharingIpMonitorMode
+	(ByeDpiHostsMode)(0),        // 21: wingsv.ByeDpiHostsMode
+	(ByeDpiDesyncMethod)(0),     // 22: wingsv.ByeDpiDesyncMethod
+	(*Config)(nil),              // 23: wingsv.Config
+	(*Guardian)(nil),            // 24: wingsv.Guardian
+	(*WbStream)(nil),            // 25: wingsv.WbStream
+	(*AmneziaWG)(nil),           // 26: wingsv.AmneziaWG
+	(*AmneziaProfile)(nil),      // 27: wingsv.AmneziaProfile
+	(*Endpoint)(nil),            // 28: wingsv.Endpoint
+	(*Cidr)(nil),                // 29: wingsv.Cidr
+	(*Turn)(nil),                // 30: wingsv.Turn
+	(*TurnProfile)(nil),         // 31: wingsv.TurnProfile
+	(*WireGuard)(nil),           // 32: wingsv.WireGuard
+	(*WireGuardProfile)(nil),    // 33: wingsv.WireGuardProfile
+	(*Interface)(nil),           // 34: wingsv.Interface
+	(*Peer)(nil),                // 35: wingsv.Peer
+	(*Xray)(nil),                // 36: wingsv.Xray
+	(*AppRouting)(nil),          // 37: wingsv.AppRouting
+	(*XrayRouting)(nil),         // 38: wingsv.XrayRouting
+	(*XrayRoutingRule)(nil),     // 39: wingsv.XrayRoutingRule
+	(*Subscription)(nil),        // 40: wingsv.Subscription
+	(*VlessProfile)(nil),        // 41: wingsv.VlessProfile
+	(*XraySettings)(nil),        // 42: wingsv.XraySettings
+	(*Xposed)(nil),              // 43: wingsv.Xposed
+	(*RootSettings)(nil),        // 44: wingsv.RootSettings
+	(*AppPreferences)(nil),      // 45: wingsv.AppPreferences
+	(*SubscriptionHwid)(nil),    // 46: wingsv.SubscriptionHwid
+	(*Sharing)(nil),             // 47: wingsv.Sharing
+	(*ByeDpi)(nil),              // 48: wingsv.ByeDpi
 }
 var file_wingsv_proto_depIdxs = []int32{
 	0,  // 0: wingsv.Config.type:type_name -> wingsv.ConfigType
-	11, // 1: wingsv.Config.turn:type_name -> wingsv.Turn
-	12, // 2: wingsv.Config.wg:type_name -> wingsv.WireGuard
-	1,  // 3: wingsv.Config.backend:type_name -> wingsv.BackendType
-	15, // 4: wingsv.Config.xray:type_name -> wingsv.Xray
-	8,  // 5: wingsv.Config.awg:type_name -> wingsv.AmneziaWG
-	16, // 6: wingsv.Config.app_routing:type_name -> wingsv.AppRouting
-	7,  // 7: wingsv.Config.wb_stream:type_name -> wingsv.WbStream
-	9,  // 8: wingsv.Turn.endpoint:type_name -> wingsv.Endpoint
-	9,  // 9: wingsv.Turn.local_endpoint:type_name -> wingsv.Endpoint
-	2,  // 10: wingsv.Turn.session_mode:type_name -> wingsv.TurnSessionMode
-	13, // 11: wingsv.WireGuard.iface:type_name -> wingsv.Interface
-	14, // 12: wingsv.WireGuard.peer:type_name -> wingsv.Peer
-	9,  // 13: wingsv.WireGuard.endpoint:type_name -> wingsv.Endpoint
-	10, // 14: wingsv.Peer.allowed_ips:type_name -> wingsv.Cidr
-	20, // 15: wingsv.Xray.profiles:type_name -> wingsv.VlessProfile
-	19, // 16: wingsv.Xray.subscriptions:type_name -> wingsv.Subscription
-	21, // 17: wingsv.Xray.settings:type_name -> wingsv.XraySettings
-	17, // 18: wingsv.Xray.routing:type_name -> wingsv.XrayRouting
-	18, // 19: wingsv.XrayRouting.rules:type_name -> wingsv.XrayRoutingRule
-	3,  // 20: wingsv.XrayRoutingRule.match_type:type_name -> wingsv.XrayRoutingMatchType
-	4,  // 21: wingsv.XrayRoutingRule.action:type_name -> wingsv.XrayRoutingAction
-	5,  // 22: wingsv.XraySettings.transport_mode:type_name -> wingsv.XrayTransportMode
-	23, // [23:23] is the sub-list for method output_type
-	23, // [23:23] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	30, // 1: wingsv.Config.turn:type_name -> wingsv.Turn
+	32, // 2: wingsv.Config.wg:type_name -> wingsv.WireGuard
+	2,  // 3: wingsv.Config.backend:type_name -> wingsv.BackendType
+	36, // 4: wingsv.Config.xray:type_name -> wingsv.Xray
+	26, // 5: wingsv.Config.awg:type_name -> wingsv.AmneziaWG
+	37, // 6: wingsv.Config.app_routing:type_name -> wingsv.AppRouting
+	25, // 7: wingsv.Config.wb_stream:type_name -> wingsv.WbStream
+	43, // 8: wingsv.Config.xposed:type_name -> wingsv.Xposed
+	44, // 9: wingsv.Config.root:type_name -> wingsv.RootSettings
+	45, // 10: wingsv.Config.app_preferences:type_name -> wingsv.AppPreferences
+	46, // 11: wingsv.Config.subscription_hwid:type_name -> wingsv.SubscriptionHwid
+	47, // 12: wingsv.Config.sharing:type_name -> wingsv.Sharing
+	48, // 13: wingsv.Config.bye_dpi:type_name -> wingsv.ByeDpi
+	24, // 14: wingsv.Config.guardian:type_name -> wingsv.Guardian
+	1,  // 15: wingsv.Guardian.sync_mode:type_name -> wingsv.GuardianSyncMode
+	3,  // 16: wingsv.WbStream.tunnel_mode:type_name -> wingsv.TunnelMode
+	27, // 17: wingsv.AmneziaWG.profiles:type_name -> wingsv.AmneziaProfile
+	28, // 18: wingsv.Turn.endpoint:type_name -> wingsv.Endpoint
+	28, // 19: wingsv.Turn.local_endpoint:type_name -> wingsv.Endpoint
+	7,  // 20: wingsv.Turn.session_mode:type_name -> wingsv.TurnSessionMode
+	8,  // 21: wingsv.Turn.runtime_mode:type_name -> wingsv.ProxyRuntimeMode
+	3,  // 22: wingsv.Turn.tunnel_mode:type_name -> wingsv.TunnelMode
+	5,  // 23: wingsv.Turn.wrap_mode:type_name -> wingsv.WrapMode
+	6,  // 24: wingsv.Turn.wrap_ciphers:type_name -> wingsv.WrapCipher
+	4,  // 25: wingsv.Turn.wrap_key_delivery:type_name -> wingsv.WrapKeyDelivery
+	31, // 26: wingsv.Turn.profiles:type_name -> wingsv.TurnProfile
+	30, // 27: wingsv.TurnProfile.config:type_name -> wingsv.Turn
+	34, // 28: wingsv.WireGuard.iface:type_name -> wingsv.Interface
+	35, // 29: wingsv.WireGuard.peer:type_name -> wingsv.Peer
+	28, // 30: wingsv.WireGuard.endpoint:type_name -> wingsv.Endpoint
+	33, // 31: wingsv.WireGuard.profiles:type_name -> wingsv.WireGuardProfile
+	34, // 32: wingsv.WireGuardProfile.iface:type_name -> wingsv.Interface
+	35, // 33: wingsv.WireGuardProfile.peer:type_name -> wingsv.Peer
+	28, // 34: wingsv.WireGuardProfile.endpoint:type_name -> wingsv.Endpoint
+	29, // 35: wingsv.Peer.allowed_ips:type_name -> wingsv.Cidr
+	41, // 36: wingsv.Xray.profiles:type_name -> wingsv.VlessProfile
+	40, // 37: wingsv.Xray.subscriptions:type_name -> wingsv.Subscription
+	42, // 38: wingsv.Xray.settings:type_name -> wingsv.XraySettings
+	38, // 39: wingsv.Xray.routing:type_name -> wingsv.XrayRouting
+	9,  // 40: wingsv.AppRouting.mode:type_name -> wingsv.AppRoutingMode
+	39, // 41: wingsv.XrayRouting.rules:type_name -> wingsv.XrayRoutingRule
+	10, // 42: wingsv.XrayRoutingRule.match_type:type_name -> wingsv.XrayRoutingMatchType
+	11, // 43: wingsv.XrayRoutingRule.action:type_name -> wingsv.XrayRoutingAction
+	13, // 44: wingsv.XraySettings.transport_mode:type_name -> wingsv.XrayTransportMode
+	8,  // 45: wingsv.XraySettings.runtime_mode:type_name -> wingsv.ProxyRuntimeMode
+	12, // 46: wingsv.XraySettings.wake_probe_mode:type_name -> wingsv.WakeProbeMode
+	14, // 47: wingsv.Xposed.procfs_hook_mode:type_name -> wingsv.XposedProcfsHookMode
+	15, // 48: wingsv.Xposed.icmp_spoofing_mode:type_name -> wingsv.XposedIcmpSpoofingMode
+	16, // 49: wingsv.AppPreferences.theme_mode:type_name -> wingsv.ThemeMode
+	17, // 50: wingsv.AppPreferences.dns_mode:type_name -> wingsv.DnsMode
+	18, // 51: wingsv.Sharing.masquerade_mode:type_name -> wingsv.SharingMasqueradeMode
+	19, // 52: wingsv.Sharing.wifi_lock:type_name -> wingsv.SharingWifiLock
+	20, // 53: wingsv.Sharing.ip_monitor_mode:type_name -> wingsv.SharingIpMonitorMode
+	21, // 54: wingsv.ByeDpi.hosts_mode:type_name -> wingsv.ByeDpiHostsMode
+	22, // 55: wingsv.ByeDpi.desync_method:type_name -> wingsv.ByeDpiDesyncMethod
+	56, // [56:56] is the sub-list for method output_type
+	56, // [56:56] is the sub-list for method input_type
+	56, // [56:56] is the sub-list for extension type_name
+	56, // [56:56] is the sub-list for extension extendee
+	0,  // [0:56] is the sub-list for field type_name
 }
 
 func init() { file_wingsv_proto_init() }
@@ -1895,21 +4934,30 @@ func file_wingsv_proto_init() {
 	if File_wingsv_proto != nil {
 		return
 	}
-	file_wingsv_proto_msgTypes[5].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[2].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[3].OneofWrappers = []any{}
 	file_wingsv_proto_msgTypes[7].OneofWrappers = []any{}
 	file_wingsv_proto_msgTypes[9].OneofWrappers = []any{}
-	file_wingsv_proto_msgTypes[10].OneofWrappers = []any{}
-	file_wingsv_proto_msgTypes[12].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[11].OneofWrappers = []any{}
 	file_wingsv_proto_msgTypes[13].OneofWrappers = []any{}
 	file_wingsv_proto_msgTypes[14].OneofWrappers = []any{}
-	file_wingsv_proto_msgTypes[15].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[16].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[17].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[18].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[19].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[20].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[21].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[22].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[23].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[24].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[25].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wingsv_proto_rawDesc), len(file_wingsv_proto_rawDesc)),
-			NumEnums:      6,
-			NumMessages:   16,
+			NumEnums:      23,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
